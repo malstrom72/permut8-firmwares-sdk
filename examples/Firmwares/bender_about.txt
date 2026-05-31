@@ -1,0 +1,24 @@
+Bender Permut8 Firmware V1.0 (C)2014 NuEdge Development.
+
+Bender is a waveshaping distortion tool.
+
+Instruction 1 offers four different pre-shaping options:
+
+  BIT - clears individual bits from the incoming signal
+  SIN - scales and applies a sine function to the incoming signal
+  ROT - slides the signal up & down (use to add motion to Instruction 2)
+  DLY - delay left & right channel independently
+
+Many of the above have a stereo (S) option as well.
+
+Instruction 2 lets you design your waveshaping function. Think of a neutral
+shaper as a diagonal line where output = input. Turn bits on to bend this line
+in different ways depending on the chosen operator and input level. E.g:
+
+     /           /           /
+    /       ____/       /\  /
+   /       /           /  \/
+  /       /           /
+
+Neutral    Shelf        Fold
+

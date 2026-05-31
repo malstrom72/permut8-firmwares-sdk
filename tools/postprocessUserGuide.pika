@@ -1,0 +1,95 @@
+#! /usr/local/bin/PikaCmd
+
+include('stdlib.pika');
+
+usage = function {
+	print('usage: PikaCmd tools/postprocessUserGuide.pika <path-prefix-to-remove> <markdown-file> [json-file]');
+	::exitCode = 1;
+};
+
+stripPrefix = function {
+	args(@path, @prefix);
+	save(path, replace(load(path), prefix, ''));
+};
+
+trimPipes = function {
+	line = $0;
+	if (line{:1} == '|') line = line{1:};
+	if (right(line, 1) == '|') line = chop(line, 1);
+	( line )
+};
+
+isSeparatorLine = function {
+	line = trimPipes($0);
+	( trim(replace(line, '-|', '', find, 1)) === '' )
+};
+
+removeTocPage = function {
+	entry = trim($0);
+	end = length(entry);
+	for (; end > 0 && find(entry{end - 1:1}, '0123456789') == 0; --end);
+	if (end == length(entry)) ( entry );
+	page = entry{end:};
+	i = end;
+	for (; i > 0 && find(entry{i - 1:1}, ' ' # char(9)) == 0; --i);
+	dotEnd = i;
+	for (; i > 0 && entry{i - 1:1} == '.'; --i);
+	if (dotEnd - i >= 3) {
+		::tocPage = page;
+		( trim(entry{:i}) )
+	} else ( entry )
+};
+
+cleanToc = function {
+	block = $0;
+	out = '';
+	foundTableRows = false;
+	tokenize(block, >{
+		line = $0;
+		if (line{:1} == '|' && !isSeparatorLine(line)) {
+			foundTableRows = true;
+			entry = '';
+			tokenize(trimPipes(line), >{
+				col = trim($0);
+				if (col !== '') {
+					if (entry !== '') entry #= ' ';
+					entry #= col;
+				}
+			}, '|');
+			entry = trim(entry);
+			if (entry !== '') {
+				::tocPage = '';
+				entry = removeTocPage(entry);
+				if (entry !== '') {
+					if (out !== '') out #= char(10);
+					out #= '- ' # entry # if (::tocPage !== '') ', p. ' # ::tocPage else '';
+				}
+			}
+		}
+	}, char(10));
+	( if (foundTableRows) out # char(10) else block )
+};
+
+postprocessMarkdown = function {
+	path = $0;
+	text = load(path);
+	text = replace(text, 'Permut8 User Guide_artifacts/', 'Permut8%20User%20Guide_artifacts/');
+	before = '## Table of Contents' # char(10) # char(10);
+	start = search(text, before);
+	if (start != length(text)) {
+		blockStart = start + length(before);
+		nextHeading = search(text{blockStart:}, char(10) # '## ');
+		if (nextHeading != length(text{blockStart:})) {
+			blockEnd = blockStart + nextHeading;
+			text = text{:blockStart} # cleanToc(text{blockStart:blockEnd - blockStart}) # text{blockEnd:};
+		}
+	};
+	save(path, text);
+};
+
+if ($n < 3) usage()
+else {
+	prefix = $1;
+	for (i = 2; i < $n; ++i) stripPrefix($[i], prefix);
+	postprocessMarkdown($2);
+}

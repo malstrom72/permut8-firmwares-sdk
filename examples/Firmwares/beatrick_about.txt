@@ -1,0 +1,16 @@
+Beatrick Permut8 Firmware V1.1 (C)2012-2014 NuEdge Development.
+
+This firmware transforms beats in real-time and is designed to be used with
+tempo sync turned on.
+
+Instruction 1 offers a choice of four different modes for rearranging the
+beat. The HOLD mode is special. It can record and hold slices of incoming
+audio so that you can splice together new beats from different sources.
+Remember to turn on the WRITE PROTECT switch when you are finished. Otherwise
+the spliced beat will be reset when you reload the project in your DAW.
+
+Instruction 2 offers a selection of real-time effects that will be applied to
+steps that are turned on.
+
+Tip: right-click the memory lane to bounce the result to a WAV file.
+

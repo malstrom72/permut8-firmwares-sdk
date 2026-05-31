@@ -1,0 +1,19 @@
+Pong Permut8 Firmware V1.0 (C)2014 NuEdge Development.
+
+Pong is a multi-tap delay. Operator 1 chooses the base division for the delay
+(1/8 to 1/64). The actual delay rate will also depend on CLOCK FREQ.
+
+Instruction 2 provides another delay in parallel. You can set its rate in
+relation to Instruction 1 (/1 or /2) or offset by 1/2 step or have it continue
+after the last step of Instruction 1 (does not work in 1/8 mode).
+
+TAPS - Turn on individual delay steps with these bits.
+PAN< - Boosts left output.
+PAN> - Boosts right output.
+VOLv - Decreases volume for each step.
+VOL^ - Increases volume for each step.
+TIM< - Increases rate for each step (bouncing ball effect).
+TIM> - Decreases rate for each step.
+RAND - Offsets the steps by a small random amount.
+RECT - Runs audio through a rectifyer (cheap pitch shifter) effect.
+

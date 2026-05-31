@@ -1,0 +1,16 @@
+BitBox Permut8 Firmware V1.1 (C)2014-2020 NuEdge Development.
+
+BitBox is a silly little drum machine firmware for Permut8. Perhaps you are
+wondering why make a drum machine software for an effect processor? The only
+answer I have to that question is "because I could".
+
+BitBox is very basic, monophonic and sounds very bad. You have 16 steps only
+(per program). Instruction 1 is bass drum. Instruction 2 is hi-hat, unless
+the step is also on for Instruction 1 in which case you'll hear a snare instead.
+
+There are four different bass drums and four different combinations of hi-hats
+and snares. They all sound bad.
+
+Incoming audio is mixed in and "volume pumped" to each drum trigger (as if
+using a side-chained compressor). This is actually somewhat useful.
+

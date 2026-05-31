@@ -1,0 +1,135 @@
+#! /usr/local/bin/PikaCmd
+
+include('stdlib.pika');
+
+CRLF = char(13) # char(10);
+
+usage = function {
+	print('usage: PikaCmd tools/createP8Bank.pika --name <firmware-name> --code <file.gazl> --output <file.p8bank> [--logo <file.ivg>] [--about <file.txt>] [--config <text>] [--template <file.p8bank>] [--compact true]');
+	::exitCode = 1;
+};
+
+readText = function {
+	text = load($0);
+	text = replace(text, char(13) # char(10), char(10));
+	text = replace(text, char(13), char(10));
+	( text )
+};
+
+quoteValue = function {
+	text = replace($0, '\', '\\');
+	text = replace(text, '"', '\"');
+	text = replace(text, char(9), '\t');
+	( '"' # text # '"' )
+};
+
+compactGAZL = function {
+	args(@source);
+	out = '';
+	tokenize(source, >{
+		s = $0;
+		line = '';
+		for (; s != '' && s{0} != ';'; ) {
+			if ((i = span(s, ' ' # char(9))) > 0) {
+				if (line != void) line #= ' ';
+				s = s{i:};
+			};
+			if (s{:4} == 'DATs') {
+				line #= s;
+				s = '';
+			} else {
+				i = find(s, ' ' # char(9) # ';');
+				line #= s{:i};
+				s = s{i:};
+			}
+		};
+		line = line{:rspan(line, ' ') + 1};
+		if (line != '') out #= line # char(10);
+	});
+	( out )
+};
+
+blockFromFile = function {
+	args(@label, @path);
+	text = readText(path);
+	if (label == 'Code' && exists(@::opt.compact) && ::opt.compact !== 'false' && ::opt.compact !== '0') {
+		text = compactGAZL(text);
+	};
+	if (right(text, 1) == char(10)) text = chop(text, 1);
+	out = TAB # TAB # label # ': {' # CRLF;
+	if (text !== '') tokenize(text # char(1), >{
+		line = $0;
+		if (right(line, 1) == char(1)) line = chop(line, 1);
+		out #= TAB # TAB # TAB # quoteValue(line) # CRLF;
+	}, char(10));
+	out #= TAB # TAB # '}' # CRLF;
+	( out )
+};
+
+defaultProgram = function {
+	id = $0;
+	( TAB # TAB # id # ': {' # CRLF
+		# TAB # TAB # TAB # 'Modified: false' # CRLF
+		# TAB # TAB # TAB # 'InputLevel: "0.00000000"' # CRLF
+		# TAB # TAB # TAB # 'Limiter: "Off"' # CRLF
+		# TAB # TAB # TAB # 'FilterFreq: "---"' # CRLF
+		# TAB # TAB # TAB # 'FilterPlacement: "Output"' # CRLF
+		# TAB # TAB # TAB # 'FeedbackAmount: "0.00000000"' # CRLF
+		# TAB # TAB # TAB # 'FeedbackFlip: "Off"' # CRLF
+		# TAB # TAB # TAB # 'FeedbackInvert: "Off"' # CRLF
+		# TAB # TAB # TAB # 'OutputLevel: "0.00000000"' # CRLF
+		# TAB # TAB # TAB # 'Mix: "100.00000000"' # CRLF
+		# TAB # TAB # TAB # 'ClockFreq: "44.10000229 kHz"' # CRLF
+		# TAB # TAB # TAB # 'SyncMode: "Off"' # CRLF
+		# TAB # TAB # TAB # 'Reverse: "Off"' # CRLF
+		# TAB # TAB # TAB # 'Operator1: "0"' # CRLF
+		# TAB # TAB # TAB # 'Operand1High: "0x00"' # CRLF
+		# TAB # TAB # TAB # 'Operand1Low: "0x00"' # CRLF
+		# TAB # TAB # TAB # 'Operator2: "0"' # CRLF
+		# TAB # TAB # TAB # 'Operand2High: "0x00"' # CRLF
+		# TAB # TAB # TAB # 'Operand2Low: "0x00"' # CRLF
+		# TAB # TAB # '}' # CRLF )
+};
+
+defaultPrefix = function {
+	out = 'Permut8BankV2: {' # CRLF # TAB # 'CurrentProgram: A0' # CRLF # TAB # 'Programs: {' # CRLF;
+	for (bank = 0; bank < 3; ++bank) {
+		prefix = 'ABC'{bank:1};
+		for (i = 0; i < 10; ++i) out #= defaultProgram(prefix # i);
+	};
+	out #= TAB # '}' # CRLF;
+	( out )
+};
+
+templatePrefix = function {
+	text = replace(readText($0), char(10), CRLF);
+	pattern = CRLF # TAB # 'Firmware:';
+	i = search(text, pattern);
+	if (i == length(text)) throw('template does not contain a top-level Firmware block: ' # $0);
+	( text{:i + length(CRLF)} )
+};
+
+validOptions = true;
+for (i = 1; i < $n; i += 2) {
+	key = $[i];
+	if (i + 1 >= $n || key{:2} !== '--') {
+		usage();
+		validOptions = false;
+		i = $n;
+	} else ::opt[key{2:}] = $[i + 1];
+};
+
+if (validOptions) {
+	if (!exists(@::opt.name) || !exists(@::opt.code) || !exists(@::opt.output)) usage()
+	else {
+		out = if (exists(@::opt.template)) templatePrefix(::opt.template) else defaultPrefix();
+		out #= TAB # 'Firmware: {' # CRLF;
+		out #= TAB # TAB # 'Name: ' # quoteValue(::opt.name) # CRLF;
+		out #= TAB # TAB # 'Config: ' # quoteValue(coalesce(@::opt.config, '')) # CRLF;
+		out #= blockFromFile('Code', ::opt.code);
+		if (exists(@::opt.logo)) out #= CRLF # blockFromFile('Logo', ::opt.logo);
+		if (exists(@::opt.about)) out #= CRLF # blockFromFile('About', ::opt.about);
+		out #= TAB # '}' # CRLF # '}' # CRLF;
+		save(::opt.output, out);
+	}
+}

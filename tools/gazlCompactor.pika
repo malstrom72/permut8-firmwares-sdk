@@ -1,0 +1,29 @@
+#! /usr/local/bin/PikaCmd
+
+include('stdlib.pika');
+include('debug.pika');
+
+usage = function {
+	print('usage: PikaCmd tools/gazlCompactor.pika <input.gazl> <output.gazl>');
+	::exitCode = 1;
+};
+
+::compactGAZL = function {
+	args(@source);
+	o = '';
+	tokenize(source, >{
+		s = $0;
+		l = '';
+		for (; s != '' && s{0} != ';'; ) {
+			if ((i = span(s, " \t")) > 0) { if (l != void) l #= ' '; s = s{i:}; };
+			if (s{:4} == 'DATs') { l #= s; s = ''; }
+			else { l #= s{:i = find(s, " \t;")}; s = s{i:}; }
+		};
+		l = l{:rspan(l, ' ') + 1};
+		if (l != '') o #= l # LF;
+	});
+	( o )
+};
+
+if ($n != 3) usage()
+else save($2, compactGAZL(load($1)));
