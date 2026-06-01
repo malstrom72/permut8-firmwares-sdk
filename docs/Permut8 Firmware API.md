@@ -30,6 +30,40 @@ Permut8 supports two practical firmware shapes:
 
 Full patches and mod patches can share helper code, panel text, parameters, LEDs, and initialization/update callbacks, but their audio entry points and required globals are different.
 
+## Signal Chain Around a Patch
+
+A firmware patch does not run in isolation. Permut8 wraps the virtual DSP in its analog controls, feedback loop, filter, delay memory, and dry/wet mixer. Knowing where the patch sits prevents duplicated work in firmware.
+
+```text
+dry input
+   |
+INPUT LEVEL
+   |
+feedback sum <------------------------------- feedback return
+   |                                          FEEDBACK AMOUNT,
+   |                                          FLIP L/R, INVERT
+soft clipper -> LIMITER -> 12-bit conversion
+   |
+YOUR PATCH
+   |  full patch: process() on signal[0..1]
+   |  mod patch: operate1()/operate2() on read positions
+   v
+wet output -> OUTPUT LEVEL / soft clipper
+   |                         |
+   |                         +--------------> feedback tap
+   v
+MIX, latency-compensated dry/wet blend -> output
+```
+
+Important consequences for firmware authors:
+
+- `signal[0]` and `signal[1]` are not the raw host input. They arrive after input gain, the feedback sum, input saturation/limiting, and 12-bit conversion.
+- The value a full patch writes back to `signal[0..1]` is the wet signal. The host applies output level, feeds that result back according to the feedback controls, and blends it with the dry input through `MIX`.
+- The analog filter is host-side. `FILTER PLACEMENT` chooses `IN` before the soft clipper/limiter but inside the feedback loop, `FB` on the feedback return only, `OUT` on the final output and feedback tap, or `OFF`.
+- In normal firmware, keep the patch fully wet and let `MIX` handle dry/wet balance. Permut8's mix control compensates the variable clock latency in a way a firmware-local blend cannot.
+- Do not rebuild feedback, filtering, or saturation unless they are intentionally part of the firmware's own sound. The front-panel controls already provide those functions around the patch.
+- Delay memory is one full 16-bit clock cycle of 12-bit stereo frames, described in the user guide as 128 kilowords. `write(clock, ...)` writes at the current head, `read(clock - d, ...)` reads `d` frames back, and both wrap.
+
 ## Required Format Constant
 
 Every current Permut8 1.1 firmware should define:
@@ -166,6 +200,8 @@ global array params[PARAM_COUNT]
 - `params[OPERAND_2_HIGH_PARAM_INDEX]`: operand 2 high byte, 0 to 255.
 - `params[OPERAND_2_LOW_PARAM_INDEX]`: operand 2 low byte, 0 to 255.
 
+For common operand-to-value mappings used by the examples and stock-style firmwares, see [Operand Scaling Conventions](Operand%20Scaling%20Conventions.md).
+
 Use the switch masks like this:
 
 ```impala
@@ -181,6 +217,8 @@ Declare only the globals your firmware uses.
 ### `global int clock`
 
 `clock` increments between every `process()` call, or decrements in reverse mode. It has a 16-bit cycle from `0` to `65535`. If tempo sync is enabled, `clock` is the absolute position within the chosen time division.
+
+The 16-bit clock cycle equals the delay-line length, so `clock - d` addresses up to a full memory cycle of delay.
 
 ### `global int hostPosition`
 

@@ -18,6 +18,11 @@ Generate banks with `tools/createP8Bank.pika`. Start from a clean no-template ba
 brand-new firmwares. Use `--template` only when deliberately preserving the 30 programs
 from an existing bank.
 
+`createP8Bank.pika` writes 30 default programs, or copies the programs from `--template`.
+It does not expose command-line options for per-program operator, operand, or analog-control
+values. To ship demo presets in a brand-new bank, edit the generated program blocks
+directly or start from a template bank saved from Permut8 with the programs you want.
+
 For release-sized banks, pass `--compact true` to `tools/createP8Bank.pika`. The compactor
 strips comments and redundant whitespace while preserving `DATs` string payloads; it is not a
 semantic optimizer. Use `tools/gazlCompactor.pika` directly only when you need a separate

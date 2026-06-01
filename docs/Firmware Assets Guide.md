@@ -10,6 +10,8 @@ For the full documentation map, see [Documentation Index](README.md). For packag
 
 The `panelTextRows` array replaces Permut8's built-in screen print with your own labels. All 8 rows are visible on the tape simultaneously — rows 0–3 on instruction 1's strip, rows 4–7 on instruction 2's — like a physical paper label. The rows align with the operator knob positions, so the whole thing acts as a permanent reference chart for every mode at once.
 
+Each instruction's operator knob currently has five positions: position 0 is the stock NOP/OFF position by convention, and positions 1–4 are the four active operator rows. The four tape rows for a strip line up with positions 1–4, not 0–3. Rows 0–3 label instruction 1 positions 1–4; rows 4–7 label instruction 2 positions 1–4. Position 0 has no tape row. When a firmware reassigns the operator knob to custom modes, keep position 0 as a clean bypass unless there is a deliberate reason to do otherwise.
+
 An empty string `""` means no tape on that row. A single space `" "` keeps a blank row. The pointer doesn't need to point at constant data, but the text shouldn't change after `init()` returns.
 
 ### Approaches — with full examples
@@ -222,6 +224,8 @@ bounds 0,0,100,40
 ```
 
 The canvas is 100 × 40 units. Use `IVG-1` — Permut8 doesn't need `IVG-2`.
+
+Permut8's sticker renderer ships no fonts. The IVG `TEXT` and `font` instructions are useful in `IVG2PNG` when external fonts are available, but do not rely on them for artwork that must appear inside the plug-in. Current example stickers draw wordmarks as `PATH` outlines or simple shapes for this reason.
 
 ### The tape shows through
 

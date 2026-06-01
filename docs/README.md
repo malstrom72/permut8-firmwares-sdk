@@ -11,6 +11,8 @@ only when you need exact language or renderer behavior.
   full-patch/mod-patch skeletons.
 - [Firmware Assets Guide](Firmware%20Assets%20Guide.md): tape text, IVG sticker graphics,
   special characters, about text, and asset layout advice.
+- [Operand Scaling Conventions](Operand%20Scaling%20Conventions.md): common mappings from
+  raw operand bytes to delays, rates, and precise 16-bit values.
 - [Validation](Validation.md): compile, package, asset, and loading checks before a
   firmware is returned or shipped.
 

@@ -97,6 +97,11 @@ Permut8ProgramV2: {
 }
 ```
 
+`createP8Bank.pika` does not currently expose command-line options for setting different
+operator, operand, or analog-control values per program. To ship demo presets, either edit
+the generated `Programs` block directly or use `--template` with a bank saved from Permut8
+that already contains the desired programs.
+
 ## Compact GAZL For Release
 
 Compiled `.gazl` files are readable assembly text with labels, comments, and alignment

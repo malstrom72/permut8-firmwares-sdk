@@ -170,6 +170,16 @@ assert(i != 0);
 
 Assignments are expressions; the `=` operator yields the assigned value so assignments may appear inside other expressions. Bitwise operators share the same precedence and `>>>` performs an unsigned right shift. Relational expressions yield a boolean result that can only control `if`, `while` and similar statements.
 
+Useful details that are easy to miss:
+
+- `>>` is arithmetic right shift and preserves the sign bit. `>>>` is logical right shift
+  and fills with zeroes, which is usually what you want for bit masks, hash steps, and
+  random-number generators.
+- `readonly` data is stored in global memory. Read readonly arrays with the `global`
+  keyword, for example `(int) global SOME_CONSTS[i]`, even though the declaration starts
+  with `readonly`.
+- `abs()` works on ints as well as floats.
+- Bitwise `^`, `~`, `&`, and `|` are available.
 
 ## The Impala tools
 
@@ -209,4 +219,3 @@ For convenience you can compile and run in one step:
 ```bash
 ./PikaCmd impala.pika run ../impala/ImpalaDemo.impala
 ```
-
