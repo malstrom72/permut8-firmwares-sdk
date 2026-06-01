@@ -8,21 +8,21 @@ Compile the firmware source to GAZL from a consuming project that has this SDK c
 `references/permut8-firmwares-sdk/`:
 
 ```sh
-cd references/permut8-firmwares-sdk/examples/Firmwares
-./PikaCmd impala.pika compile \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
+  references/permut8-firmwares-sdk/tools/bin/impala.pika \
+  compile \
   <path-to-source.impala> \
   <path-to-compiled.gazl>
-cd ../../../..
 ```
 
 On Windows:
 
 ```bat
-CD references\permut8-firmwares-sdk\examples\Firmwares
-PikaCmd impala.pika compile ^
+references\permut8-firmwares-sdk\tools\bin\PikaCmd.exe ^
+  references\permut8-firmwares-sdk\tools\bin\impala.pika ^
+  compile ^
   <path-to-source.impala> ^
   <path-to-compiled.gazl>
-CD ..\..\..\..
 ```
 
 A successful compile proves the Impala source can be translated to the GAZL text that
@@ -33,7 +33,7 @@ Permut8 loads and that `.p8bank` files embed.
 For release banks, compact the compiled GAZL during packaging:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --name ringmod \
   --code <path-to-compiled.gazl> \
@@ -51,7 +51,7 @@ does not replace a compile check or a Permut8 load test.
 Package the compiled code and optional assets with the bank writer:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --name ringmod \
   --code <path-to-compiled.gazl> \
@@ -97,7 +97,7 @@ references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 Render a sticker against Permut8's tape-like background:
 
 ```sh
-references/permut8-firmwares-sdk/IVG/output/IVG2PNG \
+references/permut8-firmwares-sdk/tools/bin/IVG2PNG \
   --fonts references/permut8-firmwares-sdk/IVG/fonts \
   --background "#b8a888" \
   <path-to-logo.ivg> \

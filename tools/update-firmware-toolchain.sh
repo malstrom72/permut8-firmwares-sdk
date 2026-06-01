@@ -19,7 +19,8 @@ esac
 src_impala="GAZL/impala"
 src_pikacmd="GAZL/externals/PikaCmd"
 dst="examples/Firmwares"
-runtime_pikacmd="$dst/PikaCmd"
+bin="tools/bin"
+runtime_pikacmd="$bin/PikaCmd"
 
 for path in "$src_impala/impala.pika" "$src_impala/impalaCompiler.pika" "$src_impala/systools.pika"; do
 	if [ ! -f "$path" ]; then
@@ -28,7 +29,7 @@ for path in "$src_impala/impala.pika" "$src_impala/impalaCompiler.pika" "$src_im
 	fi
 done
 
-mkdir -p "$dst"
+mkdir -p "$dst" "$bin"
 
 if [ ! -x "$runtime_pikacmd" ] || ! "$runtime_pikacmd" -h >/dev/null 2>&1; then
 	if [ ! -f "$src_pikacmd/PikaCmdAmalgam.cpp" ]; then
@@ -45,6 +46,13 @@ if [ ! -x "$runtime_pikacmd" ] || ! "$runtime_pikacmd" -h >/dev/null 2>&1; then
 	chmod +x "$runtime_pikacmd"
 fi
 
+cp "$bin/PikaCmd" "$dst/PikaCmd"
+chmod +x "$dst/PikaCmd"
+
+if [ -f "$bin/PikaCmd.exe" ]; then
+	cp "$bin/PikaCmd.exe" "$dst/PikaCmd.exe"
+fi
+
 (
 	cd "$src_impala"
 	"../../$runtime_pikacmd" impala.pika rebuild
@@ -53,8 +61,9 @@ fi
 cp "$src_impala/impala.pika" "$dst/impala.pika"
 cp "$src_impala/impalaCompiler.pika" "$dst/impalaCompiler.pika"
 cp "$src_impala/systools.pika" "$dst/systools.pika"
-
-mkdir -p IVG/output
+cp "$src_impala/impala.pika" "$bin/impala.pika"
+cp "$src_impala/impalaCompiler.pika" "$bin/impalaCompiler.pika"
+cp "$src_impala/systools.pika" "$bin/systools.pika"
 
 c_sources=(
 	IVG/externals/libpng/png.c
@@ -85,10 +94,10 @@ c_sources=(
 	IVG/externals/zlib/zutil.c
 )
 
-IVG/tools/BuildCpp.sh "$target" "$model" IVG/output/IVG2PNG \
+IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
 	-ffp-contract=off -UTARGET_OS_MAC IVG/tools/IVG2PNG.cpp -DNUXPIXELS_SIMD="$simd_flag" \
 	-I IVG -I IVG/externals -I IVG/externals/libpng -I IVG/externals/zlib \
 	IVG/src/IVG.cpp IVG/src/IMPD.cpp IVG/externals/NuX/NuXPixels.cpp \
 	"${c_sources[@]}"
 
-echo "Updated firmware toolchain files in $dst from GAZL."
+echo "Updated SDK tool binaries in $bin and firmware runtime files in $dst."

@@ -9,7 +9,7 @@ Expected agent practice:
 - Compile touched `.impala` files to `.gazl` whenever the local toolchain can run.
 - Generate or regenerate the `.p8bank` with `tools/createP8Bank.pika`.
 - Check about text line count and 80-column width.
-- Render static `.ivg` stickers with `references/permut8-firmwares-sdk/IVG/output/IVG2PNG`
+- Render static `.ivg` stickers with `references/permut8-firmwares-sdk/tools/bin/IVG2PNG`
   when the renderer is available.
 - Treat a successful compile/package/render pass as structural validation, not proof of
   runtime DSP behavior inside Permut8.

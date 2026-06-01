@@ -229,7 +229,7 @@ Transparent areas reveal the Permut8 tape background (amber/tan paper). This is 
 
 Test against the tape colour:
 ```sh
-references/permut8-firmwares-sdk/IVG/output/IVG2PNG --background "#b8a888" my_logo.ivg preview.png
+references/permut8-firmwares-sdk/tools/bin/IVG2PNG --background "#b8a888" my_logo.ivg preview.png
 ```
 
 ### Alpha colours

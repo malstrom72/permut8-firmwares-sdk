@@ -39,12 +39,14 @@ reference to an external `.gazl`, `.impala`, or `.p8bank` file.
     - `examples/Firmwares/linSubMod_code.impala` is the best compact mod-patch starting point.
 
 - `tools`:
+    - `bin`: prebuilt SDK helper executables and runtime scripts used by the documented
+      compile, package, and validation commands.
     - `createP8Bank.pika`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
     - `gazlCompactor.pika`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
-    - `update-firmware-toolchain.sh`: builds the Unix `examples/Firmwares/PikaCmd` runtime
-      when needed, rebuilds the Impala compiler, refreshes the runtime toolchain files from
-      the authoritative `GAZL` copy, and builds the vendored IVG renderer used for sticker
+    - `update-firmware-toolchain.sh`: builds Unix tools in `tools/bin` when needed,
+      rebuilds the Impala compiler, refreshes the firmware runtime files from the
+      authoritative `GAZL` copy, and updates the vendored IVG renderer used for sticker
       validation.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
 
@@ -70,17 +72,17 @@ and keep generated work outside the SDK checkout.
 Compile the firmware:
 
 ```sh
-cd references/permut8-firmwares-sdk/examples/Firmwares
-./PikaCmd impala.pika compile \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
+  references/permut8-firmwares-sdk/tools/bin/impala.pika \
+  compile \
   <path-to-source.impala> \
   <path-to-compiled.gazl>
-cd ../../../..
 ```
 
 Package it as a firmware bank:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --name ringmod \
   --code <path-to-compiled.gazl> \

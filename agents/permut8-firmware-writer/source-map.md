@@ -50,15 +50,16 @@ Use these repository files as the grounding map for Permut8 firmware work.
 - [tools/gazlCompactor.pika](../../tools/gazlCompactor.pika): optional release-size GAZL
   text compactor.
 - [tools/update-firmware-toolchain.sh](../../tools/update-firmware-toolchain.sh):
-  builds the runtime Unix PikaCmd when needed, rebuilds the Impala compiler, and refreshes
-  the runtime files in `examples/Firmwares` from the authoritative `GAZL` copy, and builds
-  the IVG renderer for sticker validation.
+  builds Unix tools in `tools/bin` when needed, rebuilds the Impala compiler, refreshes the
+  firmware runtime files in `examples/Firmwares` from the authoritative `GAZL` copy, and
+  builds the IVG renderer for sticker validation.
 - [tools/convert-user-guide.sh](../../tools/convert-user-guide.sh): regenerates the
   Markdown user guide from source material.
 - [GAZL/externals/PikaCmd](../../GAZL/externals/PikaCmd): bundled PikaScript command
   runner source from the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL)
-  copy. Runtime commands should use `examples/Firmwares/PikaCmd`; use this source folder
-  only when rebuilding that runtime.
+  copy. General runtime commands should use `tools/bin/PikaCmd`; firmware-folder compile
+  loops use the copied `examples/Firmwares/PikaCmd`. Use this source folder only when
+  rebuilding the runtime.
 - [docs/PikaScript](../../docs/PikaScript): local PikaScript and PikaCmd documentation
   copied from [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript).
 

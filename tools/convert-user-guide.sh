@@ -37,7 +37,7 @@ fi
 
 mv "$JSON_PATH" "$DOCLING_JSON_PATH"
 
-"$ROOT_DIR/examples/Firmwares/PikaCmd" \
+"$ROOT_DIR/tools/bin/PikaCmd" \
 	"$ROOT_DIR/tools/postprocessUserGuide.pika" \
 	"$GUIDE_DIR/" \
 	"$MD_PATH" \

@@ -51,18 +51,18 @@ you are deliberately contributing SDK examples.
 First compile Impala to GAZL:
 
 ```sh
-cd references/permut8-firmwares-sdk/examples/Firmwares
-./PikaCmd impala.pika compile \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
+  references/permut8-firmwares-sdk/tools/bin/impala.pika \
+  compile \
   <path-to-source.impala> \
   <path-to-compiled.gazl>
-cd ../../../..
 ```
 
 Then wrap the compiled firmware into a bank with the PikaScript bank writer,
 choosing the output path that fits your project:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --name ringmod \
   --code <path-to-compiled.gazl> \
@@ -106,7 +106,7 @@ the `.p8bank` is smaller.
 For normal release packaging, let the bank writer compact the code while packaging:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --name ringmodComp \
   --code <path-to-compiled.gazl> \
@@ -124,7 +124,7 @@ survive. It is not an optimizer and does not change labels, instructions, consta
 You can also run the compactor as a separate inspection step:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/gazlCompactor.pika \
   <path-to-compiled.gazl> \
   <path-to-compacted.gazl>
@@ -135,7 +135,7 @@ references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
 If you want to keep the 30 program settings from an existing bank and replace only the embedded firmware, pass it as a template:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --template "references/permut8-firmwares-sdk/examples/RingMod Firmware.p8bank" \
   --name ringmodComp \
@@ -150,7 +150,7 @@ Without `--template`, the tool writes a minimal bank with 30 empty programs. Whe
 For a better user-test artifact, preserve the programs from the existing RingMod example bank and replace only the embedded firmware block with freshly compiled Impala output:
 
 ```sh
-references/permut8-firmwares-sdk/examples/Firmwares/PikaCmd \
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
   references/permut8-firmwares-sdk/tools/createP8Bank.pika \
   --template "references/permut8-firmwares-sdk/examples/RingMod Firmware.p8bank" \
   --name ringmod \
@@ -181,7 +181,7 @@ When creating a firmware:
 1. Write or update the `.impala` source in the consuming project.
 2. Compile it to `.gazl`.
 3. Create or update matching `_logo.ivg` and `_about.txt` files if needed.
-4. Generate the `.p8bank` with `examples/Firmwares/PikaCmd tools/createP8Bank.pika`.
+4. Generate the `.p8bank` with `tools/bin/PikaCmd tools/createP8Bank.pika`.
 5. Treat the `.p8bank` path as the primary artifact.
 
 Do not rely on the user copying source files into `Permut8 Firmware Code` unless they explicitly want the console development workflow.

@@ -30,24 +30,25 @@ The firmware-code package uses `PikaCmd`, `impala.pika`, and `impalaCompiler.pik
 
 `PikaCmd` is the command-line runner for PikaScript. The SDK uses the PikaCmd source
 bundled by the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL) copy under
-`GAZL/externals/PikaCmd`, plus runtime executables in `examples/Firmwares/`. It is still
+`GAZL/externals/PikaCmd`, plus prebuilt runtime executables in `tools/bin/`. It is still
 needed because the Impala-to-GAZL compiler in the Permut8 firmware folder is itself a
 PikaScript program: `PikaCmd` runs `impala.pika`, `impala.pika` loads
 `impalaCompiler.pika`, and that compiler emits the `.gazl` text loaded by Permut8.
 
-The repository includes prebuilt runtime copies in `examples/Firmwares/`: `PikaCmd` for
-macOS and `PikaCmd.exe` for Windows. Linux users should build `examples/Firmwares/PikaCmd`
-from source by running the toolchain update script:
+The repository includes prebuilt runtime copies in `tools/bin/`: `PikaCmd` for macOS and
+`PikaCmd.exe` for Windows. Linux users should build the Unix tools from source by running
+the toolchain update script:
 
 ```sh
 references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 ```
 
-The update script builds `examples/Firmwares/PikaCmd` from
+The update script builds `tools/bin/PikaCmd` from
 `GAZL/externals/PikaCmd/PikaCmdAmalgam.cpp` when the existing runtime cannot execute on the
 current host, runs the bundled PikaScript tests, rebuilds `GAZL/impala/impalaCompiler.pika`,
-and copies the runtime Impala files into `examples/Firmwares/`. Built PikaCmd executables
-are not committed under `GAZL/`, so that folder can stay aligned with upstream.
+builds `tools/bin/IVG2PNG`, and copies the firmware-folder runtime files into
+`examples/Firmwares/`. Built executables are not committed under `GAZL/` or `IVG/`, so those
+folders can stay aligned with upstream.
 Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
 those warnings do not prevent a successful build.
 
@@ -93,7 +94,24 @@ After linking, firmware files edited in your project-local `firmware-code` direc
 
 ## Compile One Firmware
 
-Compile an Impala source file with:
+For general out-of-tree project builds, compile an Impala source file with:
+
+```sh
+references/permut8-firmwares-sdk/tools/bin/PikaCmd \
+  references/permut8-firmwares-sdk/tools/bin/impala.pika \
+  compile ringmod_code.impala ringmod_code.gazl
+```
+
+On Windows:
+
+```bat
+references\permut8-firmwares-sdk\tools\bin\PikaCmd.exe ^
+  references\permut8-firmwares-sdk\tools\bin\impala.pika ^
+  compile ringmod_code.impala ringmod_code.gazl
+```
+
+When working directly inside a self-contained firmware folder, compile with the local
+runtime copy:
 
 ```sh
 ./PikaCmd impala.pika compile ringmod_code.impala ringmod_code.gazl
@@ -102,7 +120,7 @@ Compile an Impala source file with:
 On Windows:
 
 ```bat
-PikaCmd impala.pika compile ringmod_code.impala ringmod_code.gazl
+PikaCmd.exe impala.pika compile ringmod_code.impala ringmod_code.gazl
 ```
 
 The generated `.gazl` file is the code format loaded by the Permut8 virtual machine and embedded in `.p8bank` firmware banks. This command was verified by compiling `ringmod_code.impala` to `ringmod_code.gazl`, packaging the result, and loading the generated bank in Permut8.
