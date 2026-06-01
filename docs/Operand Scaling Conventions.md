@@ -20,3 +20,20 @@ Use exponential scaling when the ear expects ratios rather than equal steps, esp
 time, pitch, and rate controls with only one byte of resolution. Use 16-bit linear scaling
 when a pair of operand bytes should act as one precise value across the whole memory cycle or
 amount range.
+
+## Sample-Based vs Time-Based Values
+
+Delay-line offsets are measured in samples, and the effective sample rate is the `CLOCK FREQ`
+knob. A fixed sample count changes duration when the user changes clock frequency: it sounds
+longer at low clock rates and shorter at high clock rates. That behavior is part of
+Permut8's character, but it can surprise authors of chorus, flanger, and vibrato-style
+effects.
+
+If a value should stay constant in milliseconds regardless of clock frequency, convert it in
+`update()` using `params[CLOCK_FREQ_PARAM_INDEX]`, which is the current clock frequency in Hz:
+
+```impala
+samples = ms * clockHz / 1000;
+```
+
+Precompute this conversion outside the audio loop.

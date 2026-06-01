@@ -178,7 +178,15 @@ Useful details that are easy to miss:
 - `readonly` data is stored in global memory. Read readonly arrays with the `global`
   keyword, for example `(int) global SOME_CONSTS[i]`, even though the declaration starts
   with `readonly`.
-- `abs()` works on ints as well as floats.
+- A function return value is untyped inside a larger expression and usually needs a cast.
+  `lfoVal(...) + 1` fails because the compiler sees an untyped value plus an int; write
+  `(int) lfoVal(...) + 1`. A bare assignment such as `x = f(...)` is fine. `ringmod` shows
+  the same pattern with `(pointer) stpcpy(...)`.
+- `floor()` and `abs()` are built in. `floor()` works on floats; `abs()` works on ints and
+  floats.
+- Trigonometric and exponential functions are not built in. Compute tables at load time or
+  provide helper functions. `ringmod_code.impala` builds cosine with a Taylor series in
+  `init()`.
 - Bitwise `^`, `~`, `&`, and `|` are available.
 
 ## The Impala tools

@@ -129,11 +129,30 @@ Writes `frameCount` 12-bit stereo frames to the delay-line memory at `offset`. V
 
 `offset` is an absolute delay-line position. Use `global clock` as the current write cursor. For example, `write(clock, 1, global signal)` writes the current sample at the write head, and `read(clock - delay, 1, buf)` reads from `delay` samples back.
 
+To build a delay, write the input at `clock` each sample and read it back from `clock - delay`. See the fractional-delay note under `read()` when the delay is modulated or needs sub-sample resolution.
+
 ### `read(int offset, int frameCount, pointer values)`
 
 Reads `frameCount` 12-bit stereo frames from the delay-line memory at `offset` into an interleaved stereo buffer. Reads and writes wrap automatically to the delay-line size.
 
 `offset` is an absolute delay-line position — see `write()` above for the `clock`-relative pattern.
+
+`offset` is an integer sample position. `read()` does not interpolate. For a smoothly
+modulated or fractional delay, keep the delay as fixed point, read the two neighbouring
+frames, and interpolate in firmware. This example uses a 16.16 fixed-point delay:
+
+```impala
+di = d >>> 16;                       // integer delay in samples
+fr = d & 0xffff;                     // fractional part, 0..65535
+read(clock - di - 1, 2, buf);        // buf = [Lold,Rold,Lnew,Rnew]
+outL = (int) buf[2] + ((((int) buf[0] - (int) buf[2]) * fr) >> 16);
+outR = (int) buf[3] + ((((int) buf[1] - (int) buf[3]) * fr) >> 16);
+```
+
+Two-point linear interpolation is usually enough for gentle chorus, flanger, vibrato, and
+similar modulation. Deeper or faster modulation may need four frames and a cubic or Hermite
+interpolator to reduce resampling artifacts. `beatrick_code.impala` shows the two-frame
+pattern, and `pong_code.impala` shows batched multi-frame delay reads.
 
 ## Host Constants
 
@@ -329,6 +348,21 @@ Some older examples use an argument on `operate1`, reflecting earlier experiment
 ## Performance
 
 GAZL global variable accesses are significantly slower than local variable accesses. Audio-rate code should minimize how often it touches globals directly.
+
+### Integer vs float
+
+Both integer and floating-point arithmetic are practical inside `process()`. GAZL values are
+single VM words, and fixed-point integer code can cost extra shifts, masks, scaling, and
+overflow checks. Do not choose integer fixed point only because it seems lower level.
+
+Use integer and fixed-point math when the quantized behavior is part of the sound or when you
+need exact bit operations. Use float when it makes the expression simpler, especially for
+LFOs, envelopes, interpolation coefficients, and other scaling math. The usual audio-rate
+costs to avoid are repeated global access and expensive functions inside the sample loop; keep
+using locals and precomputed tables either way.
+
+GAZL integers are one VM word, normally 32-bit signed, with no 64-bit intermediate for wide
+products. Float can be the more robust choice for scaling that would otherwise overflow.
 
 ### Copy globals to locals
 
