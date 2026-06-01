@@ -91,7 +91,7 @@ scroll.
 Build the local IVG renderer:
 
 ```sh
-references/permut8-firmwares-sdk/tools/build-ivg2png.sh
+references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 ```
 
 Render a sticker against Permut8's tape-like background:

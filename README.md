@@ -42,16 +42,18 @@ reference to an external `.gazl`, `.impala`, or `.p8bank` file.
     - `createP8Bank.pika`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
     - `gazlCompactor.pika`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
-    - `build-ivg2png.sh`: builds the vendored IVG renderer used for sticker validation.
-    - `update-firmware-toolchain.sh`: refreshes the runtime Impala/PikaCmd files in
-      `examples/Firmwares` from the authoritative `GAZL` copy.
+    - `update-firmware-toolchain.sh`: builds the Unix `examples/Firmwares/PikaCmd` runtime
+      when needed, rebuilds the Impala compiler, refreshes the runtime toolchain files from
+      the authoritative `GAZL` copy, and builds the vendored IVG renderer used for sticker
+      validation.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
 
 - `GAZL`:
     - Vendored GAZL VM, Impala compiler, build scripts, tests, and documentation copied
       from [malstrom72/GAZL](https://github.com/malstrom72/GAZL). This folder is kept as
       a straight upstream copy where practical.
-    - Includes the authoritative bundled PikaCmd source under `GAZL/externals/PikaCmd`.
+    - Includes the authoritative bundled PikaCmd source under `GAZL/externals/PikaCmd`;
+      built PikaCmd executables are kept out of `GAZL/`.
 
 - `IVG`:
     - Vendored IVG renderer, fonts, tools, tests, and documentation used for sticker graphics.

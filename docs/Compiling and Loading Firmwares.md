@@ -30,28 +30,26 @@ The firmware-code package uses `PikaCmd`, `impala.pika`, and `impalaCompiler.pik
 
 `PikaCmd` is the command-line runner for PikaScript. The SDK uses the PikaCmd source
 bundled by the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL) copy under
-`GAZL/externals/PikaCmd`, plus a runtime copy of the executable in `examples/Firmwares/`.
-It is still needed because the Impala-to-GAZL compiler in the Permut8 firmware folder is
-itself a PikaScript program: `PikaCmd` runs `impala.pika`, `impala.pika` loads
+`GAZL/externals/PikaCmd`, plus runtime executables in `examples/Firmwares/`. It is still
+needed because the Impala-to-GAZL compiler in the Permut8 firmware folder is itself a
+PikaScript program: `PikaCmd` runs `impala.pika`, `impala.pika` loads
 `impalaCompiler.pika`, and that compiler emits the `.gazl` text loaded by Permut8.
 
-To verify or rebuild PikaCmd from the bundled source on macOS/Linux:
-
-```sh
-cd references/permut8-firmwares-sdk/GAZL/externals/PikaCmd
-bash BuildPikaCmd.sh
-```
-
-The build script compiles `PikaCmdAmalgam.cpp` and runs the bundled PikaScript tests.
-Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
-those warnings do not prevent a successful build.
-
-The runtime copies of `PikaCmd`, `impala.pika`, `impalaCompiler.pika`, and `systools.pika`
-under `examples/Firmwares/` should be refreshed from the authoritative `GAZL` copy with:
+The repository includes prebuilt runtime copies in `examples/Firmwares/`: `PikaCmd` for
+macOS and `PikaCmd.exe` for Windows. Linux users should build `examples/Firmwares/PikaCmd`
+from source by running the toolchain update script:
 
 ```sh
 references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 ```
+
+The update script builds `examples/Firmwares/PikaCmd` from
+`GAZL/externals/PikaCmd/PikaCmdAmalgam.cpp` when the existing runtime cannot execute on the
+current host, runs the bundled PikaScript tests, rebuilds `GAZL/impala/impalaCompiler.pika`,
+and copies the runtime Impala files into `examples/Firmwares/`. Built PikaCmd executables
+are not committed under `GAZL/`, so that folder can stay aligned with upstream.
+Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
+those warnings do not prevent a successful build.
 
 ## Development Folder Linking
 
