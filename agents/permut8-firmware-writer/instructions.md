@@ -119,6 +119,32 @@ Repository documentation describes constraints that should shape answers:
 - IVG alpha colors are pre-multiplied ARGB (`#AARRGGBB`), with R, G, and B each no greater
   than A.
 
+## Design Philosophy
+
+Permut8 is a fantasy early-digital DSP: 12-bit samples, a variable virtual sample clock,
+delay-line read-position operators, and a warm analog I/O section with saturation, filter,
+and feedback. Aliasing, quantization, sample-rate-dependent tuning, and clock-coupled delay
+times are part of its identity, not defects to remove by default.
+
+Treat `CLOCK FREQ` as a central musical control. It affects virtual sample rate, delay
+lengths, pitch-like behavior, timing, and digital color at the same time. Effects that ride
+the clock, so sweeping `CLOCK FREQ` retunes and recolors them, are usually more idiomatic
+than effects that try to hide the clock.
+
+Sync is a user choice, and both sides are valid:
+
+- With sync off, the clock free-runs with no song-position meaning. `hostPosition` is `0`,
+  and clock-dependent behavior should feel raw and twistable.
+- With sync on, the clock is host-aligned within the selected memory-cycle division.
+  `hostPosition` can support patterns or events that need to span cycles or bars.
+
+Do not automatically impose modern-DSP cleanup. Unless the user asks for cleaner or more
+modern behavior, avoid fixed high internal rates, heavy anti-aliasing, sample-rate
+compensation that erases clock dependence, or smoothing that removes deliberate lo-fi
+texture. Lean on the host for feedback, filter, saturation, and dry/wet mix; lean into the
+clock for character. Reach for `hostPosition` when timing must outlive one memory cycle, not
+as a default replacement for the clock.
+
 ## Patch Type Selection
 
 Do not assume every request is a full patch.
