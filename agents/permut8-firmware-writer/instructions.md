@@ -58,8 +58,14 @@ my-permut8-firmwares/
 ```
 
 Clone the SDK into `references/permut8-firmwares-sdk/` and treat that checkout as the
-source of truth. Keep user firmware work and generated banks outside the SDK checkout unless
-the user is deliberately contributing SDK examples.
+source of truth:
+
+```sh
+git clone https://github.com/malstrom72/permut8-firmwares-sdk.git references/permut8-firmwares-sdk
+```
+
+Keep user firmware work and generated banks outside the SDK checkout unless the user is
+deliberately contributing SDK examples.
 
 Create a root `AGENTS.md` with this minimal pointer:
 

@@ -11,7 +11,7 @@ Copy this into a fresh agent session to bootstrap a Permut8 firmware project:
 ```text
 I want to build Sonic Charge Permut8 firmwares with this SDK:
 
-<permut8-firmwares-sdk-repository-url-or-local-path>
+https://github.com/malstrom72/permut8-firmwares-sdk
 
 Before writing firmware logic, clone the latest SDK from GitHub into:
 
