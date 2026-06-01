@@ -41,6 +41,10 @@ Use these repository files as the grounding map for Permut8 firmware work.
   plain descriptive panel text, step-oriented behavior, and about text reference.
 - [examples/Firmwares](../../examples/Firmwares): source and compiled GAZL examples,
   plus optional logo and about assets where available.
+- [examples/Firmwares/Impala Snippets.txt](../../examples/Firmwares/Impala%20Snippets.txt):
+  copy-paste Impala utility snippets, including Permut8-style exponential tables and
+  string/numeric helpers. Use only the needed snippets because Impala has no source include
+  mechanism.
 - [examples/screenshots](../../examples/screenshots): screenshots of example banks and
   no-firmware state for visual alignment.
 

@@ -125,6 +125,17 @@ PikaCmd.exe impala.pika compile ringmod_code.impala ringmod_code.gazl
 
 The generated `.gazl` file is the code format loaded by the Permut8 virtual machine and embedded in `.p8bank` firmware banks. This command was verified by compiling `ringmod_code.impala` to `ringmod_code.gazl`, packaging the result, and loading the generated bank in Permut8.
 
+## Reusable Impala Snippets
+
+Impala does not support source `include` directives or linking separate compilation units.
+For shared utility code, use
+[`examples/Firmwares/Impala Snippets.txt`](../examples/Firmwares/Impala%20Snippets.txt) as
+a copy-paste reference. It contains reusable lookup tables and helper routines, including
+the exponential tables used by Permut8 v1 operators and string/numeric conversion helpers.
+
+Copy only the snippets a firmware actually needs into the `.impala` source. Once copied,
+that code is part of the firmware and contributes to compile time, GAZL size, and bank size.
+
 ## Auto-Compile While Editing
 
 The example firmware folder includes compile-loop scripts:

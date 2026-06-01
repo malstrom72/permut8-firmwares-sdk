@@ -17,8 +17,8 @@ only when you need exact language or renderer behavior.
 ## Development Workflow
 
 - [Compiling and Loading Firmwares](Compiling%20and%20Loading%20Firmwares.md): Impala to
-  GAZL compilation, development folder setup, console loading, debug behavior, and saved
-  project behavior.
+  GAZL compilation, reusable Impala snippets, development folder setup, console loading,
+  debug behavior, and saved project behavior.
 - [Creating P8Bank Files](Creating%20P8Bank%20Files.md): `.p8bank` file structure,
   `tools/createP8Bank.pika`, template usage, escaping, and release packaging.
 

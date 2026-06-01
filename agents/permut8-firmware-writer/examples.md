@@ -15,6 +15,10 @@ Use examples as implementation references, not as generic templates.
   plain descriptive panel text and step-oriented behavior.
 - Use [examples/screenshots](../../examples/screenshots) when checking visual expectations for
   stickers and bank examples.
+- Use [Impala Snippets.txt](../../examples/Firmwares/Impala%20Snippets.txt) when a firmware
+  needs reusable tables or helper routines, such as Permut8-style exponential tables or
+  string/numeric conversion. Copy only the needed snippet into the firmware source; Impala
+  has no source include mechanism.
 
 When adapting an example:
 
