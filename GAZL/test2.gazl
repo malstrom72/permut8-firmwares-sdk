@@ -1,0 +1,13 @@
+ ; Compiled with Impala version 1.0
+
+ ; signatures version=1
+
+ ;-----------------------------------------------------------------------------
+ 					$z:			OUTi
+ add:				FUNC		; signature func add(int x, int y) -> int @ 1:14
+ 					$x:			INPi
+ 					$y:			INPi
+ ;-----------------------------------------------------------------------------
+ 								ADDi $z $x $y					; z = x + y
+ 								RETU   							; }
+

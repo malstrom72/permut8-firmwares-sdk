@@ -1,0 +1,15 @@
+extern function add
+
+function add2(int x, int y)
+returns int z
+{
+  z = x + y;
+}
+
+function test()
+locals int x, int y, int z
+{
+  x = add(5, 7);
+  y = add(9, 11, 13);
+  z = add2(12, 23);
+}

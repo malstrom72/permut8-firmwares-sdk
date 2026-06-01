@@ -1,0 +1,37 @@
+ ; Compiled with Impala version 1.0
+
+ ; signatures version=1
+ ; signature extern func add() -> unknown @ 3:1
+
+ ;-----------------------------------------------------------------------------
+ 					$z:			OUTi
+ add2:				FUNC		; signature func add2(int x, int y) -> int @ 3:15
+ 					$x:			INPi
+ 					$y:			INPi
+ ;-----------------------------------------------------------------------------
+ 								ADDi $z $x $y					; z = x + y
+ 								RETU   							; }
+
+
+ ;-----------------------------------------------------------------------------
+ test:				FUNC		; signature func test() -> void @ 9:15
+ 								PARA *1
+ 					$x:			LOCi
+ 					$y:			LOCi
+ 					$z:			LOCi
+ ;-----------------------------------------------------------------------------
+ 								MOVi %1 #5 						; x = add(5, 7)
+ 								MOVi %2 #7 
+ 								CALL &add %0 *3					; expects add(int, int) -> int @ 12:16
+ 								MOVi $x %0 
+ 								MOVi %1 #9 						; y = add(9, 11, 13)
+ 								MOVi %2 #11 
+ 								MOVi %3 #13 
+ 								CALL &add %0 *4					; expects add(int, int, int) -> int @ 13:21
+ 								MOVi $y %0 
+ 								MOVi %1 #12 					; z = add2(12, 23)
+ 								MOVi %2 #23 
+ 								CALL &add2 %0 *3				; expects add2(int, int) -> int @ 14:19
+ 								MOVi $z %0 
+ 								RETU   							; }
+

@@ -51,11 +51,15 @@ Use these repository files as the grounding map for Permut8 firmware work.
   text compactor.
 - [tools/build-ivg2png.sh](../../tools/build-ivg2png.sh): builds the IVG renderer for
   sticker validation.
+- [tools/update-firmware-toolchain.sh](../../tools/update-firmware-toolchain.sh):
+  refreshes the runtime Impala/PikaCmd files in `examples/Firmwares` from the authoritative
+  `GAZL` copy.
 - [tools/convert-user-guide.sh](../../tools/convert-user-guide.sh): regenerates the
   Markdown user guide from source material.
-- [PikaCmd](../../PikaCmd): vendored PikaScript command runner source copied from
-  [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript). Needed to run
-  `impala.pika` / `impalaCompiler.pika` for Impala-to-GAZL firmware compilation.
+- [GAZL/externals/PikaCmd](../../GAZL/externals/PikaCmd): bundled PikaScript command
+  runner source from the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL)
+  copy. Needed to run `impala.pika` / `impalaCompiler.pika` for Impala-to-GAZL firmware
+  compilation.
 - [docs/PikaScript](../../docs/PikaScript): local PikaScript and PikaCmd documentation
   copied from [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript).
 

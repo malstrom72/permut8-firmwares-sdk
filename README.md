@@ -43,16 +43,15 @@ reference to an external `.gazl`, `.impala`, or `.p8bank` file.
     - `gazlCompactor.pika`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
     - `build-ivg2png.sh`: builds the vendored IVG renderer used for sticker validation.
+    - `update-firmware-toolchain.sh`: refreshes the runtime Impala/PikaCmd files in
+      `examples/Firmwares` from the authoritative `GAZL` copy.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
 
-- `PikaCmd`:
-    - Vendored PikaScript command runner source copied from
-      [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript).
-    - Used to run the PikaScript-based Impala compiler shipped in
-      `examples/Firmwares/impala.pika` and `examples/Firmwares/impalaCompiler.pika`.
-
 - `GAZL`:
-    - Vendored GAZL VM, Impala compiler, build scripts, tests, and documentation.
+    - Vendored GAZL VM, Impala compiler, build scripts, tests, and documentation copied
+      from [malstrom72/GAZL](https://github.com/malstrom72/GAZL). This folder is kept as
+      a straight upstream copy where practical.
+    - Includes the authoritative bundled PikaCmd source under `GAZL/externals/PikaCmd`.
 
 - `IVG`:
     - Vendored IVG renderer, fonts, tools, tests, and documentation used for sticker graphics.
@@ -150,9 +149,10 @@ For a linked local development workflow, see
 
 ## Documentation Notes
 
-The files under `GAZL/` and `IVG/` are vendored subsystem snapshots. Prefer the top-level
-Permut8 docs for firmware authoring, and use the vendored docs when you need exact language,
-VM, or renderer behavior.
+The files under `GAZL/` and `IVG/` are vendored subsystem snapshots. `GAZL/` is intended to
+remain a straight copy of [malstrom72/GAZL](https://github.com/malstrom72/GAZL) where
+practical. Prefer the top-level Permut8 docs for firmware authoring, and use the vendored
+docs when you need exact language, VM, or renderer behavior.
 
 AI tools have been used to assist with documentation and repetitive edits in this repository.
 The original firmware examples, tools, and core subsystem code should be treated as the

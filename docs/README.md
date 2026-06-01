@@ -50,4 +50,6 @@ only when you need exact language or renderer behavior.
 - [GAZL README](../GAZL/README.md)
 
 The vendored `IVG/` and `GAZL/` folders contain their own documentation because they are
-usable subsystems. For Permut8 firmware work, use the Permut8-specific docs above first.
+usable subsystems. `GAZL/` is intended to remain a straight copy of
+[malstrom72/GAZL](https://github.com/malstrom72/GAZL) where practical. For Permut8
+firmware work, use the Permut8-specific docs above first.

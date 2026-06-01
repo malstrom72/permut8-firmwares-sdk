@@ -28,23 +28,30 @@ The development folder should contain:
 
 The firmware-code package uses `PikaCmd`, `impala.pika`, and `impalaCompiler.pika`. The RingMod compile path in this SDK has been verified with that toolchain, and this is the only supported Impala compiler path for this repository.
 
-`PikaCmd` is the command-line runner for PikaScript. The SDK includes PikaCmd source
-copied from [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript), plus a
-runtime copy of the executable in `examples/Firmwares/`. It is still needed because the
-Impala-to-GAZL compiler in the Permut8 firmware folder is itself a PikaScript program:
-`PikaCmd` runs `impala.pika`, `impala.pika` loads `impalaCompiler.pika`, and that compiler
-emits the `.gazl` text loaded by Permut8.
+`PikaCmd` is the command-line runner for PikaScript. The SDK uses the PikaCmd source
+bundled by the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL) copy under
+`GAZL/externals/PikaCmd`, plus a runtime copy of the executable in `examples/Firmwares/`.
+It is still needed because the Impala-to-GAZL compiler in the Permut8 firmware folder is
+itself a PikaScript program: `PikaCmd` runs `impala.pika`, `impala.pika` loads
+`impalaCompiler.pika`, and that compiler emits the `.gazl` text loaded by Permut8.
 
 To verify or rebuild PikaCmd from the bundled source on macOS/Linux:
 
 ```sh
-cd references/permut8-firmwares-sdk/PikaCmd
+cd references/permut8-firmwares-sdk/GAZL/externals/PikaCmd
 bash BuildPikaCmd.sh
 ```
 
 The build script compiles `PikaCmdAmalgam.cpp` and runs the bundled PikaScript tests.
 Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
 those warnings do not prevent a successful build.
+
+The runtime copies of `PikaCmd`, `impala.pika`, `impalaCompiler.pika`, and `systools.pika`
+under `examples/Firmwares/` should be refreshed from the authoritative `GAZL` copy with:
+
+```sh
+references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
+```
 
 ## Development Folder Linking
 
