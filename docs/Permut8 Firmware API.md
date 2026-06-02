@@ -275,6 +275,44 @@ Defines custom description text for the configuration dialog shown when clicking
 global pointer configText
 ```
 
+## Tempo Sync
+
+The sync switch is reported through `params[SWITCHES_PARAM_INDEX]`:
+
+- `SWITCHES_SYNC_MASK` is set for any synced mode.
+- `SWITCHES_DOTTED_MASK` is set for dotted sync.
+- `SWITCHES_TRIPLET_MASK` is set for triplet sync.
+- Standard sync is synced with neither dotted nor triplet set.
+
+In synced modes, `CLOCK FREQ` selects the duration of one full memory cycle. The current
+Permut8 sync rates are:
+
+| Mode | Memory-cycle lengths |
+|---|---|
+| Standard | `8/1`, `4/1`, `2/1`, `1/1`, `1/2`, `1/4`, `1/8` |
+| Dotted | `12/1`, `6/1`, `3/1`, `3/2`, `3/4`, `3/8`, `3/16` |
+| Triplet | `16/3`, `8/3`, `4/3`, `2/3`, `1/3`, `1/6`, `1/12` |
+
+These values are note lengths, expressed as whole notes per memory cycle. `1/1` is one
+whole note, or four quarter notes. With `HOST_POSITION_PPQ` normally `1920`, one `1/1`
+cycle is `HOST_POSITION_PPQ * 4` host pulses before Permut8's sync scaling is applied.
+
+`hostPosition` is scaled by the active sync ratio so that one selected memory cycle maps to
+`HOST_POSITION_PPQ * 4` pulses from the firmware's point of view. This makes the common
+cross-cycle index independent of the selected sync rate:
+
+```impala
+cycle = global hostPosition / (HOST_POSITION_PPQ * 4);
+```
+
+Use `global clock` for phase within the current memory cycle: it always covers the cycle as
+`0..65535`. Use `hostPosition` only when the firmware needs to know which cycle it is in, or
+when a pattern must evolve across cycles. `hostPosition` is `0` when sync is off and `-1`
+when the transport is not playing, so synced timeline logic should handle both cases.
+
+Firmware does not receive a separate host time-signature value. Write sync logic in terms of
+memory-cycle note lengths and PPQ pulses, and verify any bar-specific behavior in a real host.
+
 ## Full-Patch Globals
 
 Full patches must declare:

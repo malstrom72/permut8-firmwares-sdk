@@ -18,6 +18,32 @@ Use examples as implementation references, not as generic templates.
   fractional-delay note in the Firmware API `read()` section. Interpolate both the LFO/table
   lookup and the delay-line read to avoid stepping or resampling noise. Output fully wet and
   let the host `MIX` and feedback controls handle blend and resonance.
+- For tempo-synced step sequencers, gates, parameter sequencers, and beat effects, drive the
+  step phase from `clock` and use `hostPosition` only for cross-cycle evolution. Avoid adding
+  a redundant global step-rate control; the user already sets the memory-cycle rate with sync
+  mode and `CLOCK FREQ`. Use operator modes or operands for subdivisions only when the
+  firmware needs musically distinct patterns inside the selected cycle.
+
+  ```impala
+  // 16 steps across one memory cycle. Use >>> 13 for 8 steps.
+  step = (clock >>> 12) & 15;
+
+  // Run unsynced, or synced only while the host transport is playing.
+  if (((int) global params[SWITCHES_PARAM_INDEX] & SWITCHES_SYNC_MASK) == 0
+          || global hostPosition >= 0) {
+      cycle = 0;
+      if (global hostPosition >= 0) {
+          cycle = global hostPosition / (HOST_POSITION_PPQ * 4);
+      }
+      absStep = cycle * 16 + step;
+      // Use absStep for repeatable cross-cycle variation.
+  }
+  ```
+
+  Key pseudo-random or generated values from `absStep` rather than `step` when the sequence
+  should evolve from one memory cycle to the next but repeat identically on playback.
+  `trancelvania` and `bitbox` show clock-based stepping; `fooBar` shows `hostPosition` used
+  for a cross-cycle index.
 - Use [examples/screenshots](../../examples/screenshots) when checking visual expectations for
   stickers and bank examples.
 - Use [Impala Snippets.txt](../../examples/Firmwares/Impala%20Snippets.txt) when a firmware
