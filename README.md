@@ -13,6 +13,22 @@ Permut8 saves the actual firmware code with the DAW project state. Reopening an 
 restores the embedded firmware code that was loaded into that Permut8 instance, not merely a
 reference to an external `.gazl`, `.impala`, or `.p8bank` file.
 
+## Prerequisites
+
+**No Installation Required** for everyday firmware authoring. PikaCmd — the runtime for
+the Impala compiler and bank-packaging tools — comes prebuilt for macOS and Windows inside
+`tools/bin`. You do not need to install any compiler, runtime, or build system to write,
+compile, and package a `.p8bank` file.
+
+**SDK Maintenance Tools (Not Required for General Use)**
+
+Additional tools are needed only for maintaining or rebuilding the SDK itself:
+
+- **C++ compiler** — to rebuild PikaCmd or native GAZL tools from source via
+  `update-firmware-toolchain.sh`
+- **Python 3 + Docling** — to regenerate the Permut8 User Guide Markdown from the
+  original PDF via `bootstrap-docling.sh` and `convert-user-guide.sh`
+
 ## Technology Overview
 
 - _Permut8 firmware_: a GAZL program loaded by Permut8 to replace DSP behavior.
