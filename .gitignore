@@ -2,3 +2,8 @@
 .tools/
 PikaCmd/PikaCmd
 PikaCmd/PikaCmd.exe
+examples/Firmwares/folder.p8bank
+examples/Firmwares/folder_about.txt
+examples/Firmwares/folder_code.gazl
+examples/Firmwares/folder_code.impala
+examples/Firmwares/folder_logo.ivg
