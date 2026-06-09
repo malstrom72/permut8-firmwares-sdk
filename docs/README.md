@@ -35,7 +35,7 @@ only when you need exact language or renderer behavior.
 - [IVG Documentation](IVG%20Documentation.md): vector graphics language used for stickers.
 - [ImpD Documentation](ImpD%20Documentation.md): imperative data language used by IVG.
 - [GAZL Overview](../GAZL/docs/Overview.md): VM architecture and textual representation.
-- [Impala Quick Start](../GAZL/docs/Impala.md): Impala source language basics.
+- [Impala Language Reference](../GAZL/docs/Impala.md): the Impala source language.
 - [GAZL Instruction Set](../GAZL/docs/InstructionSet.md): opcode reference.
 - [GAZL Usage Example](../GAZL/docs/UsageExample.md): compile and run a simple program.
 - [PikaScript Documentation](PikaScript/PikaScript%20Documentation.txt): PikaScript

@@ -72,7 +72,7 @@ Use these repository files as the grounding map for Permut8 firmware work.
 ## Language And Renderer References
 
 - [GAZL/README.md](../../GAZL/README.md): GAZL subsystem overview.
-- [GAZL/docs/Impala.md](../../GAZL/docs/Impala.md): Impala language quick start.
+- [GAZL/docs/Impala.md](../../GAZL/docs/Impala.md): Impala language reference.
 - [GAZL/docs/Overview.md](../../GAZL/docs/Overview.md): VM architecture and assembly model.
 - [GAZL/docs/InstructionSet.md](../../GAZL/docs/InstructionSet.md): opcode reference.
 - [IVG/README.md](../../IVG/README.md): IVG subsystem overview.
