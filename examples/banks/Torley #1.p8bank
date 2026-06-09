@@ -1,0 +1,665 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "TOR: Uneasy Jitters"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 75.00000000 %
+			ClockFreq: 47.92500305 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xC8 
+			Operand1.Low: 0x40 
+			Operator2: SUB 
+			Operand2.High: 0x20 
+			Operand2.Low: 0x00 
+		}
+		A1: {
+			Name: "TOR: Hissizzle"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 4596.83154297 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 79.75000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x36 
+			Operand1.Low: 0x7F 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A2: {
+			Name: "TOR: Future Dubs"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 404.35321045 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 3.29999995 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 33.00000000 %
+			ClockFreq: 1/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x02 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x01 
+		}
+		A3: {
+			Name: "TOR: Gamification"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 2001.23925781 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x40 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x10 
+			Operand2.Low: 0x20 
+		}
+		A4: {
+			Name: "TOR: Interruptions"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x3D 
+			Operand1.Low: 0x48 
+			Operator2: MSK 
+			Operand2.High: 0x5F 
+			Operand2.Low: 0x00 
+		}
+		A5: {
+			Name: "TOR: Grunge Grits"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 71.13668823 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 9.35000038 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 75.00000000 %
+			ClockFreq: 2/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x2C 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x10 
+		}
+		A6: {
+			Name: "TOR: Lucky 4444"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 8/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x44 
+			Operand1.Low: 0x44 
+			Operator2: SUB 
+			Operand2.High: 0x44 
+			Operand2.Low: 0x44 
+		}
+		A7: {
+			Name: "TOR: What\'s Cookin\'?"
+			Modified: false
+			InputLevel: -16.93439865 dB
+			Limiter: Off 
+			FilterFreq: LP 7118.07617188 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 352.79998779 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x4F 
+			Operand1.Low: 0xFF 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A8: {
+			Name: "TOR: W-w-w-wut!?"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x80 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x60 
+			Operand2.Low: 0x00 
+		}
+		A9: {
+			Name: "TOR: Harmony Hell"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 1651.78784180 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 53.35000229 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x4C 
+			Operand1.Low: 0x44 
+			Operator2: SUB 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x01 
+		}
+		B0: {
+			Name: "TOR: Crazy."
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x10 
+			Operand2.Low: 0x00 
+		}
+		B1: {
+			Name: "TOR: Chronobastard"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x0F 
+			Operand1.Low: 0xF0 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B2: {
+			Name: "TOR: Wow + Flutter"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x01 
+			Operand1.Low: 0xF0 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B3: {
+			Name: "TOR: Ominous Inverse"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 1533.22631836 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x80 
+			Operand1.Low: 0x80 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+		B4: {
+			Name: "TOR: Amigaze"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 145.29702759 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 11.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x40 
+		}
+		B5: {
+			Name: "TOR: Alien Market"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 431.06488037 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 95.00000000 %
+			ClockFreq: 8/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xAB 
+			Operand1.Low: 0xD5 
+			Operator2: SUB 
+			Operand2.High: 0x2A 
+			Operand2.Low: 0x10 
+		}
+		B6: {
+			Name: "TOR: Bad Neighbors"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 197.96928406 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x08 
+		}
+		B7: {
+			Name: "TOR: Chasing Bits"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 3303.57568359 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 24.20000076 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x04 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B8: {
+			Name: "TOR: Worse Neighbors"
+			Modified: false
+			InputLevel: 54.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 111.31768036 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 88.55000305 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B9: {
+			Name: "TOR: Warpologie"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x02 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C0: {
+			Name: "TOR: DIYstortion"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 81.70024109 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x55 
+			Operand1.Low: 0x55 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C1: {
+			Name: "TOR: Back + Forth 1"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: SUB 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x00 
+		}
+		C2: {
+			Name: "TOR: Back + Forth 2"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 25.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0xFF 
+			Operand2.Low: 0xFF 
+		}
+		C3: {
+			Name: "TOR: SO ANNOYING"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 25.00000000 %
+			ClockFreq: 2/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x00 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C4: {
+			Name: "TOR: Cassette Cutup"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 8/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x04 
+			Operand2.Low: 0x00 
+		}
+		C5: {
+			Name: "TOR: Psycho-Stereo"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 10.00000000 %
+			ClockFreq: 0.00000000 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C6: {
+			Name: "TOR: Digital Glitter"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 5875.13574219 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 24.99999809 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: AND 
+			Operand1.High: 0xAF 
+			Operand1.Low: 0xD5 
+			Operator2: MSK 
+			Operand2.High: 0x95 
+			Operand2.Low: 0xD6 
+		}
+		C7: {
+			Name: "TOR: Digital Wankery"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: OSC 
+			Operand1.High: 0x03 
+			Operand1.Low: 0xC0 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x10 
+		}
+		C8: {
+			Name: "TOR: Subtle Armor"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 674.54833984 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 32.50000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x52 
+			Operand1.Low: 0x44 
+			Operator2: SUB 
+			Operand2.High: 0x20 
+			Operand2.Low: 0x00 
+		}
+		C9: {
+			Name: "TOR: Song of my Peep"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: MUL 
+			Operand1.High: 0x01 
+			Operand1.Low: 0x80 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+	}
+}

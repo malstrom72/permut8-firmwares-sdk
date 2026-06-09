@@ -21,7 +21,16 @@ from an existing bank.
 `createP8Bank.pika` writes 30 default programs, or copies the programs from `--template`.
 It does not expose command-line options for per-program operator, operand, or analog-control
 values. To ship demo presets in a brand-new bank, edit the generated program blocks
-directly or start from a template bank saved from Permut8 with the programs you want.
+directly or start from a template bank saved from Permut8 with the programs you want. After
+editing a generated bank's `Programs` block, use that edited bank as `--template` on later
+builds to preserve the 30 program slots while replacing firmware code and assets.
+
+New user-facing firmware banks should normally include named example programs instead of 30
+empty defaults. Good programs make a firmware easier to audition and test because they cover
+different operator modes, operand ranges, clock/sync settings, feedback, filter placement,
+and wet/dry mix. Prefer designed presets for release banks; bounded semi-random programs are
+useful for smoke testing and exploratory demo banks when they stay inside sensible control
+ranges.
 
 For release-sized banks, pass `--compact true` to `tools/createP8Bank.pika`. The compactor
 strips comments and redundant whitespace while preserving `DATs` string payloads; it is not a

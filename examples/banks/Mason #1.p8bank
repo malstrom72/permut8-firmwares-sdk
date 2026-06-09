@@ -1,0 +1,635 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "MAS: Air Vocal"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 30.50000000 %
+			ClockFreq: 4/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x32 
+			Operand1.Low: 0x3D 
+			Operator2: SUB 
+			Operand2.High: 0x24 
+			Operand2.Low: 0x2C 
+		}
+		A1: {
+			Name: "MAS: Beeped Up"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x08 
+			Operand1.Low: 0x7D 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A2: {
+			Name: "MAS: Bowed Glass"
+			InputLevel: 0.02159882 dB
+			Limiter: On 
+			FilterFreq: LP 8623.96875000 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 3.67500043 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x28 
+		}
+		A3: {
+			Name: "MAS: Cave Pong"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 59.94999695 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 25.00000381 %
+			ClockFreq: 4/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x0C 
+			Operand1.Low: 0xA0 
+			Operator2: SUB 
+			Operand2.High: 0xF6 
+			Operand2.Low: 0x00 
+		}
+		A4: {
+			Name: "MAS: Bleedthrough"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 105.61759949 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x83 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x0B 
+		}
+		A5: {
+			Name: "MAS: Digi OD"
+			InputLevel: 28.77661133 dB
+			Limiter: On 
+			FilterFreq: LP 1980.30651855 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 8/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x28 
+		}
+		A6: {
+			Name: "MAS: Nice Verb"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 17.49999619 %
+			ClockFreq: 21.75599480 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x9F 
+			Operator2: SUB 
+			Operand2.High: 0x24 
+			Operand2.Low: 0x2C 
+		}
+		A7: {
+			Name: "MAS: Shift Down Rhythm"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x7F 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A8: {
+			Name: "MAS: Short Verb"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 23.49999619 %
+			ClockFreq: 47.26520538 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x9F 
+			Operator2: SUB 
+			Operand2.High: 0x24 
+			Operand2.Low: 0x2C 
+		}
+		A9: {
+			Name: "MAS: Are Your Friends"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 4/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x9F 
+			Operator2: SUB 
+			Operand2.High: 0x24 
+			Operand2.Low: 0x2C 
+		}
+		B0: {
+			Name: "MAS: Bithmic"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x20 
+			Operand1.Low: 0x86 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x10 
+		}
+		B1: {
+			Name: "MAS: Cellophane stretch"
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 431.06457520 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xED 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B2: {
+			Name: "MAS: F scale trash"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 15337.00585938 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 91.84999847 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 4/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x78 
+			Operand1.Low: 0x3D 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B3: {
+			Name: "MAS: Glass Plate"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 280.66534424 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x20 
+			Operand1.Low: 0x86 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x10 
+		}
+		B4: {
+			Name: "MAS: Half Speed"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x7D 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B5: {
+			Name: "MAS: Instant Scape"
+			InputLevel: 24.96959686 dB
+			Limiter: On 
+			FilterFreq: HP 431.06457520 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xE2 
+			Operator2: SUB 
+			Operand2.High: 0x09 
+			Operand2.Low: 0x3B 
+		}
+		B6: {
+			Name: "MAS: Platinum Shimmer"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 2274.37304688 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 103.94999695 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 105.61759949 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x83 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x0B 
+		}
+		B7: {
+			Name: "MAS: Secundic"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x20 
+			Operand1.Low: 0x83 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x07 
+		}
+		B8: {
+			Name: "MAS: SloMo"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 62.59367371 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.66666412 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/2D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x3D 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B9: {
+			Name: "MAS: Whubble Verb"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 89.09999847 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 60.99999619 %
+			ClockFreq: 4/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x9F 
+			Operator2: SUB 
+			Operand2.High: 0x24 
+			Operand2.Low: 0x2C 
+		}
+		C0: {
+			Name: "MAS: Slapp Across"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 56.09999847 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 0.00000000 %
+			ClockFreq: 0.00000000 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x50 
+			Operand1.Low: 0xFF 
+			Operator2: NOP 
+			Operand2.High: 0x1E 
+			Operand2.Low: 0x60 
+		}
+		C1: {
+			Name: "MAS: 808-ifier"
+			InputLevel: 7.79759979 dB
+			Limiter: On 
+			FilterFreq: LP 126.51061249 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 102.84999847 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.77759933 dB
+			Mix: 87.00000000 %
+			ClockFreq: 1/2T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x15 
+			Operand1.Low: 0xBA 
+			Operator2: MSK 
+			Operand2.High: 0xC0 
+			Operand2.Low: 0x00 
+		}
+		C2: {
+			Name: "MAS: Add Sand"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 56.09999847 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 29.00000000 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x53 
+			Operand1.Low: 0xC6 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x39 
+		}
+		C3: {
+			Name: "MAS: Note Nr. Flange"
+			InputLevel: 54.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 70.40000153 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 305.00863647 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x5B 
+			Operand1.Low: 0xC8 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x39 
+		}
+		C4: {
+			Name: "MAS: Bend Cloudism"
+			InputLevel: 35.42941284 dB
+			Limiter: On 
+			FilterFreq: LP 6263.25000000 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 48.95000076 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 52.08177567 kHz 
+			SyncMode: Off 
+			Reverse: On 
+			Operator1: MUL 
+			Operand1.High: 0x5B 
+			Operand1.Low: 0xFF 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x39 
+		}
+		C5: {
+			Name: "MAS: Rev. Delay"
+			InputLevel: 35.42941284 dB
+			Limiter: On 
+			FilterFreq: LP 6263.25000000 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 48.95000076 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 218.68447876 kHz 
+			SyncMode: Off 
+			Reverse: On 
+			Operator1: NOP 
+			Operand1.High: 0x21 
+			Operand1.Low: 0xFF 
+			Operator2: SUB 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x39 
+		}
+		C6: {
+			Name: "MAS: Dropping out"
+			InputLevel: 35.42941284 dB
+			Limiter: On 
+			FilterFreq: HP 593.54010010 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 48.95000076 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/4D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x62 
+			Operator2: MSK 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x39 
+		}
+		C7: {
+			Name: "MAS: Grain Rain"
+			InputLevel: 20.09340668 dB
+			Limiter: On 
+			FilterFreq: HP 593.54010010 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 0.55000001 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 14.84700012 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x62 
+			Operator2: XOR 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x39 
+		}
+		C8: {
+			Name: "MAS: On the One"
+			InputLevel: 35.42941284 dB
+			Limiter: On 
+			FilterFreq: HP 593.54010010 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 48.95000076 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x62 
+			Operator2: MSK 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x39 
+		}
+		C9: {
+			Name: "MAS: Panned Pump"
+			InputLevel: 27.99359894 dB
+			Limiter: On 
+			FilterFreq: HP 593.54010010 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 0.55000001 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.24240112 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x83 
+			Operand1.Low: 0x30 
+			Operator2: NOP 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x39 
+		}
+	}
+}

@@ -97,6 +97,9 @@ subsystem behavior.
 - Use `GAZL/docs/Impala.md` and examples when Impala syntax is uncertain.
 - Use `docs/Firmware Assets Guide.md` and `docs/IVG Documentation.md` before changing sticker
   graphics.
+- Use `docs/Firmware Assets Guide.md` before creating or changing `panelTextRows`.
+- Use `examples/banks/` and `docs/Creating P8Bank Files.md` before making exact claims about
+  program fields, bank values, or preset formats.
 - Keep CustomBBL special characters as documented `\uXXXX` escapes in Impala strings.
 
 ## Runtime And Host Constraints
@@ -157,6 +160,28 @@ Do not assume every request is a full patch.
 
 See [examples.md](examples.md).
 
+## Panel Text Practice
+
+Treat tape text as part of the firmware design, not as a final cosmetic pass.
+
+- Pick a documented tape pattern before writing `panelTextRows`: simple operand labels,
+  mode-per-row, stacked per-switch labels, plain descriptive text, mixed layout, or a single
+  label spanning both operands.
+- For custom operator modes with stable operand meanings, prefer mode-per-row labels:
+  a 3-character mode mnemonic, one space, a 24-character high-operand field, one space, and
+  a 24-character low-operand field.
+- Do not put multiple operator positions on the same row; rows 0-3 align to instruction 1
+  positions 1-4, and rows 4-7 align to instruction 2 positions 1-4.
+- Use free-form prose only when operands do not have stable meanings, and use stacked
+  vertical labels only for real per-switch column layouts.
+- Check fixed-layout row lengths and operand field widths before compiling or packaging.
+
+## Impala Implementation Practice
+
+When implementing mutually exclusive operator modes, prefer Impala `switch` dispatch over a
+series of independent `if` statements unless the cases intentionally overlap. This matches
+the current multi-mode examples and makes the knob-position mapping explicit.
+
 ## Packaging And Validation
 
 For finished user-facing work, treat `.p8bank` generation as required whenever the workspace
@@ -164,7 +189,11 @@ can run the tools.
 
 - Compile Impala to GAZL.
 - Generate the `.p8bank` with `tools/createP8Bank.pika`.
+- For new user-facing banks, include named example programs when feasible. They may be
+  carefully designed presets or bounded semi-random variations that exercise the firmware's
+  modes, operands, clock/sync behavior, feedback, filter, and mix.
 - Check about text dimensions.
+- Check panel text layout, row lengths, and operator-position alignment.
 - Render static IVG stickers with `IVG2PNG` when available.
 - State clearly whether a final load test in Permut8 was or was not run.
 

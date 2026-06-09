@@ -1,0 +1,635 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "PDN: Frosty Pipe"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 2584.78857422 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 86.90000153 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0xEF 
+			Operand1.Low: 0x00 
+			Operator2: SUB 
+			Operand2.High: 0x0A 
+			Operand2.Low: 0x00 
+		}
+		A1: {
+			Name: "PDN: Slow Infinity"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 17430.25976562 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 99.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 54.00000381 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x6B 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0xFC 
+			Operand2.Low: 0x10 
+		}
+		A2: {
+			Name: "PDN: Magnus Shuffle"
+			InputLevel: 5.18940353 dB
+			Limiter: On 
+			FilterFreq: HP 293.66607666 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 30.79999924 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 25.00000381 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x22 
+			Operand1.Low: 0xA0 
+			Operator2: SUB 
+			Operand2.High: 0xEF 
+			Operand2.Low: 0x00 
+		}
+		A3: {
+			Name: "PDN: NANDroid Metronome"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 1438.21789551 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 93.50000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 47.00000763 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x28 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+		A4: {
+			Name: "PDN: Shufflah"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 550.93725586 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 64.34999847 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 15.00000381 %
+			ClockFreq: 1/4D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x40 
+			Operator2: MSK 
+			Operand2.High: 0xD4 
+			Operand2.Low: 0xFC 
+		}
+		A5: {
+			Name: "PDN: TransPoser"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 176.03601074 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 38.50000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 23.00000572 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xC9 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A6: {
+			Name: "PDN: WarpedDrive"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 400.12402344 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 95.50000000 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x6B 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0xFC 
+			Operand2.Low: 0x10 
+		}
+		A7: {
+			Name: "PDN: Hiccup"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 587.33203125 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 41.00000381 %
+			ClockFreq: 8/1T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x04 
+			Operand1.Low: 0x03 
+			Operator2: SUB 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A8: {
+			Name: "PDN: Game Over"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 766.61328125 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 16.50000572 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xD7 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+		A9: {
+			Name: "PDN: NotOKComputer"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 1760.90429688 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 50.59999847 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/2D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0xF2 
+			Operand1.Low: 0x3B 
+			Operator2: SUB 
+			Operand2.High: 0x7F 
+			Operand2.Low: 0xFF 
+		}
+		B0: {
+			Name: "PDN: VIC20 Reverb"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 719.10937500 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 81.40000153 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 16.50000572 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x0E 
+			Operand1.Low: 0xA9 
+			Operator2: XOR 
+			Operand2.High: 0x03 
+			Operand2.Low: 0x00 
+		}
+		B1: {
+			Name: "PDN: Funk Droplets"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 1265.49841309 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 77.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 16.50000572 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xDB 
+			Operand1.Low: 0xAD 
+			Operator2: MSK 
+			Operand2.High: 0x8B 
+			Operand2.Low: 0xB6 
+		}
+		B2: {
+			Name: "PDN: Skrambler"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: --- Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 65.99999237 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/4D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x08 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x66 
+			Operand2.Low: 0x00 
+		}
+		B3: {
+			Name: "PDN: Red Alert!"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 459.54095459 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 70.40000153 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 30.50000381 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xF5 
+			Operand1.Low: 0xEF 
+			Operator2: NOP 
+			Operand2.High: 0xC6 
+			Operand2.Low: 0x99 
+		}
+		B4: {
+			Name: "PDN: RoboDrums"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 626.13073730 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 100.64999390 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 23.50000381 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xDF 
+			Operand1.Low: 0xAC 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+		B5: {
+			Name: "PDN: StepFlange"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 1438.21789551 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 88.00000763 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000763 %
+			ClockFreq: 8/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x28 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x04 
+		}
+		B6: {
+			Name: "PDN: Distant Signals"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 1187.08020020 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 65.99999237 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 30.50000381 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x9D 
+			Operand1.Low: 0x5D 
+			Operator2: OR 
+			Operand2.High: 0x3C 
+			Operand2.Low: 0x08 
+		}
+		B7: {
+			Name: "PDN: Arcadia"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 176.03601074 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 73.15000153 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 23.00000572 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xC9 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B8: {
+			Name: "PDN: King Dubby"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 489.89794922 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 70.40000153 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 65.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0xEB 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x0A 
+		}
+		B9: {
+			Name: "PDN: Sidebandit"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 1549.43164062 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 59.94999695 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 31.50000191 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x40 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x40 
+			Operand2.Low: 0x41 
+		}
+		C0: {
+			Name: "PDN: Vaberet Coltaire"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 7118.07226562 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 85.79999542 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0xFF 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x4B 
+		}
+		C1: {
+			Name: "PDN: 20 GOTO 10"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 22.72966194 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 49.50000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 51.00000381 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x20 
+			Operand1.Low: 0xD4 
+			Operator2: NOP 
+			Operand2.High: 0xD5 
+			Operand2.Low: 0xD1 
+		}
+		C2: {
+			Name: "PDN: Dubblah"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: HP 3338.49707031 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 10.99999523 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0xFF 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x4B 
+		}
+		C3: {
+			Name: "PDN: Shimmerer"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 333.74645996 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 80.30000305 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 23.00000572 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xC9 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C4: {
+			Name: "PDN: No Check Out"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 17430.25976562 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 99.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 54.00000381 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x6B 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0xFC 
+			Operand2.Low: 0x10 
+		}
+		C5: {
+			Name: "PDN: Dig The Dug"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 64.89999390 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -6.24240112 dB
+			Mix: 48.50000000 %
+			ClockFreq: 1/2D 
+			SyncMode: Dotted 
+			Reverse: On 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: OR 
+			Operand2.High: 0x22 
+			Operand2.Low: 0xA7 
+		}
+		C6: {
+			Name: "PDN: Kobol"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 489.89794922 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 10.99999523 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x13 
+			Operand1.Low: 0x5C 
+			Operator2: OR 
+			Operand2.High: 0xD8 
+			Operand2.Low: 0x00 
+		}
+		C7: {
+			Name: "PDN: Bouncy Bouncy"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 489.89794922 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 10.99999523 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: MUL 
+			Operand1.High: 0x07 
+			Operand1.Low: 0x80 
+			Operator2: SUB 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x9D 
+		}
+		C8: {
+			Name: "PDN: Divide By Zero"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 489.89794922 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 37.94999695 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 36.50000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xDF 
+			Operand1.Low: 0x4C 
+			Operator2: OR 
+			Operand2.High: 0x1C 
+			Operand2.Low: 0x08 
+		}
+		C9: {
+			Name: "PDN: GIGO"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: --- Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 62.70000076 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 29.00000191 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0xA9 
+			Operand1.Low: 0xFF 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0xFD 
+		}
+	}
+}

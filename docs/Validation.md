@@ -70,6 +70,11 @@ Use `--template` only when you deliberately want to preserve the 30 programs fro
 existing bank. For a brand-new firmware, start from a clean no-template bank and add named
 programs intentionally.
 
+For user-facing firmware banks, check that the program slots are intentional. A release bank
+should normally include useful named examples or deliberately chosen empty/default slots,
+not accidental untouched defaults. The programs should exercise the firmware's important
+modes, operand ranges, clock/sync behavior, and host-side feedback/filter/mix controls.
+
 ## Check About Text
 
 The about text is shown in Permut8's built-in console. The visible content area is 21 rows
@@ -118,6 +123,16 @@ python3 -c 'print(len("    |----- LEFT DELAY -----| |----- RIGHT DELAY ----|"))'
 
 Free-form rows are acceptable when the firmware does not use fixed per-switch labels, but
 they should still be short enough to fit the tape cleanly.
+
+Also check the tape as a user-facing control surface:
+
+- Rows 0-3 line up with instruction 1 operator positions 1-4.
+- Rows 4-7 line up with instruction 2 operator positions 1-4.
+- Mode-per-row designs do not put multiple operator positions on the same row.
+- Operand-high and operand-low meanings are visible when the switches have stable meanings.
+- Fixed switch layouts use the 24-character operand spans where practical.
+- Stacked vertical labels are used only for real per-switch column layouts.
+- The final tape is checked in Permut8 or against a screenshot when available.
 
 ## Load In Permut8
 

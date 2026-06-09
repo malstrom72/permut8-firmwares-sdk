@@ -1,0 +1,635 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "Basic Delay"
+			InputLevel: 6.99840164 dB
+			Limiter: On 
+			FilterFreq: LP 9193.66308594 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 50.05000305 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 40.00000763 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x1C 
+			Operand1.Low: 0xC0 
+			Operator2: SUB 
+			Operand2.High: 0xF8 
+			Operand2.Low: 0xF9 
+		}
+		A1: {
+			Name: "Infinite Climb"
+			InputLevel: -1.05839920 dB
+			Limiter: Off 
+			FilterFreq: HP 593.54052734 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 86.90000153 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 1.74959946 dB
+			Mix: 40.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x81 
+			Operand1.Low: 0x03 
+			Operator2: SUB 
+			Operand2.High: 0xF0 
+			Operand2.Low: 0xFF 
+		}
+		A2: {
+			Name: "Light Phasing"
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 1565.81323242 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 55.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 91.31036377 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x81 
+			Operand1.Low: 0x41 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A3: {
+			Name: "Wave Bucket"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 2038.40771484 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 85.79998779 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 176.39997864 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x84 
+			Operand1.Low: 0x95 
+			Operator2: SUB 
+			Operand2.High: 0x93 
+			Operand2.Low: 0x4E 
+		}
+		A4: {
+			Name: "Auto Drone"
+			InputLevel: 3.11040115 dB
+			Limiter: On 
+			FilterFreq: LP 2625.88354492 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 96.46096802 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -1.53305817 dB
+			Mix: 100.00000000 %
+			ClockFreq: 100.89473724 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0xC6 
+			Operand1.Low: 0x42 
+			Operator2: MSK 
+			Operand2.High: 0xFF 
+			Operand2.Low: 0xA6 
+		}
+		A5: {
+			Name: "Laser Disco"
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 21117.80859375 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 96.25000763 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -0.34560013 dB
+			Mix: 39.99999619 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xF8 
+			Operator2: SUB 
+			Operand2.High: 0x02 
+			Operand2.Low: 0x02 
+		}
+		A6: {
+			Name: "Fuzzy Logic"
+			InputLevel: 26.45999908 dB
+			Limiter: Off 
+			FilterFreq: LP 7588.29296875 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 31.35000229 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -10.93499756 dB
+			Mix: 100.00000000 %
+			ClockFreq: 26.01899719 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: SUB 
+			Operand2.High: 0x40 
+			Operand2.Low: 0x40 
+		}
+		A7: {
+			Name: "Burn Oli Drive"
+			InputLevel: 35.42939758 dB
+			Limiter: Off 
+			FilterFreq: LP 8305.05761719 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 87.11096191 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -11.92860413 dB
+			Mix: 59.99999619 %
+			ClockFreq: 119.65249634 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x87 
+			Operand1.Low: 0x68 
+			Operator2: SUB 
+			Operand2.High: 0x3B 
+			Operand2.Low: 0x38 
+		}
+		A8: {
+			Name: "Crush Bucket"
+			InputLevel: 3.11040115 dB
+			Limiter: On 
+			FilterFreq: LP 12996.10449219 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 90.41096497 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -1.05839920 dB
+			Mix: 100.00000000 %
+			ClockFreq: 100.73963928 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x67 
+			Operand1.Low: 0x26 
+			Operator2: SUB 
+			Operand2.High: 0x3B 
+			Operand2.Low: 0x38 
+		}
+		A9: {
+			Name: "Nyquist Issues"
+			InputLevel: -20.09339905 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 20.09340668 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x07 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B0: {
+			Name: "Granulizer"
+			InputLevel: 2.38140106 dB
+			Limiter: On 
+			FilterFreq: HP 593.54150391 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 84.15000153 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.38140106 dB
+			Mix: 50.00000000 %
+			ClockFreq: 352.79998779 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x80 
+			Operand1.Low: 0xE0 
+			Operator2: MSK 
+			Operand2.High: 0xAA 
+			Operand2.Low: 0xE0 
+		}
+		B1: {
+			Name: "Hi Freek"
+			InputLevel: 10.93500519 dB
+			Limiter: On 
+			FilterFreq: LP 12996.10449219 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -1.56059647 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xF6 
+			Operand1.Low: 0x49 
+			Operator2: MSK 
+			Operand2.High: 0x1C 
+			Operand2.Low: 0x00 
+		}
+		B2: {
+			Name: "Four Bar Var"
+			InputLevel: 7.79759979 dB
+			Limiter: On 
+			FilterFreq: HP 154.89529419 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 40.00000000 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x03 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xAB 
+			Operand2.Low: 0x00 
+		}
+		B3: {
+			Name: "Selective Repeater"
+			InputLevel: 10.93500519 dB
+			Limiter: On 
+			FilterFreq: LP 9153.46777344 Hz
+			FilterPlacement: Off 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: -1.56060028 dB
+			Mix: 74.99999237 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0xD8 
+			Operand1.Low: 0x10 
+			Operator2: MSK 
+			Operand2.High: 0x02 
+			Operand2.Low: 0x00 
+		}
+		B4: {
+			Name: "Stochastic Splinters"
+			InputLevel: 4.23360062 dB
+			Limiter: On 
+			FilterFreq: HP 1784.20312500 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 57.89314651 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 40.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x03 
+			Operand1.Low: 0xCB 
+			Operator2: SUB 
+			Operand2.High: 0x65 
+			Operand2.Low: 0x85 
+		}
+		B5: {
+			Name: "Add Some Spark"
+			InputLevel: 36.30959320 dB
+			Limiter: On 
+			FilterFreq: HP 150.08522034 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 91.91780853 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -2.52645874 dB
+			Mix: 45.00000000 %
+			ClockFreq: 29.60135841 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xB4 
+			Operand1.Low: 0x82 
+			Operator2: XOR 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x02 
+		}
+		B6: {
+			Name: "Melonball Bounce"
+			InputLevel: 4.23360062 dB
+			Limiter: Off 
+			FilterFreq: LP 1058.34033203 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 102.84999847 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -7.39259720 dB
+			Mix: 50.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x01 
+			Operand1.Low: 0xD0 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x7F 
+		}
+		B7: {
+			Name: "Mersenne Twister"
+			InputLevel: 3.65039444 dB
+			Limiter: On 
+			FilterFreq: LP 4323.33447266 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 91.85000610 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 4.85999680 dB
+			Mix: 29.99999809 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xC9 
+			Operator2: XOR 
+			Operand2.High: 0x80 
+			Operand2.Low: 0x5F 
+		}
+		B8: {
+			Name: "Buffer Zone"
+			InputLevel: 20.75759888 dB
+			Limiter: On 
+			FilterFreq: HP 275.46887207 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 97.34999847 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -8.21339798 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x0E 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xA3 
+			Operand2.Low: 0xFF 
+		}
+		B9: {
+			Name: "Dotted Artifacts"
+			InputLevel: 1.66282654 dB
+			Limiter: Off 
+			FilterFreq: LP 3394.54736328 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 23.64999771 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 3.11039352 dB
+			Mix: 33.00000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: On 
+			Operator1: OSC 
+			Operand1.High: 0x58 
+			Operand1.Low: 0x9F 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C0: {
+			Name: "Octapose"
+			InputLevel: 3.37500000 dB
+			Limiter: Off 
+			FilterFreq: HP 112.49436951 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 40.70000076 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 1.21500397 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x80 
+			Operator2: MSK 
+			Operand2.High: 0xFF 
+			Operand2.Low: 0x00 
+		}
+		C1: {
+			Name: "Slomo Swing"
+			InputLevel: 0.13499832 dB
+			Limiter: Off 
+			FilterFreq: HP 609.88470459 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 30.25000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 2.38140106 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xE0 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		C2: {
+			Name: "Transduced Waves"
+			InputLevel: 0.13499832 dB
+			Limiter: Off 
+			FilterFreq: HP 609.88470459 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 92.08355713 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -5.88059998 dB
+			Mix: 39.99999619 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x01 
+			Operand1.Low: 0x05 
+			Operator2: SUB 
+			Operand2.High: 0x40 
+			Operand2.Low: 0x20 
+		}
+		C3: {
+			Name: "Bass Ionizer"
+			InputLevel: 12.20836639 dB
+			Limiter: Off 
+			FilterFreq: LP 2312.55786133 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 82.50000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -4.23360443 dB
+			Mix: 40.00000000 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xD4 
+			Operand1.Low: 0x37 
+			Operator2: MSK 
+			Operand2.High: 0xAA 
+			Operand2.Low: 0x00 
+		}
+		C4: {
+			Name: "Bubble Memory"
+			InputLevel: 6.61500168 dB
+			Limiter: On 
+			FilterFreq: HP 595.62451172 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 78.64999390 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 1.05838394 dB
+			Mix: 33.00000381 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x01 
+			Operand1.Low: 0xFF 
+			Operator2: MSK 
+			Operand2.High: 0x0F 
+			Operand2.Low: 0xC8 
+		}
+		C5: {
+			Name: "Split Reflection"
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x81 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x0F 
+			Operand2.Low: 0x00 
+		}
+		C6: {
+			Name: "Rusty Bits"
+			InputLevel: 0.65340042 dB
+			Limiter: Off 
+			FilterFreq: HP 127.84793854 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 71.50000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -3.11040115 dB
+			Mix: 75.00000000 %
+			ClockFreq: 136.49520874 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x84 
+			Operand1.Low: 0x40 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x28 
+		}
+		C7: {
+			Name: "Cone Rubble"
+			InputLevel: 5.52960205 dB
+			Limiter: Off 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 90.75000763 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -6.60982513 dB
+			Mix: 100.00000000 %
+			ClockFreq: 144.27793884 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x5E 
+			Operand1.Low: 0x49 
+			Operator2: NOP 
+			Operand2.High: 0x8B 
+			Operand2.Low: 0x72 
+		}
+		C8: {
+			Name: "Chip Sequencing"
+			InputLevel: 0.02159882 dB
+			Limiter: Off 
+			FilterFreq: LP 3754.45922852 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 96.80000305 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: -6.61500168 dB
+			Mix: 100.00000000 %
+			ClockFreq: 31.75199318 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x23 
+			Operand1.Low: 0x28 
+			Operator2: OR 
+			Operand2.High: 0x07 
+			Operand2.Low: 0x07 
+		}
+		C9: {
+			Name: "DAC Disaster"
+			InputLevel: -50.80860138 dB
+			Limiter: Off 
+			FilterFreq: LP 5169.57714844 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 54.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 4.85099983 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: NOP 
+			Operand2.High: 0x03 
+			Operand2.Low: 0x00 
+		}
+	}
+}

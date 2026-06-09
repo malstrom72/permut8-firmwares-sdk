@@ -1,0 +1,665 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "EDT: Muff Waver"
+			Modified: false
+			InputLevel: 0.00162132 dB
+			Limiter: Off 
+			FilterFreq: HP 338.16186779 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 71.13426864 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 1.56060140 dB
+			Mix: 56.99999928 %
+			ClockFreq: 4.55699968 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x4E 
+			Operand1.Low: 0x08 
+			Operator2: SUB 
+			Operand2.High: 0xAA 
+			Operand2.Low: 0x48 
+		}
+		A1: {
+			Name: "EDT: Squish Em"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 64.34999764 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 1.74960130 dB
+			Mix: 61.00000143 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x41 
+			Operand1.Low: 0x94 
+			Operator2: SUB 
+			Operand2.High: 0x7A 
+			Operand2.Low: 0x2B 
+		}
+		A2: {
+			Name: "EDT: Springverb"
+			Modified: false
+			InputLevel: 0.00162132 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 66.54999554 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 35.49999893 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xD6 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0xAC 
+		}
+		A3: {
+			Name: "EDT: Queez"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 2038.40775757 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 85.79999030 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 52.99999714 %
+			ClockFreq: 32.92798996 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x8B 
+			Operator2: NOP 
+			Operand2.High: 0x19 
+			Operand2.Low: 0x00 
+		}
+		A4: {
+			Name: "EDT: Grind"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 13961.45926787 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 55.69478035 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 28.49999964 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x86 
+			Operand1.Low: 0x27 
+			Operator2: MSK 
+			Operand2.High: 0x5C 
+			Operand2.Low: 0xD8 
+		}
+		A5: {
+			Name: "EDT: Sonic Decay"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 13495.14873591 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 59.40000236 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -0.34559934 dB
+			Mix: 69.99999881 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x04 
+			Operand1.Low: 0xB3 
+			Operator2: MSK 
+			Operand2.High: 0xA0 
+			Operand2.Low: 0x40 
+		}
+		A6: {
+			Name: "EDT: Tweez"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 8623.96443726 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 50.05000472 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 44.99999881 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x1B 
+			Operand1.Low: 0x8F 
+			Operator2: OR 
+			Operand2.High: 0x31 
+			Operand2.Low: 0x0C 
+		}
+		A7: {
+			Name: "EDT: Deeper"
+			Modified: false
+			InputLevel: 23.52239762 dB
+			Limiter: Off 
+			FilterFreq: LP 873.53601116 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 83.33471596 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -6.61500090 dB
+			Mix: 44.49999928 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x5A 
+			Operand1.Low: 0x1E 
+			Operator2: SUB 
+			Operand2.High: 0x66 
+			Operand2.Low: 0x33 
+		}
+		A8: {
+			Name: "EDT: Bounce Bits"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 11435.37214678 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 88.76096308 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 28.49999666 %
+			ClockFreq: 1/4D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x01 
+			Operand1.Low: 0x45 
+			Operator2: SUB 
+			Operand2.High: 0x6B 
+			Operand2.Low: 0x2A 
+		}
+		A9: {
+			Name: "EDT: Crebble"
+			Modified: false
+			InputLevel: 19.44000154 dB
+			Limiter: Off 
+			FilterFreq: LP 5028.44092423 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 82.01944053 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.26460130 dB
+			Mix: 26.99999809 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x0A 
+			Operand1.Low: 0x50 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x47 
+		}
+		B0: {
+			Name: "EDT: Quanda"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 6263.24697789 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 63.79999816 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 34.50000882 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x45 
+			Operand1.Low: 0x55 
+			Operator2: MSK 
+			Operand2.High: 0x3D 
+			Operand2.Low: 0xB8 
+		}
+		B1: {
+			Name: "EDT: Bird Beat"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 2886.20859545 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 110.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -1.56059483 dB
+			Mix: 51.49999857 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x19 
+			Operand1.Low: 0x07 
+			Operator2: NOP 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		B2: {
+			Name: "EDT: Right Box"
+			Modified: false
+			InputLevel: 19.82053679 dB
+			Limiter: On 
+			FilterFreq: LP 2193.80281940 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 67.65000105 %
+			FeedbackFlip: On 
+			FeedbackInvert: Off 
+			OutputLevel: 5.18940208 dB
+			Mix: 65.99999666 %
+			ClockFreq: 8/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x37 
+			Operand1.Low: 0x27 
+			Operator2: SUB 
+			Operand2.High: 0xF2 
+			Operand2.Low: 0x31 
+		}
+		B3: {
+			Name: "EDT: Stab Delay"
+			Modified: false
+			InputLevel: 6.99840056 dB
+			Limiter: Off 
+			FilterFreq: HP 92.85094396 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 38.50000262 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -0.00540005 dB
+			Mix: 27.00000107 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: RND 
+			Operand1.High: 0xC5 
+			Operand1.Low: 0x68 
+			Operator2: SUB 
+			Operand2.High: 0x39 
+			Operand2.Low: 0x11 
+		}
+		B4: {
+			Name: "EDT: Go Groove"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 1882.17000348 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 34.10000026 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 70.00000477 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x41 
+			Operand1.Low: 0x51 
+			Operator2: MSK 
+			Operand2.High: 0x2E 
+			Operand2.Low: 0x3F 
+		}
+		B5: {
+			Name: "EDT: Squange"
+			Modified: false
+			InputLevel: 0.08639984 dB
+			Limiter: Off 
+			FilterFreq: HP 45.93985856 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 63.31781268 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 44.99999881 %
+			ClockFreq: 29.60135841 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x9A 
+			Operand1.Low: 0x98 
+			Operator2: SUB 
+			Operand2.High: 0x6D 
+			Operand2.Low: 0x21 
+		}
+		B6: {
+			Name: "EDT: Iron Wasp"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 1058.34033427 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 70.39999843 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 35.49999893 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x2E 
+			Operand1.Low: 0xD3 
+			Operator2: MSK 
+			Operand2.High: 0x3B 
+			Operand2.Low: 0x96 
+		}
+		B7: {
+			Name: "EDT: Bucket Wub"
+			Modified: false
+			InputLevel: 0.00162132 dB
+			Limiter: Off 
+			FilterFreq: LP 8738.06620109 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 55.00000656 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00539986 dB
+			Mix: 31.99999928 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x3B 
+			Operand1.Low: 0xDA 
+			Operator2: MSK 
+			Operand2.High: 0xE9 
+			Operand2.Low: 0x5C 
+		}
+		B8: {
+			Name: "EDT: One Two Three"
+			Modified: false
+			InputLevel: 0.11418171 dB
+			Limiter: On 
+			FilterFreq: LP 2280.36091820 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 91.84999764 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 3.93660292 dB
+			Mix: 43.50000024 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x7C 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xA9 
+			Operand2.Low: 0x86 
+		}
+		B9: {
+			Name: "EDT: Flippin Beat"
+			Modified: false
+			InputLevel: 0.00162132 dB
+			Limiter: Off 
+			FilterFreq: LP 8738.06203446 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 46.74999803 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.02159970 dB
+			Mix: 76.49999857 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: OSC 
+			Operand1.High: 0x1F 
+			Operand1.Low: 0xAC 
+			Operator2: SUB 
+			Operand2.High: 0x35 
+			Operand2.Low: 0x5E 
+		}
+		C0: {
+			Name: "EDT: Breath Chip"
+			Modified: false
+			InputLevel: 3.81423876 dB
+			Limiter: Off 
+			FilterFreq: LP 19809.19122644 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 50.59999436 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 1.21500154 dB
+			Mix: 42.00000167 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x10 
+			Operand1.Low: 0x46 
+			Operator2: MSK 
+			Operand2.High: 0xD0 
+			Operand2.Low: 0x4A 
+		}
+		C1: {
+			Name: "EDT: Tik Sub"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 9696.68782361 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 39.04999882 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 3.65039973 dB
+			Mix: 37.99999952 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x10 
+			Operand1.Low: 0xD5 
+			Operator2: SUB 
+			Operand2.High: 0x36 
+			Operand2.Low: 0x18 
+		}
+		C2: {
+			Name: "EDT: Buzzer"
+			Modified: false
+			InputLevel: 7.21306309 dB
+			Limiter: Off 
+			FilterFreq: LP 3347.28474491 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 42.89999843 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.77760006 dB
+			Mix: 39.49999809 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x55 
+			Operand1.Low: 0x63 
+			Operator2: MSK 
+			Operand2.High: 0x45 
+			Operand2.Low: 0x8F 
+		}
+		C3: {
+			Name: "EDT: Gate Blips"
+			Modified: false
+			InputLevel: 3.80588756 dB
+			Limiter: Off 
+			FilterFreq: LP 5952.86528716 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 86.81047320 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 40.00000060 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x73 
+			Operand1.Low: 0x59 
+			Operator2: MSK 
+			Operand2.High: 0xEA 
+			Operand2.Low: 0x34 
+		}
+		C4: {
+			Name: "EDT: Decimate Delay"
+			Modified: false
+			InputLevel: 0.49228197 dB
+			Limiter: Off 
+			FilterFreq: LP 3568.40638509 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 46.74999803 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.34559007 dB
+			Mix: 39.00000453 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x11 
+			Operand1.Low: 0x1D 
+			Operator2: MSK 
+			Operand2.High: 0x43 
+			Operand2.Low: 0xBF 
+		}
+		C5: {
+			Name: "EDT: Small Space"
+			Modified: false
+			InputLevel: 0.06797464 dB
+			Limiter: Off 
+			FilterFreq: LP 11286.03278766 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 63.40041816 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: 0.00000000 dB
+			Mix: 63.49999905 %
+			ClockFreq: 263.69140625 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x59 
+			Operand1.Low: 0x43 
+			Operator2: SUB 
+			Operand2.High: 0xCF 
+			Operand2.Low: 0xB9 
+		}
+		C6: {
+			Name: "EDT: Detuna"
+			Modified: false
+			InputLevel: 0.03505689 dB
+			Limiter: Off 
+			FilterFreq: LP 12136.94404009 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 72.08356619 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 42.50000119 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x40 
+			Operand1.Low: 0x6A 
+			Operator2: MSK 
+			Operand2.High: 0x67 
+			Operand2.Low: 0xA3 
+		}
+		C7: {
+			Name: "EDT: Sterilize"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 187.66486340 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 56.10000551 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 43.00000072 %
+			ClockFreq: 1/2D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0xD0 
+			Operand1.Low: 0x27 
+			Operator2: SUB 
+			Operand2.High: 0x12 
+			Operand2.Low: 0x35 
+		}
+		C8: {
+			Name: "EDT: Follow Me"
+			Modified: false
+			InputLevel: 0.02159713 dB
+			Limiter: Off 
+			FilterFreq: LP 4266.87835290 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 62.15000629 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -6.61500090 dB
+			Mix: 55.00000119 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x0A 
+			Operand1.Low: 0x3D 
+			Operator2: MSK 
+			Operand2.High: 0x2C 
+			Operand2.Low: 0x4A 
+		}
+		C9: {
+			Name: "EDT: Chip Blip"
+			Modified: false
+			InputLevel: 9.07739852 dB
+			Limiter: Off 
+			FilterFreq: LP 4548.75051856 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 58.84999633 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 32.00000226 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x08 
+			Operand1.Low: 0x39 
+			Operator2: MSK 
+			Operand2.High: 0x28 
+			Operand2.Low: 0xA8 
+		}
+	}
+}

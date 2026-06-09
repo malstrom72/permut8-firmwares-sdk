@@ -150,6 +150,33 @@ The `|---|` section here spans all 16 switches as one continuous range. Row 1 ra
 
 ---
 
+### Common tape mistakes
+
+Avoid tape layouts that compile but stop acting like a physical panel label:
+
+- Do not list all operator modes on one or two rows when the operator knob has four active
+  positions. Rows 0-3 should still line up with instruction 1 positions 1-4, and rows 4-7
+  with instruction 2 positions 1-4.
+- Do not put several mutually exclusive operator modes on one row. Use one row per operator
+  position when each position has stable operand meanings.
+- Do not repeat identical operand labels on every mode row unless the controls really mean
+  the same thing in every mode. Repetition hides the rows that need mode-specific labels.
+- Do not use stacked vertical words such as `S I Z E` for ordinary operand labels. Reserve
+  stacked per-switch labels for layouts where each switch column has a distinct function,
+  as in the pong example.
+- Do not write prose descriptions when operand controls have stable meanings. Free-form
+  text is useful for step or mode descriptions, but a user still needs to know what the
+  high and low operand switches do.
+
+For custom multi-mode firmware with stable operands, start from the mode-per-row pattern:
+
+```text
+MOD |------ OPERAND A -----| |------ OPERAND B -----|
+```
+
+That is the standard 53-character row: a 3-character mnemonic, one space, a 24-character
+operand-high field, one space, and a 24-character operand-low field.
+
 ### Permut8 special characters
 
 Permut8 uses a custom font (CustomBBL) that maps code points U+00C0 and up to graphic glyphs. In Impala strings you write them as C-style `\uXXXX` escape codes. The full set is documented in `docs/CustomBBL Extra Characters.png`. Here is the complete table:

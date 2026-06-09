@@ -1,0 +1,665 @@
+Permut8BankV1: {
+	Current Program: A0
+	Programs: {
+		A0: {
+			Name: "SAF: Artichoke Follower"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 187.66487122 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 70.94998932 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -1.74959946 dB
+			Mix: 41.50000381 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x72 
+			Operand1.Low: 0x54 
+			Operator2: OR 
+			Operand2.High: 0x70 
+			Operand2.Low: 0x00 
+		}
+		A1: {
+			Name: "SAF: There\'s a Fly in My Loop"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 766.61328125 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 35.50000000 %
+			ClockFreq: 1/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x97 
+			Operand1.Low: 0x0C 
+			Operator2: OR 
+			Operand2.High: 0x06 
+			Operand2.Low: 0x12 
+		}
+		A2: {
+			Name: "SAF: Ketchup"
+			Modified: false
+			InputLevel: -0.43739700 dB
+			Limiter: On 
+			FilterFreq: LP 808.70678711 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 16.50000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 44.00000000 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x02 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A3: {
+			Name: "SAF: Unsprung"
+			Modified: false
+			InputLevel: 0.13499832 dB
+			Limiter: On 
+			FilterFreq: LP 1662.74389648 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 77.34657288 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xFF 
+			Operator2: SUB 
+			Operand2.High: 0x5D 
+			Operand2.Low: 0x5E 
+		}
+		A4: {
+			Name: "SAF: 2 milligrams"
+			Modified: false
+			InputLevel: -0.03013229 dB
+			Limiter: On 
+			FilterFreq: HP 355.79342651 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 87.45000458 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.03013229 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0xFF 
+			Operand1.Low: 0xFF 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+		A5: {
+			Name: "SAF: 4 milligrams"
+			Modified: false
+			InputLevel: -0.03013229 dB
+			Limiter: On 
+			FilterFreq: HP 57.59826660 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 87.45000458 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 0.03013229 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x74 
+			Operand1.Low: 0x0A 
+			Operator2: NOP 
+			Operand2.High: 0xE2 
+			Operand2.Low: 0x5B 
+		}
+		A6: {
+			Name: "SAF: Enhance the Pants"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 255.69595337 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 79.20000458 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 352.79998779 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xDF 
+			Operand1.Low: 0x00 
+			Operator2: SUB 
+			Operand2.High: 0x87 
+			Operand2.Low: 0x66 
+		}
+		A7: {
+			Name: "SAF: Slight Panhandle"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x84 
+			Operand1.Low: 0x3F 
+			Operator2: SUB 
+			Operand2.High: 0x09 
+			Operand2.Low: 0x41 
+		}
+		A8: {
+			Name: "SAF: deLayed Back"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 4266.87841797 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 30.24999428 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -0.54000092 dB
+			Mix: 50.00000000 %
+			ClockFreq: 4/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x08 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x04 
+			Operand2.Low: 0x00 
+		}
+		A9: {
+			Name: "SAF: Delays Delays"
+			Modified: false
+			InputLevel: 1.05840302 dB
+			Limiter: On 
+			FilterFreq: LP 1187.08020020 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 13.19999409 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -0.00540161 dB
+			Mix: 42.99999619 %
+			ClockFreq: 4/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0x02 
+			Operand1.Low: 0x00 
+			Operator2: XOR 
+			Operand2.High: 0x08 
+			Operand2.Low: 0x00 
+		}
+		B0: {
+			Name: "SAF: a Delay (.)"
+			Modified: false
+			InputLevel: 4.40092468 dB
+			Limiter: Off 
+			FilterFreq: LP 6676.99414063 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 40.69999695 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 7.79759216 dB
+			Mix: 18.50000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: On 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xC5 
+			Operand2.Low: 0xF1 
+		}
+		B1: {
+			Name: "SAF: a Delay (T)"
+			Modified: false
+			InputLevel: 4.40092468 dB
+			Limiter: Off 
+			FilterFreq: LP 6676.99414063 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 40.69999695 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 5.88059235 dB
+			Mix: 18.50000000 %
+			ClockFreq: 1/8T 
+			SyncMode: Triplets 
+			Reverse: On 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xC5 
+			Operand2.Low: 0xF1 
+		}
+		B2: {
+			Name: "SAF: a Delay (-)"
+			Modified: false
+			InputLevel: 4.40092468 dB
+			Limiter: Off 
+			FilterFreq: LP 6676.99414063 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 45.64999390 %
+			FeedbackFlip: On 
+			FeedbackInvert: On 
+			OutputLevel: 5.88059235 dB
+			Mix: 18.50000000 %
+			ClockFreq: 1/8 
+			SyncMode: Standard 
+			Reverse: On 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0xC5 
+			Operand2.Low: 0xF1 
+		}
+		B3: {
+			Name: "SAF: a Delay (again)"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 379.29693604 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 63.25001144 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 42.00000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0xE6 
+		}
+		B4: {
+			Name: "SAF: CrazyLegs Delay"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 86.57242584 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 62.15000534 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 42.00000000 %
+			ClockFreq: 1/2T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x9D 
+			Operand1.Low: 0x65 
+			Operator2: MSK 
+			Operand2.High: 0xCE 
+			Operand2.Low: 0xFE 
+		}
+		B5: {
+			Name: "SAF: Straight 8"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 4521.33496094 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 50.60000610 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 64.00000000 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0xB7 
+			Operand1.Low: 0x6E 
+			Operator2: MSK 
+			Operand2.High: 0xB8 
+			Operand2.Low: 0xF1 
+		}
+		B6: {
+			Name: "SAF: Springy Verby 1"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 379.29693604 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 53.90000916 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 42.00000000 %
+			ClockFreq: 1/8D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0xBD 
+		}
+		B7: {
+			Name: "SAF: Springy Verby 2"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 86.57242584 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 62.15000534 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 42.00000000 %
+			ClockFreq: 1/8T 
+			SyncMode: Triplets 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x9D 
+			Operand1.Low: 0x65 
+			Operator2: MSK 
+			Operand2.High: 0xCE 
+			Operand2.Low: 0xC4 
+		}
+		B8: {
+			Name: "SAF: Springy Verby 3"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: LP 1662.74389648 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 77.34657288 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 40.50000000 %
+			ClockFreq: 2/1D 
+			SyncMode: Dotted 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xFF 
+			Operator2: SUB 
+			Operand2.High: 0x5D 
+			Operand2.Low: 0x8D 
+		}
+		B9: {
+			Name: "SAF: Crawspace"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 163.89503479 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 58.29999542 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 50.50000000 %
+			ClockFreq: 1/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x4C 
+			Operand1.Low: 0x16 
+			Operator2: SUB 
+			Operand2.High: 0x93 
+			Operand2.Low: 0x9D 
+		}
+		C0: {
+			Name: "SAF: Chorus Chops"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 92.85094452 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 24.75000191 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 44.50000000 %
+			ClockFreq: 352.79998779 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: SUB 
+			Operand2.High: 0xC8 
+			Operand2.Low: 0xA0 
+		}
+		C1: {
+			Name: "SAF: That\'s Not a Chorus"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 56.98734665 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x81 
+			Operand1.Low: 0x70 
+			Operator2: SUB 
+			Operand2.High: 0x8F 
+			Operand2.Low: 0x5E 
+		}
+		C2: {
+			Name: "SAF: ITB"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: On 
+			FilterFreq: HP 136.29351807 Hz
+			FilterPlacement: Input 
+			FeedbackAmount: 70.95000458 %
+			FeedbackFlip: Off 
+			FeedbackInvert: On 
+			OutputLevel: -0.65340042 dB
+			Mix: 39.99999619 %
+			ClockFreq: 4/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: MUL 
+			Operand1.High: 0xD1 
+			Operand1.Low: 0xFD 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x2E 
+		}
+		C3: {
+			Name: "SAF: Strange Separation"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 44.09999847 kHz 
+			SyncMode: Off 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x40 
+			Operand1.Low: 0x02 
+			Operator2: SUB 
+			Operand2.High: 0x14 
+			Operand2.Low: 0x99 
+		}
+		C4: {
+			Name: "SAF: Sphereo"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: --- Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 37.40000153 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -1.05839920 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x74 
+			Operator2: SUB 
+			Operand2.High: 0x9F 
+			Operand2.Low: 0x8F 
+		}
+		C5: {
+			Name: "SAF: Diode Mode"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 928.79699707 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 18.69999886 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: AND 
+			Operand1.High: 0x00 
+			Operand1.Low: 0xC0 
+			Operator2: SUB 
+			Operand2.High: 0xFF 
+			Operand2.Low: 0x1F 
+		}
+		C6: {
+			Name: "SAF: AKA KHz"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: LP 8333.58789063 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 78.00000000 %
+			ClockFreq: 1/2 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: RND 
+			Operand1.High: 0x8F 
+			Operand1.Low: 0x52 
+			Operator2: XOR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x14 
+		}
+		C7: {
+			Name: "SAF: Bitz of Me"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 12000.00097656 Hz
+			FilterPlacement: Feedback 
+			FeedbackAmount: 83.05000305 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 35.50000000 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: OSC 
+			Operand1.High: 0x01 
+			Operand1.Low: 0x01 
+			Operator2: OR 
+			Operand2.High: 0x04 
+			Operand2.Low: 0x68 
+		}
+		C8: {
+			Name: "SAF: i is bwokem"
+			Modified: false
+			InputLevel: 0.00000000 dB
+			Limiter: Off 
+			FilterFreq: HP 714.77551270 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: 0.00000000 dB
+			Mix: 100.00000000 %
+			ClockFreq: 1/4 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0xFE 
+			Operand1.Low: 0x09 
+			Operator2: OR 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x8D 
+		}
+		C9: {
+			Name: "SAF: Hybrid Dirt"
+			Modified: false
+			InputLevel: 52.31260681 dB
+			Limiter: Off 
+			FilterFreq: LP 1173.40783691 Hz
+			FilterPlacement: Output 
+			FeedbackAmount: 0.00000000 %
+			FeedbackFlip: Off 
+			FeedbackInvert: Off 
+			OutputLevel: -14.04539871 dB
+			Mix: 100.00000000 %
+			ClockFreq: 2/1 
+			SyncMode: Standard 
+			Reverse: Off 
+			Operator1: NOP 
+			Operand1.High: 0x00 
+			Operand1.Low: 0x00 
+			Operator2: MSK 
+			Operand2.High: 0x00 
+			Operand2.Low: 0x00 
+		}
+	}
+}
