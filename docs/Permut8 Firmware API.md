@@ -62,7 +62,7 @@ Important consequences for firmware authors:
 - The analog filter is host-side. `FILTER PLACEMENT` chooses `IN` before the soft clipper/limiter but inside the feedback loop, `FB` on the feedback return only, `OUT` on the final output and feedback tap, or `OFF`.
 - In normal firmware, keep the patch fully wet and let `MIX` handle dry/wet balance. Permut8's mix control compensates the variable clock latency in a way a firmware-local blend cannot.
 - Do not rebuild feedback, filtering, or saturation unless they are intentionally part of the firmware's own sound. The front-panel controls already provide those functions around the patch.
-- Delay memory is one full 16-bit clock cycle of 12-bit stereo frames, described in the user guide as 128 kilowords. `write(clock, ...)` writes at the current head, `read(clock - d, ...)` reads `d` frames back, and both wrap.
+- Delay memory holds 65536 12-bit stereo frames — one full 16-bit clock cycle, which the user guide counts as 128 kilowords (65536 frames × 2 channels = 131072 words). `write(clock, ...)` writes at the current head, `read(clock - d, ...)` reads `d` frames back, and both wrap.
 
 ## Required Format Constant
 
@@ -125,7 +125,9 @@ The typical pattern, used in `ringmod_code.impala`, is an outer `loop {}` contai
 
 ### `write(int offset, int frameCount, pointer values)`
 
-Writes `frameCount` 12-bit stereo frames to the delay-line memory at `offset`. Values are interleaved stereo samples. Reads and writes wrap automatically to the delay-line size.
+Writes `frameCount` 12-bit stereo frames to the delay-line memory at `offset`. Values are interleaved stereo samples.
+
+The delay line holds **65536 stereo frames** (131072 12-bit words, the 128 kilowords from the user guide). `offset` and `frameCount` are measured in stereo frames; the host handles the interleaved-word layout internally. The size is a power of two and addresses wrap with a bitmask, so **any integer `offset` is valid, including negative values** — `read(clock - d, ...)` wraps correctly even when `d` exceeds `clock`.
 
 `offset` is an absolute delay-line position. Use `global clock` as the current write cursor. For example, `write(clock, 1, global signal)` writes the current sample at the write head, and `read(clock - delay, 1, buf)` reads from `delay` samples back.
 
@@ -133,9 +135,9 @@ To build a delay, write the input at `clock` each sample and read it back from `
 
 ### `read(int offset, int frameCount, pointer values)`
 
-Reads `frameCount` 12-bit stereo frames from the delay-line memory at `offset` into an interleaved stereo buffer. Reads and writes wrap automatically to the delay-line size.
+Reads `frameCount` 12-bit stereo frames from the delay-line memory at `offset` into an interleaved stereo buffer.
 
-`offset` is an absolute delay-line position — see `write()` above for the `clock`-relative pattern.
+`offset` is an absolute delay-line position — see `write()` above for the delay-line size, frame units, wrapping behavior, and the `clock`-relative pattern.
 
 `offset` is an integer sample position. `read()` does not interpolate. For a smoothly
 modulated or fractional delay, keep the delay as fixed point, read the two neighbouring
@@ -237,7 +239,7 @@ Declare only the globals your firmware uses.
 
 `clock` increments between every `process()` call, or decrements in reverse mode. It has a 16-bit cycle from `0` to `65535`. If tempo sync is enabled, `clock` is the absolute position within the chosen time division.
 
-The 16-bit clock cycle equals the delay-line length, so `clock - d` addresses up to a full memory cycle of delay.
+The 16-bit clock cycle matches the 65536-frame delay line exactly, so `clock - d` addresses up to a full memory cycle of delay and wraps cleanly for any `d`.
 
 ### `global int hostPosition`
 
