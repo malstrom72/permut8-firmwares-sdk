@@ -9,7 +9,7 @@ for ((;;)); do
 	for FILE in *.impala; do
 		if [ "$FILE" -nt "${FILE%.impala}.gazl" ]; then
 			echo Compiling $FILE...
-			./PikaCmd impala.pika compile "$FILE" "${FILE%.impala}.gazl"
+			./NuXJS impala.nuxjs.js "$FILE" "${FILE%.impala}.gazl"
 		fi
 	done
 	sleep 0.1

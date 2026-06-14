@@ -1,7 +1,6 @@
 .DS_Store
 .tools/
-PikaCmd/PikaCmd
-PikaCmd/PikaCmd.exe
+GAZL/output/
 examples/Firmwares/folder.p8bank
 examples/Firmwares/folder_about.txt
 examples/Firmwares/folder_code.gazl

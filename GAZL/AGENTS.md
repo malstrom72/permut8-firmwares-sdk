@@ -23,9 +23,6 @@ The project uses a consistent folder structure. Build output is written to `outp
 
 Root-level `build.sh` and `build.cmd` (mirrored implementations) should build and test both the beta and release targets.
 
-### PikaCmd directory
-The `externals/PikaCmd` folder is a separate project copied into this repository. Ignore it when applying formatting or running tests.
-
 BuildCpp.sh and BuildCpp.cmd are copied from another repository. Only make changes to them if there is no other solution.
 
 ## Formatting rules
@@ -86,3 +83,18 @@ EXIT /b 0
 :error
 EXIT /b %ERRORLEVEL%
 ```
+
+## Code Formatting
+
+All JavaScript files in this repository should be formatted with Prettier using tab indentation.
+
+- Install Prettier if necessary:
+  ```sh
+  npm install --no-save prettier
+  ```
+- Format sources before committing:
+  ```sh
+  npx prettier --write .
+  ```
+
+This project includes a Prettier configuration (`.prettierrc.json`) that enforces tab-based indentation and a wider print width.

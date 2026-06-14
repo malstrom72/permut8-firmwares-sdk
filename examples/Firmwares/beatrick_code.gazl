@@ -1,20 +1,26 @@
  ; Compiled with Impala version 1.0
 
- PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2
- FALSE:				! DEFi #0
- TRUE:				! DEFi #1
- panelTextRows:		CNST *8
- 					DATA &.s_MUTEst86a5e976 &.s_REPEAT86a5e977
- 					DATA &.s_SKIPst86a5e978 &.s_HOLDst86a5e979
- 					DATA &.s_ACCENT86a5e97a &.s_STUTTE86a5e97b
- 					DATA &.s_REVERS86a5e97c &.s_TAPEST86a5e97d
+ ; signatures version=1
+ PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2	; signature const PRAWN_FIRMWARE_PATCH_FORMAT : int @ 20:1
+ FALSE:				! DEFi #0	; signature const FALSE : int @ 21:1
+ TRUE:				! DEFi #1	; signature const TRUE : int @ 29:1
+ panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 29:33
+ 					DATA &.s_MUTEst774f3f67 &.s_REPEAT774f3f68
+ 					DATA &.s_SKIPst774f3f69 &.s_HOLDst774f3f6a
+ 					DATA &.s_ACCENT774f3f6b &.s_STUTTE774f3f6c
+ 					DATA &.s_REVERS774f3f6d &.s_TAPEST774f3f6e
+ ; signature extern native abort() -> unknown @ 41:1
+ ; signature extern native trace() -> unknown @ 42:1
+ ; signature extern native yield() -> unknown @ 43:1
+ ; signature extern native write() -> unknown @ 44:1
+ ; signature extern native read() -> unknown @ 46:1
  					GLOB *1
- clock:				DATi #0
- params:			GLOB *PARAM_COUNT
- displayLEDs:		GLOB *4
+ clock:				DATi #0		; signature global clock : int @ 68:1
+ params:			GLOB *PARAM_COUNT ; signature array params[PARAM_COUNT] : unknown @ 69:1
+ displayLEDs:		GLOB *4		; signature array displayLEDs[4] : unknown @ 70:1
  					CNST *1
- clockFreqLimit:	DATi #132300
- signal:			GLOB *2
+ clockFreqLimit:	DATi #132300 ; signature readonly clockFreqLimit : int @ 71:1
+ signal:			GLOB *2		; signature array signal[2] : unknown @ 72:1
  					CNST *1
  					! SHLi <A> #1 #OPERATOR_1_PARAM_INDEX
  					! SHLi <B> #1 #OPERAND_1_HIGH_PARAM_INDEX
@@ -27,36 +33,36 @@
  					! IORi <A> <A> <B>
  					! SHLi <B> #1 #OPERAND_2_LOW_PARAM_INDEX
  					! IORi <A> <A> <B>
- updateMask:		DATi <A>
- NOP:				! DEFi #0
- MUTE:				! DEFi #1
- REPEAT:			! DEFi #2
- SKIP:				! DEFi #3
- HOLD:				! DEFi #4
- ACCENT:			! DEFi #1
- STUTTER:			! DEFi #2
- REVERSE:			! DEFi #3
- TAPE_STOP:			! DEFi #4
- LOOKAHEAD:			! DEFi #0x80
+ updateMask:		DATi <A>	; signature readonly updateMask : int @ 81:1
+ NOP:				! DEFi #0	; signature const NOP : int @ 82:1
+ MUTE:				! DEFi #1	; signature const MUTE : int @ 83:1
+ REPEAT:			! DEFi #2	; signature const REPEAT : int @ 84:1
+ SKIP:				! DEFi #3	; signature const SKIP : int @ 85:1
+ HOLD:				! DEFi #4	; signature const HOLD : int @ 86:1
+ ACCENT:			! DEFi #1	; signature const ACCENT : int @ 87:1
+ STUTTER:			! DEFi #2	; signature const STUTTER : int @ 88:1
+ REVERSE:			! DEFi #3	; signature const REVERSE : int @ 89:1
+ TAPE_STOP:			! DEFi #4	; signature const TAPE_STOP : int @ 91:1
+ LOOKAHEAD:			! DEFi #0x80 ; signature const LOOKAHEAD : int @ 95:1
  					GLOB *1
- bottomOperator:	DATi #0
- steps:				GLOB *16
- gains:				GLOB *16
- holds:				GLOB *16
- sfxs:				GLOB *16
+ bottomOperator:	DATi #0		; signature global bottomOperator : int @ 96:1
+ steps:				GLOB *16	; signature array steps[16] : unknown @ 97:1
+ gains:				GLOB *16	; signature array gains[16] : unknown @ 97:23
+ holds:				GLOB *16	; signature array holds[16] : unknown @ 98:23
+ sfxs:				GLOB *16	; signature array sfxs[16] : unknown @ 99:22
  					GLOB *1
- lastInStep:		DATi #-1
+ lastInStep:		DATi #-1	; signature global lastInStep : int @ 101:1
  					GLOB *1
- currentOutStep:	DATi #0
+ currentOutStep:	DATi #0		; signature global currentOutStep : int @ 102:1
  					GLOB *1
- stopIndex:			DATi #0
+ stopIndex:			DATi #0		; signature global stopIndex : int @ 103:1
  					GLOB *1
- stopRate:			DATi #0
+ stopRate:			DATi #0		; signature global stopRate : int @ 104:1
  					GLOB *1
- currentGain:		DATi #0
+ currentGain:		DATi #0		; signature global currentGain : int @ 108:1
 
  ;-----------------------------------------------------------------------------
- reset:				FUNC
+ reset:				FUNC		; signature func reset() -> void @ 108:16
  								PARA *1
  ;-----------------------------------------------------------------------------
  								POKE &lastInStep #-1 			; global lastInStep = -1
@@ -65,7 +71,7 @@
 
 
  ;-----------------------------------------------------------------------------
- update:			FUNC
+ update:			FUNC		; signature func update() -> void @ 114:17
  								PARA *1
  					$topOperator: LOCi
  					$bottomOperator: LOCi
@@ -168,7 +174,7 @@
 
 
  ;-----------------------------------------------------------------------------
- process:			FUNC
+ process:			FUNC		; signature func process() -> void @ 178:18
  								PARA *1
  					$localClock: LOCi
  					$inStep:	LOCi
@@ -194,7 +200,7 @@
  								MOVi %1 $localClock 			; write(localClock, 1, localSignal)
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^write %0 *4
+ 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 189:36
  					.f0:		PEEK %0 &lastInStep 			; if (global lastInStep != inStep) 
  								EQUi %0 $inStep @.f1
  								PEEK %0 &steps $inStep			; global currentOutStep = (int) global steps[inStep]
@@ -211,7 +217,7 @@
  								IORi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4
+ 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 199:49
  								GOTO @.e3  						; } else 
  					.f2:		PEEK %0 &bottomOperator 		; switch (global bottomOperator == 0 to 5) 
  								SWCH %0 *5 @.s4
@@ -220,13 +226,13 @@
  								ADDi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4
+ 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 202:80
  								GOTO @.e5  
  					.s4#STUTTER: ANDi %1 $localClock #0x3FF		; read(i | (localClock & 0x3FF), 1, localSignal)
  								IORi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4
+ 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 203:64
  								GOTO @.e5  
  					.s4#TAPE_STOP: MOVi $si #0x0 				; si = 0x0
  								MOVi $sr #0x10000 				; sr = 0x10000
@@ -238,7 +244,7 @@
  								IORi %1 $i %1
  								MOVi %2 #2 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4
+ 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 211:41
  								ANDi $f $si #0xFFFF				; f = si & 0xFFFF
  								SUBi %0 $localSignal:2 $localSignal:0 ; localSignal[0] = (int) localSignal[0] + (((int) localSignal[2] - (int) localSignal[0]) * f >> 16)
  								MULi %0 %0 $f
@@ -274,27 +280,27 @@
  								COPY &signal %0 *2
  								RETU   							; }
 
- .s_MUTEst86a5e976:	CNST *24
+ .s_MUTEst774f3f67:	CNST *24
  					DATs MUTE steps that are off
  					DATi #0
- .s_REPEAT86a5e977:	CNST *36
+ .s_REPEAT774f3f68:	CNST *36
  					DATs REPEAT steps that are on before off
  					DATi #0
- .s_SKIPst86a5e978:	CNST *24
+ .s_SKIPst774f3f69:	CNST *24
  					DATs SKIP steps that are off
  					DATi #0
- .s_HOLDst86a5e979:	CNST *53
+ .s_HOLDst774f3f6a:	CNST *53
  					DATs HOLD steps that are on, turn on WRITE PROT when done
  					DATi #0
- .s_ACCENT86a5e97a:	CNST *14
+ .s_ACCENT774f3f6b:	CNST *14
  					DATs ACCENT effect
  					DATi #0
- .s_STUTTE86a5e97b:	CNST *15
+ .s_STUTTE774f3f6c:	CNST *15
  					DATs STUTTER effect
  					DATi #0
- .s_REVERS86a5e97c:	CNST *15
+ .s_REVERS774f3f6d:	CNST *15
  					DATs REVERSE effect
  					DATi #0
- .s_TAPEST86a5e97d:	CNST *17
+ .s_TAPEST774f3f6e:	CNST *17
  					DATs TAPE STOP effect
  					DATi #0

@@ -22,7 +22,7 @@ only when you need exact language or renderer behavior.
   GAZL compilation, reusable Impala snippets, development folder setup, console loading,
   debug behavior, and saved project behavior.
 - [Creating P8Bank Files](Creating%20P8Bank%20Files.md): `.p8bank` file structure,
-  `tools/createP8Bank.pika`, template usage, escaping, and release packaging.
+  `tools/createP8Bank.nuxjs.js`, template usage, escaping, and release packaging.
 
 ## User-Facing Product Reference
 
@@ -38,10 +38,6 @@ only when you need exact language or renderer behavior.
 - [Impala Language Reference](../GAZL/docs/Impala.md): the Impala source language.
 - [GAZL Instruction Set](../GAZL/docs/InstructionSet.md): opcode reference.
 - [GAZL Usage Example](../GAZL/docs/UsageExample.md): compile and run a simple program.
-- [PikaScript Documentation](PikaScript/PikaScript%20Documentation.txt): PikaScript
-  language reference for SDK tools such as `tools/createP8Bank.pika`.
-- [PikaCmd Documentation](PikaScript/PikaCmd%20Documentation.txt): command runner
-  reference.
 
 ## Vendored Subsystem Docs
 

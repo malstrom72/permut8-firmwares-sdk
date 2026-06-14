@@ -14,7 +14,7 @@ Use these repository files as the grounding map for Permut8 firmware work.
   Impala compile workflow, firmware development folder, console loading, debug behavior,
   and saved project behavior.
 - [docs/Creating P8Bank Files.md](../../docs/Creating%20P8Bank%20Files.md): bank file
-  structure, `tools/createP8Bank.pika`, template usage, escaping, and release packaging.
+  structure, `tools/createP8Bank.nuxjs.js`, template usage, escaping, and release packaging.
 - [docs/Firmware Assets Guide.md](../../docs/Firmware%20Assets%20Guide.md): tape text,
   IVG sticker graphics, CustomBBL special characters, and about text.
 - [docs/Validation.md](../../docs/Validation.md): practical compile, package, asset, and
@@ -52,22 +52,20 @@ Use these repository files as the grounding map for Permut8 firmware work.
 
 ## Tools
 
-- [tools/createP8Bank.pika](../../tools/createP8Bank.pika): bank writer.
-- [tools/gazlCompactor.pika](../../tools/gazlCompactor.pika): optional release-size GAZL
+- [tools/createP8Bank.nuxjs.js](../../tools/createP8Bank.nuxjs.js): bank writer.
+- [tools/gazlCompactor.nuxjs.js](../../tools/gazlCompactor.nuxjs.js): optional release-size GAZL
   text compactor.
 - [tools/update-firmware-toolchain.sh](../../tools/update-firmware-toolchain.sh):
-  builds Unix tools in `tools/bin` when needed, rebuilds the Impala compiler, refreshes the
-  firmware runtime files in `examples/Firmwares` from the authoritative `GAZL` copy, and
-  builds the IVG renderer for sticker validation.
+  builds Unix tools in `tools/bin` when needed, rebuilds the NuXJS runtime, stages the
+  Impala compiler, refreshes the firmware runtime files in `examples/Firmwares` from the
+  authoritative `GAZL` copy, and builds the IVG renderer for sticker validation.
 - [tools/convert-user-guide.sh](../../tools/convert-user-guide.sh): regenerates the
   Markdown user guide from source material.
-- [GAZL/externals/PikaCmd](../../GAZL/externals/PikaCmd): bundled PikaScript command
-  runner source from the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL)
-  copy. General runtime commands should use `tools/bin/PikaCmd`; firmware-folder compile
-  loops use the copied `examples/Firmwares/PikaCmd`. Use this source folder only when
+- [GAZL/externals/NuXJS](../../GAZL/externals/NuXJS): bundled NuXJS command-line
+  JavaScript runtime source from the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL)
+  copy. General runtime commands should use `tools/bin/NuXJS`; firmware-folder compile
+  loops use the copied `examples/Firmwares/NuXJS`. Use this source folder only when
   rebuilding the runtime.
-- [docs/PikaScript](../../docs/PikaScript): local PikaScript and PikaCmd documentation
-  copied from [malstrom72/PikaScript](https://github.com/malstrom72/PikaScript).
 
 ## Language And Renderer References
 

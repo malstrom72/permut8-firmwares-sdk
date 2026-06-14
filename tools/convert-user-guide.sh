@@ -37,8 +37,7 @@ fi
 
 mv "$JSON_PATH" "$DOCLING_JSON_PATH"
 
-"$ROOT_DIR/tools/bin/PikaCmd" \
-	"$ROOT_DIR/tools/postprocessUserGuide.pika" \
+node "$ROOT_DIR/tools/postprocessUserGuide.js" \
 	"$GUIDE_DIR/" \
 	"$MD_PATH" \
 	"$DOCLING_JSON_PATH"

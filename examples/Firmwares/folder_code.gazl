@@ -1,27 +1,31 @@
  ; Compiled with Impala version 1.0
 
- PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2
- FALSE:				! DEFi #0
- TRUE:				! DEFi #1
- panelTextRows:		CNST *8
- 					DATA &.s_1d30c9d6 &.s_1d30c9d6 &.s_1d30c9d6
- 					DATA &.s_DRIVEL1d30c9d7 &.s_1d30c9d6 &.s_1d30c9d6
- 					DATA &.s_1d30c9d6 &.s_BIAS1d30c9d8
- params:			GLOB *PARAM_COUNT
- displayLEDs:		GLOB *4
+ ; signatures version=1
+ PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2	; signature const PRAWN_FIRMWARE_PATCH_FORMAT : int @ 24:1
+ FALSE:				! DEFi #0	; signature const FALSE : int @ 25:1
+ TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
+ panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
+ 					DATA &.s_-794f7ba9 &.s_-794f7ba9 &.s_-794f7ba9
+ 					DATA &.s_DRIVEL-794f7ba8 &.s_-794f7ba9 &.s_-794f7ba9
+ 					DATA &.s_-794f7ba9 &.s_BIAS-794f7ba7
+ ; signature extern native abort() -> unknown @ 39:1
+ ; signature extern native trace() -> unknown @ 40:1
+ ; signature extern native yield() -> unknown @ 42:1
+ params:			GLOB *PARAM_COUNT ; signature array params[PARAM_COUNT] : unknown @ 51:1
+ displayLEDs:		GLOB *4		; signature array displayLEDs[4] : unknown @ 52:1
  					GLOB *1
- instance:			DATi #0
- signal:			GLOB *2
+ instance:			DATi #0		; signature global instance : int @ 53:1
+ signal:			GLOB *2		; signature array signal[2] : unknown @ 55:1
  					CNST *1
- clockFreqLimit:	DATi #132300
+ clockFreqLimit:	DATi #132300 ; signature readonly clockFreqLimit : int @ 56:1
  					CNST *1
  					! SHLi <A> #1 #OPERAND_1_HIGH_PARAM_INDEX
  					! SHLi <B> #1 #OPERAND_1_LOW_PARAM_INDEX
  					! IORi <A> <A> <B>
  					! SHLi <B> #1 #OPERAND_2_HIGH_PARAM_INDEX
  					! IORi <A> <A> <B>
- updateMask:		DATi <A>
- EIGHT_BIT_EXP_TABLE: CNST *256
+ updateMask:		DATi <A>	; signature readonly updateMask : int @ 62:1
+ EIGHT_BIT_EXP_TABLE: CNST *256	; signature array EIGHT_BIT_EXP_TABLE[256] : unknown @ 62:41
  					DATA #0x0 #0x1 #0x2 #0x3 #0x4 #0x5 #0x6 #0x7 #0x8 #0x9
  					DATA #0xa #0xb #0xc #0xd #0xe #0xf #0x10 #0x11 #0x12 #0x13
  					DATA #0x14 #0x15 #0x16 #0x17 #0x18 #0x19 #0x1a #0x1b #0x1c
@@ -56,23 +60,23 @@
  					DATA #0x7c00 #0x8000 #0x8800 #0x9000 #0x9800 #0xa000
  					DATA #0xa800 #0xb000 #0xb800 #0xc000 #0xc800 #0xd000
  					DATA #0xd800 #0xe000 #0xe800 #0xf000 #0xffff
- BATCH_SIZE:		! DEFi #77
- THRESHOLD:			! DEFi #2047
+ BATCH_SIZE:		! DEFi #77	; signature const BATCH_SIZE : int @ 90:1
+ THRESHOLD:			! DEFi #2047 ; signature const THRESHOLD : int @ 91:1
  					! MULi <A> #THRESHOLD #2
- TWO_T:				! DEFi <A>
+ TWO_T:				! DEFi <A>	; signature const TWO_T : int @ 92:1
  					! MULi <A> #THRESHOLD #3
- THREE_T:			! DEFi <A>
+ THREE_T:			! DEFi <A>	; signature const THREE_T : int @ 93:1
  					! MULi <A> #THRESHOLD #4
- FOUR_T:			! DEFi <A>
+ FOUR_T:			! DEFi <A>	; signature const FOUR_T : int @ 97:1
  					GLOB *1
- drive:				DATi #0x100
+ drive:				DATi #0x100	; signature global drive : int @ 98:1
  					GLOB *1
- outGain:			DATi #0x100
+ outGain:			DATi #0x100	; signature global outGain : int @ 99:1
  					GLOB *1
- bias:				DATi #0
+ bias:				DATi #0		; signature global bias : int @ 103:1
 
  ;-----------------------------------------------------------------------------
- ledBar:			FUNC
+ ledBar:			FUNC		; signature func ledBar(int x) -> int @ 103:17
  					$mask:		OUTi
  					$x:			INPi
  ;-----------------------------------------------------------------------------
@@ -83,16 +87,16 @@
 
 
  ;-----------------------------------------------------------------------------
- init:				FUNC
+ init:				FUNC		; signature func init() -> void @ 109:15
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_Folder1d30c9d9 		; trace("Folder init")
- 								CALL ^trace %0 *2
+ 								MOVp %1 &.s_Folder-794f7ba6 	; trace("Folder init")
+ 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 111:22
  								RETU   							; }
 
 
  ;-----------------------------------------------------------------------------
- update:			FUNC
+ update:			FUNC		; signature func update() -> void @ 114:17
  								PARA *1
  					$params:	LOCA *PARAM_COUNT
  ;-----------------------------------------------------------------------------
@@ -106,20 +110,20 @@
  								MULi %0 %0 #16
  								POKE &bias %0 
  								MOVi %1 $params:OPERAND_1_HIGH_PARAM_INDEX 	; global displayLEDs[0] = ledBar((int) params[OPERAND_1_HIGH_PARAM_INDEX])
- 								CALL &ledBar %0 *2
+ 								CALL &ledBar %0 *2				; expects ledBar(int) -> int @ 122:74
  								POKE &displayLEDs:0 %0 
  								MOVi %1 $params:OPERAND_1_LOW_PARAM_INDEX  ; global displayLEDs[1] = ledBar((int) params[OPERAND_1_LOW_PARAM_INDEX])
- 								CALL &ledBar %0 *2
+ 								CALL &ledBar %0 *2				; expects ledBar(int) -> int @ 123:73
  								POKE &displayLEDs:1 %0 
  								MOVi %1 $params:OPERAND_2_HIGH_PARAM_INDEX 	; global displayLEDs[2] = ledBar((int) params[OPERAND_2_HIGH_PARAM_INDEX])
- 								CALL &ledBar %0 *2
+ 								CALL &ledBar %0 *2				; expects ledBar(int) -> int @ 124:74
  								POKE &displayLEDs:2 %0 
  								POKE &displayLEDs:3 #0 			; global displayLEDs[3] = 0
  								RETU   							; }
 
 
  ;-----------------------------------------------------------------------------
- fold:				FUNC
+ fold:				FUNC		; signature func fold(int x, int drive, int bias, int outGain) -> int @ 128:15
  					$out:		OUTi
  					$x:			INPi
  					$drive:		INPi
@@ -155,7 +159,7 @@
 
 
  ;-----------------------------------------------------------------------------
- process:			FUNC
+ process:			FUNC		; signature func process() -> void @ 145:18
  								PARA *1
  					$i:			LOCi
  					$drive:		LOCi
@@ -171,29 +175,29 @@
  								MOVi %2 $drive 
  								MOVi %3 $bias 
  								MOVi %4 $outGain 
- 								CALL &fold %0 *5
+ 								CALL &fold %0 *5				; expects fold(int, int, int, int) -> int @ 153:73
  								POKE &signal:0 %0 
  								PEEK %1 &signal:1 				; global signal[1] = fold((int) global signal[1], drive, bias, outGain)
  								MOVi %2 $drive 
  								MOVi %3 $bias 
  								MOVi %4 $outGain 
- 								CALL &fold %0 *5
+ 								CALL &fold %0 *5				; expects fold(int, int, int, int) -> int @ 154:73
  								POKE &signal:1 %0 
- 								CALL ^yield %0 *1				; yield()
+ 								CALL ^yield %0 *1				; expects function() -> unknown @ 155:11
  								FORi $i #BATCH_SIZE @.l2		; }
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_1d30c9d6:		CNST *2
+ .s_-794f7ba9:		CNST *2
  					DATi #32 #0
- .s_DRIVEL1d30c9d7:	CNST *50
+ .s_DRIVEL-794f7ba8: CNST *50
  					DATi #32 #32 #32 #32
  					DATs |------- DRIVE ------| |------- LEVEL ------|
  					DATi #0
- .s_BIAS1d30c9d8:	CNST *51
+ .s_BIAS-794f7ba7:	CNST *51
  					DATi #32 #32 #32 #32
  					DATs |------- BIAS -------| |---------------------|
  					DATi #0
- .s_Folder1d30c9d9:	CNST *12
+ .s_Folder-794f7ba6: CNST *12
  					DATs Folder init
  					DATi #0

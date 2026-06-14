@@ -188,7 +188,7 @@ For finished user-facing work, treat `.p8bank` generation as required whenever t
 can run the tools.
 
 - Compile Impala to GAZL.
-- Generate the `.p8bank` with `tools/createP8Bank.pika`.
+- Generate the `.p8bank` with `tools/createP8Bank.nuxjs.js`.
 - For new user-facing banks, include named example programs when feasible. They may be
   carefully designed presets or bounded semi-random variations that exercise the firmware's
   modes, operands, clock/sync behavior, feedback, filter, and mix.

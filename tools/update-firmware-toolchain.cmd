@@ -20,10 +20,16 @@ IF "%simd%"=="simd" (
 )
 
 SET src_impala=GAZL\impala
+SET src_nuxjs=GAZL\externals\NuXJS
 SET dst=examples\Firmwares
 SET bin=tools\bin
 
-FOR %%f IN ("%src_impala%\impala.pika" "%src_impala%\impalaCompiler.pika" "%src_impala%\systools.pika") DO (
+FOR %%f IN (^
+	"%src_impala%\impala.nuxjs.js" ^
+	"%src_impala%\impalaCompiler.js" ^
+	"%src_nuxjs%\tools\NuXJSREPL.cpp" ^
+	"%src_nuxjs%\src\NuXJS.cpp" ^
+	"%src_nuxjs%\src\stdlibJS.cpp") DO (
 	IF NOT EXIST "%%~f" (
 		ECHO Missing expected source file: %%~f >&2
 		EXIT /B 1
@@ -33,26 +39,25 @@ FOR %%f IN ("%src_impala%\impala.pika" "%src_impala%\impalaCompiler.pika" "%src_
 IF NOT EXIST "%dst%" MKDIR "%dst%"
 IF NOT EXIST "%bin%" MKDIR "%bin%"
 
-REM Copy PikaCmd.exe (prebuilt for Windows)
-IF EXIST "%bin%\PikaCmd.exe" (
-	COPY /Y "%bin%\PikaCmd.exe" "%dst%\PikaCmd.exe" >NUL
-) ELSE (
-	ECHO Missing %bin%\PikaCmd.exe >&2
-	EXIT /B 1
-)
+REM Build the NuXJS command-line runtime that executes the Impala compiler.
+CALL GAZL\tools\BuildCpp.cmd %target% %model% "%bin%\NuXJS.exe" ^
+	"%src_nuxjs%\tools\NuXJSREPL.cpp" ^
+	"%src_nuxjs%\src\NuXJS.cpp" ^
+	"%src_nuxjs%\src\stdlibJS.cpp"
+IF ERRORLEVEL 1 EXIT /B 1
 
-REM Rebuild Impala compiler pika files
-PUSHD "%src_impala%"
-CALL "..\..\%bin%\PikaCmd.exe" impala.pika rebuild
-IF ERRORLEVEL 1 ( POPD & EXIT /B 1 )
-POPD
+COPY /Y "%bin%\NuXJS.exe" "%dst%\NuXJS.exe" >NUL
 
-COPY /Y "%src_impala%\impala.pika"         "%dst%\impala.pika"         >NUL
-COPY /Y "%src_impala%\impalaCompiler.pika" "%dst%\impalaCompiler.pika" >NUL
-COPY /Y "%src_impala%\systools.pika"       "%dst%\systools.pika"       >NUL
-COPY /Y "%src_impala%\impala.pika"         "%bin%\impala.pika"         >NUL
-COPY /Y "%src_impala%\impalaCompiler.pika" "%bin%\impalaCompiler.pika" >NUL
-COPY /Y "%src_impala%\systools.pika"       "%bin%\systools.pika"       >NUL
+REM Copy NuXJS (prebuilt for macOS/Linux) if present, so the bundle stays cross-platform.
+IF EXIST "%bin%\NuXJS" COPY /Y "%bin%\NuXJS" "%dst%\NuXJS" >NUL
+
+REM Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
+REM rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js from
+REM its own directory, so both files must sit side by side wherever NuXJS runs.
+COPY /Y "%src_impala%\impala.nuxjs.js"   "%dst%\impala.nuxjs.js"   >NUL
+COPY /Y "%src_impala%\impalaCompiler.js" "%dst%\impalaCompiler.js" >NUL
+COPY /Y "%src_impala%\impala.nuxjs.js"   "%bin%\impala.nuxjs.js"   >NUL
+COPY /Y "%src_impala%\impalaCompiler.js" "%bin%\impalaCompiler.js" >NUL
 
 REM Build IVG2PNG.exe
 SET CPP_OPTIONS=/DNUXPIXELS_SIMD=%simd_flag%

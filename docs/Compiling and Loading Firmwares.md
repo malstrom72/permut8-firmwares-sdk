@@ -26,29 +26,28 @@ The development folder should contain:
 - generated `*_code.gazl` files
 - optional `*_logo.ivg` and `*_about.txt` files used by matching firmware names
 
-The firmware-code package uses `PikaCmd`, `impala.pika`, and `impalaCompiler.pika`. The RingMod compile path in this SDK has been verified with that toolchain, and this is the only supported Impala compiler path for this repository.
+The firmware-code package uses `NuXJS`, `impala.nuxjs.js`, and `impalaCompiler.js`. The RingMod compile path in this SDK has been verified with that toolchain, and this is the only supported Impala compiler path for this repository.
 
-`PikaCmd` is the command-line runner for PikaScript. The SDK uses the PikaCmd source
+`NuXJS` is a small command-line JavaScript runtime. The SDK uses the NuXJS source
 bundled by the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL) copy under
-`GAZL/externals/PikaCmd`, plus prebuilt runtime executables in `tools/bin/`. It is still
-needed because the Impala-to-GAZL compiler in the Permut8 firmware folder is itself a
-PikaScript program: `PikaCmd` runs `impala.pika`, `impala.pika` loads
-`impalaCompiler.pika`, and that compiler emits the `.gazl` text loaded by Permut8.
+`GAZL/externals/NuXJS`, plus prebuilt runtime executables in `tools/bin/`. It is needed
+because the Impala-to-GAZL compiler is a JavaScript program: `NuXJS` runs
+`impala.nuxjs.js`, `impala.nuxjs.js` loads the JSPEG-generated `impalaCompiler.js`, and
+that compiler emits the `.gazl` text loaded by Permut8.
 
-The repository includes prebuilt runtime copies in `tools/bin/`: `PikaCmd` for macOS and
-`PikaCmd.exe` for Windows. Linux users should build the Unix tools from source by running
+The repository includes prebuilt runtime copies in `tools/bin/`: `NuXJS` for macOS and
+`NuXJS.exe` for Windows. Linux users should build the Unix tools from source by running
 the toolchain update script:
 
 ```sh
 references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 ```
 
-The update script builds `tools/bin/PikaCmd` from
-`GAZL/externals/PikaCmd/PikaCmdAmalgam.cpp` when the existing runtime cannot execute on the
-current host, runs the bundled PikaScript tests, rebuilds `GAZL/impala/impalaCompiler.pika`,
-builds `tools/bin/IVG2PNG`, and copies the firmware-folder runtime files into
-`examples/Firmwares/`. Built executables are not committed under `GAZL/` or `IVG/`, so those
-folders can stay aligned with upstream.
+The update script builds `tools/bin/NuXJS` from the NuXJS C++ sources under
+`GAZL/externals/NuXJS`, stages `GAZL/impala/impala.nuxjs.js` and
+`GAZL/impala/impalaCompiler.js`, builds `tools/bin/IVG2PNG`, and copies the firmware-folder
+runtime files into `examples/Firmwares/`. Built executables are not committed under `GAZL/`
+or `IVG/`, so those folders can stay aligned with upstream.
 Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
 those warnings do not prevent a successful build.
 
@@ -97,30 +96,30 @@ After linking, firmware files edited in your project-local `firmware-code` direc
 For general out-of-tree project builds, compile an Impala source file with:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/bin/impala.pika \
-  compile ringmod_code.impala ringmod_code.gazl
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/bin/impala.nuxjs.js \
+  ringmod_code.impala ringmod_code.gazl
 ```
 
 On Windows:
 
 ```bat
-references\permut8-firmwares-sdk\tools\bin\PikaCmd.exe ^
-  references\permut8-firmwares-sdk\tools\bin\impala.pika ^
-  compile ringmod_code.impala ringmod_code.gazl
+references\permut8-firmwares-sdk\tools\bin\NuXJS.exe ^
+  references\permut8-firmwares-sdk\tools\bin\impala.nuxjs.js ^
+  ringmod_code.impala ringmod_code.gazl
 ```
 
 When working directly inside a self-contained firmware folder, compile with the local
 runtime copy:
 
 ```sh
-./PikaCmd impala.pika compile ringmod_code.impala ringmod_code.gazl
+./NuXJS impala.nuxjs.js ringmod_code.impala ringmod_code.gazl
 ```
 
 On Windows:
 
 ```bat
-PikaCmd.exe impala.pika compile ringmod_code.impala ringmod_code.gazl
+NuXJS.exe impala.nuxjs.js ringmod_code.impala ringmod_code.gazl
 ```
 
 The generated `.gazl` file is the code format loaded by the Permut8 virtual machine and embedded in `.p8bank` firmware banks. This command was verified by compiling `ringmod_code.impala` to `ringmod_code.gazl`, packaging the result, and loading the generated bank in Permut8.
@@ -145,15 +144,15 @@ The example firmware folder includes compile-loop scripts:
 
 They watch the current folder and recompile any `.impala` file newer than its matching `.gazl` file.
 Run the macOS script by double-clicking it in Finder or launching it from Terminal. Run the
-Windows script from the `Permut8 Firmware Code` folder. Both scripts expect `PikaCmd`,
-`impala.pika`, and `impalaCompiler.pika` to be in the same folder as the firmware sources.
+Windows script from the `Permut8 Firmware Code` folder. Both scripts expect `NuXJS`,
+`impala.nuxjs.js`, and `impalaCompiler.js` to be in the same folder as the firmware sources.
 
 The macOS loop is essentially:
 
 ```sh
 for FILE in *.impala; do
 	if [ "$FILE" -nt "${FILE%.impala}.gazl" ]; then
-		./PikaCmd impala.pika compile "$FILE" "${FILE%.impala}.gazl"
+		./NuXJS impala.nuxjs.js "$FILE" "${FILE%.impala}.gazl"
 	fi
 done
 ```
@@ -233,7 +232,7 @@ loaded from the console, changes to the watched `.gazl` file are reloaded automa
 ## Practical Development Loop
 
 1. Put the `.impala` source in the Permut8 firmware code folder.
-2. Run the compile loop, or compile manually with `PikaCmd impala.pika compile`.
+2. Run the compile loop, or compile manually with `NuXJS impala.nuxjs.js`.
 3. Open Permut8 in a DAW.
 4. Open the built-in terminal from the logotype.
 5. Log on and run the patch from the console.

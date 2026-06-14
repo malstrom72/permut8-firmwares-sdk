@@ -14,11 +14,11 @@ A bank embeds:
 - 30 program slots;
 - the current program selection.
 
-Generate banks with `tools/createP8Bank.pika`. Start from a clean no-template bank for
+Generate banks with `tools/createP8Bank.nuxjs.js`. Start from a clean no-template bank for
 brand-new firmwares. Use `--template` only when deliberately preserving the 30 programs
 from an existing bank.
 
-`createP8Bank.pika` writes 30 default programs, or copies the programs from `--template`.
+`createP8Bank.nuxjs.js` writes 30 default programs, or copies the programs from `--template`.
 It does not expose command-line options for per-program operator, operand, or analog-control
 values. To ship demo presets in a brand-new bank, edit the generated program blocks
 directly or start from a template bank saved from Permut8 with the programs you want. After
@@ -32,9 +32,9 @@ and wet/dry mix. Prefer designed presets for release banks; bounded semi-random 
 useful for smoke testing and exploratory demo banks when they stay inside sensible control
 ranges.
 
-For release-sized banks, pass `--compact true` to `tools/createP8Bank.pika`. The compactor
+For release-sized banks, pass `--compact true` to `tools/createP8Bank.nuxjs.js`. The compactor
 strips comments and redundant whitespace while preserving `DATs` string payloads; it is not a
-semantic optimizer. Use `tools/gazlCompactor.pika` directly only when you need a separate
+semantic optimizer. Use `tools/gazlCompactor.nuxjs.js` directly only when you need a separate
 compacted `.gazl` file for inspection.
 
 ## Console Development

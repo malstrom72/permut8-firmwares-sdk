@@ -17,12 +17,17 @@ case "$simd" in
 esac
 
 src_impala="GAZL/impala"
-src_pikacmd="GAZL/externals/PikaCmd"
+src_nuxjs="GAZL/externals/NuXJS"
 dst="examples/Firmwares"
 bin="tools/bin"
-runtime_pikacmd="$bin/PikaCmd"
+runtime_nuxjs="$bin/NuXJS"
 
-for path in "$src_impala/impala.pika" "$src_impala/impalaCompiler.pika" "$src_impala/systools.pika"; do
+for path in \
+	"$src_impala/impala.nuxjs.js" \
+	"$src_impala/impalaCompiler.js" \
+	"$src_nuxjs/tools/NuXJSREPL.cpp" \
+	"$src_nuxjs/src/NuXJS.cpp" \
+	"$src_nuxjs/src/stdlibJS.cpp"; do
 	if [ ! -f "$path" ]; then
 		echo "Missing expected source file: $path" >&2
 		exit 1
@@ -31,39 +36,27 @@ done
 
 mkdir -p "$dst" "$bin"
 
-if [ ! -x "$runtime_pikacmd" ] || ! "$runtime_pikacmd" -h >/dev/null 2>&1; then
-	if [ ! -f "$src_pikacmd/PikaCmdAmalgam.cpp" ]; then
-		echo "Missing expected source file: $src_pikacmd/PikaCmdAmalgam.cpp" >&2
-		exit 1
-	fi
+# Build the NuXJS command-line runtime that executes the Impala compiler.
+GAZL/tools/BuildCpp.sh "$target" "$model" "$runtime_nuxjs" \
+	"$src_nuxjs/tools/NuXJSREPL.cpp" \
+	"$src_nuxjs/src/NuXJS.cpp" \
+	"$src_nuxjs/src/stdlibJS.cpp"
+chmod +x "$runtime_nuxjs"
 
-	(
-		cd "$src_pikacmd"
-		bash BuildCpp.sh "../../../$runtime_pikacmd" -DPLATFORM_STRING=UNIX PikaCmdAmalgam.cpp
-		"../../../$runtime_pikacmd" unittests.pika >/dev/null
-		"../../../$runtime_pikacmd" systoolsTests.pika
-	)
-	chmod +x "$runtime_pikacmd"
+cp "$runtime_nuxjs" "$dst/NuXJS"
+chmod +x "$dst/NuXJS"
+
+if [ -f "$bin/NuXJS.exe" ]; then
+	cp "$bin/NuXJS.exe" "$dst/NuXJS.exe"
 fi
 
-cp "$bin/PikaCmd" "$dst/PikaCmd"
-chmod +x "$dst/PikaCmd"
-
-if [ -f "$bin/PikaCmd.exe" ]; then
-	cp "$bin/PikaCmd.exe" "$dst/PikaCmd.exe"
-fi
-
-(
-	cd "$src_impala"
-	"../../$runtime_pikacmd" impala.pika rebuild
-)
-
-cp "$src_impala/impala.pika" "$dst/impala.pika"
-cp "$src_impala/impalaCompiler.pika" "$dst/impalaCompiler.pika"
-cp "$src_impala/systools.pika" "$dst/systools.pika"
-cp "$src_impala/impala.pika" "$bin/impala.pika"
-cp "$src_impala/impalaCompiler.pika" "$bin/impalaCompiler.pika"
-cp "$src_impala/systools.pika" "$bin/systools.pika"
+# Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
+# rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js from
+# its own directory, so both files must sit side by side wherever NuXJS runs.
+cp "$src_impala/impala.nuxjs.js" "$dst/impala.nuxjs.js"
+cp "$src_impala/impalaCompiler.js" "$dst/impalaCompiler.js"
+cp "$src_impala/impala.nuxjs.js" "$bin/impala.nuxjs.js"
+cp "$src_impala/impalaCompiler.js" "$bin/impalaCompiler.js"
 
 c_sources=(
 	IVG/externals/libpng/png.c

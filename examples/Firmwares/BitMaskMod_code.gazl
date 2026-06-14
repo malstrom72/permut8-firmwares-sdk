@@ -1,31 +1,38 @@
  ; Compiled with Impala version 1.0
 
- PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2
- FALSE:				! DEFi #0
- TRUE:				! DEFi #1
- panelTextRows:		CNST *8
- 					DATA &.s_e423a9af &.s_e423a9af &.s_e423a9af &.s_e423a9af
- 					DATA &.s_BMSKHIe423a9b0 &.s_BMSKHIe423a9b0:53
- 					DATA &.s_BMSKHIe423a9b0:53 &.s_BMSKHIe423a9b0:53
+ ; signatures version=1
+ PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #2	; signature const PRAWN_FIRMWARE_PATCH_FORMAT : int @ 18:1
+ FALSE:				! DEFi #0	; signature const FALSE : int @ 19:1
+ TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
+ panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
+ 					DATA &.s_-3a9ca501 &.s_-3a9ca501 &.s_-3a9ca501
+ 					DATA &.s_-3a9ca501 &.s_BMSKHI-3a9ca500
+ 					DATA &.s_BMSKHI-3a9ca500:53 &.s_BMSKHI-3a9ca500:53
+ 					DATA &.s_BMSKHI-3a9ca500:53
+ ; signature extern native abort() -> unknown @ 39:1
+ ; signature extern native trace() -> unknown @ 40:1
+ ; signature extern native yield() -> unknown @ 41:1
+ ; signature extern native write() -> unknown @ 42:1
+ ; signature extern native read() -> unknown @ 44:1
  					GLOB *1
- clock:				DATi #0
- positions:			GLOB *2
- params:			GLOB *PARAM_COUNT
- displayLEDs:		GLOB *4
+ clock:				DATi #0		; signature global clock : int @ 80:1
+ positions:			GLOB *2		; signature array positions[2] : unknown @ 81:1
+ params:			GLOB *PARAM_COUNT ; signature array params[PARAM_COUNT] : unknown @ 82:1
+ displayLEDs:		GLOB *4		; signature array displayLEDs[4] : unknown @ 83:1
  					GLOB *1
- instance:			DATi #0
+ instance:			DATi #0		; signature global instance : int @ 85:1
  					CNST *1
  					! SHLi <A> #1 #OPERATOR_2_PARAM_INDEX
  					! SHLi <B> #1 #OPERAND_2_HIGH_PARAM_INDEX
  					! IORi <A> <A> <B>
  					! SHLi <B> #1 #OPERAND_2_LOW_PARAM_INDEX
  					! IORi <A> <A> <B>
- updateMask:		DATi <A>
+ updateMask:		DATi <A>	; signature readonly updateMask : int @ 90:1
  					GLOB *1
- mask:				DATi #0
+ mask:				DATi #0		; signature global mask : int @ 90:16
 
  ;-----------------------------------------------------------------------------
- update:			FUNC
+ update:			FUNC		; signature func update() -> void @ 114:17
  								PARA *1
  					$x:			LOCi
  					$y:			LOCi
@@ -46,7 +53,7 @@
 
 
  ;-----------------------------------------------------------------------------
- operate2:			FUNC
+ operate2:			FUNC		; signature func operate2() -> int @ 134:19
  					$r:			OUTi
  					$l:			LOCi
  					$x:			LOCi
@@ -77,8 +84,8 @@
  								MOVi $r #1 						; r = 1
  					.e1:		RETU   							; }
 
- .s_e423a9af:		CNST *1
+ .s_-3a9ca501:		CNST *1
  					DATi #0
- .s_BMSKHIe423a9b0:	CNST *54
+ .s_BMSKHI-3a9ca500: CNST *54
  					DATs BMSK|----- HIGH BITS ------| |------ LOW BITS ------|
  					DATi #0

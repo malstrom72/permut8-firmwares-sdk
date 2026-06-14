@@ -15,19 +15,20 @@ reference to an external `.gazl`, `.impala`, or `.p8bank` file.
 
 ## Prerequisites
 
-**No Installation Required** for everyday firmware authoring. PikaCmd — the runtime for
-the Impala compiler and bank-packaging tools — comes prebuilt for macOS and Windows inside
-`tools/bin`. You do not need to install any compiler, runtime, or build system to write,
-compile, and package a `.p8bank` file.
+**No Installation Required** for everyday firmware authoring. NuXJS — the JavaScript
+runtime that runs the Impala compiler and bank-packaging tools — comes prebuilt for macOS
+and Windows inside `tools/bin`. You do not need to install any compiler, runtime, or build
+system to write, compile, and package a `.p8bank` file.
 
 **SDK Maintenance Tools (Not Required for General Use)**
 
 Additional tools are needed only for maintaining or rebuilding the SDK itself:
 
-- **C++ compiler** — to rebuild PikaCmd or native GAZL tools from source via
+- **C++ compiler** — to rebuild NuXJS or native GAZL tools from source via
   `update-firmware-toolchain.sh`
-- **Python 3 + Docling** — to regenerate the Permut8 User Guide Markdown from the
-  original PDF via `bootstrap-docling.sh` and `convert-user-guide.sh`
+- **Python 3 + Docling, and Node.js** — to regenerate the Permut8 User Guide Markdown from
+  the original PDF via `bootstrap-docling.sh` and `convert-user-guide.sh` (the conversion
+  step post-processes the Markdown with `tools/postprocessUserGuide.js`)
 
 ## Technology Overview
 
@@ -57,11 +58,11 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
 - `tools`:
     - `bin`: prebuilt SDK helper executables and runtime scripts used by the documented
       compile, package, and validation commands.
-    - `createP8Bank.pika`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
-    - `gazlCompactor.pika`: strips comments and redundant whitespace from compiled GAZL
+    - `createP8Bank.nuxjs.js`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
+    - `gazlCompactor.nuxjs.js`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
     - `update-firmware-toolchain.sh`: builds Unix tools in `tools/bin` when needed,
-      rebuilds the Impala compiler, refreshes the firmware runtime files from the
+      rebuilds the NuXJS runtime, refreshes the firmware compiler files from the
       authoritative `GAZL` copy, and updates the vendored IVG renderer used for sticker
       validation.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
@@ -70,8 +71,8 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
     - Vendored GAZL VM, Impala compiler, build scripts, tests, and documentation copied
       from [malstrom72/GAZL](https://github.com/malstrom72/GAZL). This folder is kept as
       a straight upstream copy where practical.
-    - Includes the authoritative bundled PikaCmd source under `GAZL/externals/PikaCmd`;
-      built PikaCmd executables are kept out of `GAZL/`.
+    - Includes the authoritative bundled NuXJS source under `GAZL/externals/NuXJS`;
+      built NuXJS executables are kept out of `GAZL/`.
 
 - `IVG`:
     - Vendored IVG renderer, fonts, tools, tests, and documentation used for sticker graphics.
@@ -88,9 +89,8 @@ and keep generated work outside the SDK checkout.
 Compile the firmware:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/bin/impala.pika \
-  compile \
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/bin/impala.nuxjs.js \
   <path-to-source.impala> \
   <path-to-compiled.gazl>
 ```
@@ -98,8 +98,8 @@ references/permut8-firmwares-sdk/tools/bin/PikaCmd \
 Package it as a firmware bank:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/createP8Bank.pika \
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/createP8Bank.nuxjs.js \
   --name ringmod \
   --code <path-to-compiled.gazl> \
   --logo <path-to-logo.ivg> \
@@ -114,9 +114,8 @@ debugging.
 Load the generated `.p8bank` in Permut8. This compile/package/load path has been
 verified with the RingMod example and is the recommended sanity check for the SDK.
 
-The `PikaCmd` executable is still required for Impala firmware work because the
-firmware compiler used by the original Permut8 development folder is written in
-PikaScript. `PikaCmd` runs `impala.pika`, which loads `impalaCompiler.pika` and emits
+The `NuXJS` executable runs the Impala compiler for firmware work. `NuXJS` runs
+`impala.nuxjs.js`, which loads the JSPEG-generated `impalaCompiler.js` and emits
 the `.gazl` file that Permut8 can load.
 
 ## Firmware Authoring

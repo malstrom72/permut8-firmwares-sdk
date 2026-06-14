@@ -1,7 +1,8 @@
 .DS_Store
 /output
-impala/GAZLCmd
-impala/GAZLCmd.exe
-externals/PikaCmd/PikaCmd
-externals/PikaCmd/PikaCmd.exe
 /projects/build
+tests/impala/erroneous/
+externals/NuXJS/output/
+externals/NuXJS/**/*.dSYM/
+externals/NuXJS/**/xcuserdata/
+*.pdb

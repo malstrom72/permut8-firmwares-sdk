@@ -8,9 +8,8 @@ Compile the firmware source to GAZL from a consuming project that has this SDK c
 `references/permut8-firmwares-sdk/`:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/bin/impala.pika \
-  compile \
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/bin/impala.nuxjs.js \
   <path-to-source.impala> \
   <path-to-compiled.gazl>
 ```
@@ -18,9 +17,8 @@ references/permut8-firmwares-sdk/tools/bin/PikaCmd \
 On Windows:
 
 ```bat
-references\permut8-firmwares-sdk\tools\bin\PikaCmd.exe ^
-  references\permut8-firmwares-sdk\tools\bin\impala.pika ^
-  compile ^
+references\permut8-firmwares-sdk\tools\bin\NuXJS.exe ^
+  references\permut8-firmwares-sdk\tools\bin\impala.nuxjs.js ^
   <path-to-source.impala> ^
   <path-to-compiled.gazl>
 ```
@@ -33,8 +31,8 @@ Permut8 loads and that `.p8bank` files embed.
 For release banks, compact the compiled GAZL during packaging:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/createP8Bank.pika \
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/createP8Bank.nuxjs.js \
   --name ringmod \
   --code <path-to-compiled.gazl> \
   --logo <path-to-logo.ivg> \
@@ -51,8 +49,8 @@ does not replace a compile check or a Permut8 load test.
 Package the compiled code and optional assets with the bank writer:
 
 ```sh
-references/permut8-firmwares-sdk/tools/bin/PikaCmd \
-  references/permut8-firmwares-sdk/tools/createP8Bank.pika \
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/createP8Bank.nuxjs.js \
   --name ringmod \
   --code <path-to-compiled.gazl> \
   --logo <path-to-logo.ivg> \

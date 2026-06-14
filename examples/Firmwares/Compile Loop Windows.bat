@@ -20,7 +20,7 @@ FOR %%I IN (*.impala) DO (
 	)
 	IF !_dirty! EQU 1 (
 		ECHO Compiling !_source!...
-		PikaCmd impala.pika compile !_source! !_target!
+		NuXJS impala.nuxjs.js !_source! !_target!
 	)
 )
 ping 123.45.67.89 -n 1 -w 100 > nul
