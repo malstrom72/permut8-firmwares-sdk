@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 19:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
- 					DATA &.s_433db05 &.s_SUB16B433db06 &.s_SUB16B433db06:53
- 					DATA &.s_SUB16B433db06:53 &.s_SUB16B433db06:53
- 					DATA &.s_SUB16B433db06:53 &.s_SUB16B433db06:53
- 					DATA &.s_SUB16B433db06:53
+ 					DATA &.s_5c15f56b &.s_SUB16B5c15f56c &.s_SUB16B5c15f56c:53
+ 					DATA &.s_SUB16B5c15f56c:53 &.s_SUB16B5c15f56c:53
+ 					DATA &.s_SUB16B5c15f56c:53 &.s_SUB16B5c15f56c:53
+ 					DATA &.s_SUB16B5c15f56c:53
  ; signature extern native abort() -> unknown @ 39:1
  ; signature extern native trace() -> unknown @ 40:1
  ; signature extern native yield() -> unknown @ 41:1
@@ -73,8 +73,8 @@
  								MOVi $r #1 						; r = 1
  					.f0:		RETU   							; }
 
- .s_433db05:		CNST *1
+ .s_5c15f56b:		CNST *1
  					DATi #0
- .s_SUB16B433db06:	CNST *54
+ .s_SUB16B5c15f56c:	CNST *54
  					DATs SUB |-------- 16-BIT LINEAR SUBTRACT AMOUNT --------|
  					DATi #0

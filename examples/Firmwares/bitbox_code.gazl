@@ -5,9 +5,9 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 11:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 13:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 13:33
- 					DATA &.s_A34aa574f &.s_BBASSD34aa5750 &.s_C34aa5751
- 					DATA &.s_D34aa5752 &.s_A34aa574f &.s_BHIHAT34aa5753
- 					DATA &.s_CSNARE34aa5754 &.s_D34aa5752
+ 					DATA &.s_A4f4669f3 &.s_BBASSD4f4669f4 &.s_C4f4669f5
+ 					DATA &.s_D4f4669f6 &.s_A4f4669f3 &.s_BHIHAT4f4669f7
+ 					DATA &.s_CSNARE4f4669f8 &.s_D4f4669f6
  ; signature extern native abort() -> unknown @ 25:1
  ; signature extern native trace() -> unknown @ 26:1
  ; signature extern native yield() -> unknown @ 27:1
@@ -225,8 +225,8 @@
  								PEEK %1 &clock 					; write(global clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 268:41
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 269:11
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 268:41
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 269:11
  								PEEK %0 &signal:0 				; global signal[0] = (((int) global signal[0] * pump) >> 12) + y
  								MULi %0 %0 $pump
  								SHRi %0 %0 #12
@@ -240,8 +240,8 @@
  								PEEK %1 &clock 					; write(global clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 272:41
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 273:11
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 272:41
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 273:11
  								ADDi $pump $pump #0x2			; pump = pump + 0x2
  								LEQi $pump #0x1000 @.f16		; if (pump > 0x1000) pump = 0x1000
  								MOVi $pump #0x1000 				; pump = 0x1000
@@ -249,21 +249,21 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_A34aa574f:		CNST *2
+ .s_A4f4669f3:		CNST *2
  					DATs A
  					DATi #0
- .s_BBASSD34aa5750:	CNST *17
+ .s_BBASSD4f4669f4:	CNST *17
  					DATs B      BASS DRUM
  					DATi #0
- .s_C34aa5751:		CNST *2
+ .s_C4f4669f5:		CNST *2
  					DATs C
  					DATi #0
- .s_D34aa5752:		CNST *2
+ .s_D4f4669f6:		CNST *2
  					DATs D
  					DATi #0
- .s_BHIHAT34aa5753:	CNST *47
+ .s_BHIHAT4f4669f7:	CNST *47
  					DATs B      HI-HAT                      + BASS DRUM
  					DATi #0
- .s_CSNARE34aa5754:	CNST *48
+ .s_CSNARE4f4669f8:	CNST *48
  					DATs C                                  = SNARE DRUM
  					DATi #0

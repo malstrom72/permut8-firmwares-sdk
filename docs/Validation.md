@@ -26,6 +26,23 @@ references\permut8-firmwares-sdk\tools\bin\NuXJS.exe ^
 A successful compile proves the Impala source can be translated to the GAZL text that
 Permut8 loads and that `.p8bank` files embed.
 
+## Validate GAZL Signatures
+
+Run the GAZL signature validator on the compiled `.gazl` to catch signature and
+argument-count mismatches across function definitions and call sites. Run it from the SDK
+root so it auto-loads the Permut8 native manifest at `docs/nativeCallbackSignatures.gazl`:
+
+```sh
+references/permut8-firmwares-sdk/tools/bin/NuXJS \
+  references/permut8-firmwares-sdk/tools/gazl-validate.js \
+  <path-to-compiled.gazl>
+```
+
+It exits non-zero and prints each conflict (with definition and call-site origins) when it
+finds one; `--warn-only` downgrades failures to warnings. This complements the compile
+check — the compiler already rejects in-firmware mismatches, and the validator additionally
+guards against signature drift in the embedded GAZL.
+
 ## Optional: Compact GAZL
 
 For release banks, compact the compiled GAZL during packaging:

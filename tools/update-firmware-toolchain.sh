@@ -18,6 +18,7 @@ esac
 
 src_impala="GAZL/impala"
 src_nuxjs="GAZL/externals/NuXJS"
+src_validator="GAZL/tools/gazl-validate.js"
 dst="examples/Firmwares"
 bin="tools/bin"
 runtime_nuxjs="$bin/NuXJS"
@@ -25,6 +26,7 @@ runtime_nuxjs="$bin/NuXJS"
 for path in \
 	"$src_impala/impala.nuxjs.js" \
 	"$src_impala/impalaCompiler.js" \
+	"$src_validator" \
 	"$src_nuxjs/tools/NuXJSREPL.cpp" \
 	"$src_nuxjs/src/NuXJS.cpp" \
 	"$src_nuxjs/src/stdlibJS.cpp"; do
@@ -57,6 +59,12 @@ cp "$src_impala/impala.nuxjs.js" "$dst/impala.nuxjs.js"
 cp "$src_impala/impalaCompiler.js" "$dst/impalaCompiler.js"
 cp "$src_impala/impala.nuxjs.js" "$bin/impala.nuxjs.js"
 cp "$src_impala/impalaCompiler.js" "$bin/impalaCompiler.js"
+
+# Stage the GAZL signature validator next to the other SDK tools. Run it from the
+# SDK root so it auto-loads the Permut8 native manifest at docs/nativeCallbackSignatures.gazl
+# (the validator looks for ../docs/ relative to its own location):
+#   tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl
+cp "$src_validator" "tools/gazl-validate.js"
 
 c_sources=(
 	IVG/externals/libpng/png.c

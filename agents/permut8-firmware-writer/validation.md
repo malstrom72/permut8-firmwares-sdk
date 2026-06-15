@@ -7,6 +7,9 @@ Use the repository validation guide as the canonical checklist:
 Expected agent practice:
 
 - Compile touched `.impala` files to `.gazl` whenever the local toolchain can run.
+- Validate the compiled `.gazl` for signature/argument-count conflicts by running
+  `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` from the SDK root (it auto-loads
+  the Permut8 native manifest at `docs/nativeCallbackSignatures.gazl`).
 - Generate or regenerate the `.p8bank` with `tools/createP8Bank.nuxjs.js`.
 - For user-facing banks, check that program slots are intentional and preferably include
   named example programs that exercise the firmware's important behaviors.

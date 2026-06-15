@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 19:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
- 					DATA &.s_-3a9ca501 &.s_-3a9ca501 &.s_-3a9ca501
- 					DATA &.s_-3a9ca501 &.s_BMSKHI-3a9ca500
- 					DATA &.s_BMSKHI-3a9ca500:53 &.s_BMSKHI-3a9ca500:53
- 					DATA &.s_BMSKHI-3a9ca500:53
+ 					DATA &.s_-65654687 &.s_-65654687 &.s_-65654687
+ 					DATA &.s_-65654687 &.s_BMSKHI-65654686
+ 					DATA &.s_BMSKHI-65654686:53 &.s_BMSKHI-65654686:53
+ 					DATA &.s_BMSKHI-65654686:53
  ; signature extern native abort() -> unknown @ 39:1
  ; signature extern native trace() -> unknown @ 40:1
  ; signature extern native yield() -> unknown @ 41:1
@@ -84,8 +84,8 @@
  								MOVi $r #1 						; r = 1
  					.e1:		RETU   							; }
 
- .s_-3a9ca501:		CNST *1
+ .s_-65654687:		CNST *1
  					DATi #0
- .s_BMSKHI-3a9ca500: CNST *54
+ .s_BMSKHI-65654686: CNST *54
  					DATs BMSK|----- HIGH BITS ------| |------ LOW BITS ------|
  					DATi #0

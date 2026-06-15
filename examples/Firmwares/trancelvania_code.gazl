@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 19:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
- 					DATA &.s_116ste6f391b6b &.s_132ste6f391b6c
- 					DATA &.s_Level66f391b6d &.s_Leftst6f391b6e
- 					DATA &.s_Gate6f391b6f &.s_LPF6f391b70 &.s_BPF6f391b71
- 					DATA &.s_HPFAtt6f391b72
+ 					DATA &.s_116ste-5d7bba0d &.s_132ste-5d7bba0c
+ 					DATA &.s_Level6-5d7bba0b &.s_Leftst-5d7bba0a
+ 					DATA &.s_Gate-5d7bba09 &.s_LPF-5d7bba08 &.s_BPF-5d7bba07
+ 					DATA &.s_HPFAtt-5d7bba06
  ; signature extern native abort() -> unknown @ 39:1
  ; signature extern native trace() -> unknown @ 40:1
  ; signature extern native yield() -> unknown @ 41:1
@@ -36,8 +36,8 @@
  					$s:			INPp
  ;-----------------------------------------------------------------------------
  								MOVp %1 $s 						; trace(s)
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 105:10
- 								CALL ^abort %0 *1				; expects function() -> unknown @ 106:9
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 105:10
+ 								CALL ^abort %0 *1				; expects abort() -> unknown @ 106:9
  								RETU   							; }
 
 
@@ -62,7 +62,7 @@
  					$y:			INPf
  ;-----------------------------------------------------------------------------
  								NEQf $y #0.0 @.f0				; if (y == 0.0) error("Division by zero")
- 								MOVp %1 &.s_Divisi6f391b73 		; error("Division by zero")
+ 								MOVp %1 &.s_Divisi-5d7bba05 	; error("Division by zero")
  								CALL &error %0 *2				; expects error(ptr) -> void @ 119:41
  								GOTO @.e1  
  					.f0:		DIVf %1 $x $y					; z = x - (float)trunc(x / y) * y
@@ -162,8 +162,8 @@
  					$i:			LOCi
  					$x:			LOCf
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_init6f391b74 		; trace("init")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 227:15
+ 								MOVp %1 &.s_init-5d7bba04 		; trace("init")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 227:15
  								MOVi $i #0 						; for (i = 0 to FILTER_PARAM_TABLE_SIZE) 
  								GEQi #0 #FILTER_PARAM_TABLE_SIZE @.e0
  					.l1:		NOOP
@@ -210,8 +210,8 @@
  reset:				FUNC		; signature func reset() -> void @ 246:16
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_reset6f391b75 		; trace("reset")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 248:16
+ 								MOVp %1 &.s_reset-5d7bba03 		; trace("reset")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 248:16
  								POKE &doReset #TRUE 			; global doReset = TRUE
  								RETU   							; }
 
@@ -416,11 +416,11 @@
  					.l18:		MOVi %1 $clock 					; write(clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 378:34
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 378:34
  								MOVi %1 $clock 					; read(clock, 1, inputSignal)
  								MOVi %2 #1 
  								ADRL %3 $inputSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 379:31
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 379:31
  								! DIVf <A> #1.0 #2048.0			; l = itof((int) inputSignal[0]) * (1.0 / 2048.0) + nyquist
  								iTOf %0 $inputSignal:0 <A>
  								ADDf $l %0 $nyquist
@@ -461,7 +461,7 @@
  								POKE &signal:0 %0 
  								fTOi %0 $r #2048.0				; global signal[1] = ftoi(r * 2048.0)
  								POKE &signal:1 %0 
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 401:11
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 401:11
  								ADDi $clock $clock $clockDir	; clock = clock + clockDir
  								SUBf $nyquist #0.0 $nyquist		; nyquist = -nyquist
  								FORi $i #BATCH_SIZE @.l18		; }
@@ -470,38 +470,38 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_116ste6f391b6b:	CNST *54
+ .s_116ste-5d7bba0d: CNST *54
  					DATs --- [ 1/16 steps                                    ]
  					DATi #0
- .s_132ste6f391b6c:	CNST *54
+ .s_132ste-5d7bba0c: CNST *54
  					DATs --- [ 1/32 steps                                    ]
  					DATi #0
- .s_Level66f391b6d:	CNST *54
+ .s_Level6-5d7bba0b: CNST *54
  					DATs --- [ Level: 67%           ]+[ Level: 33%           ]
  					DATi #0
- .s_Leftst6f391b6e:	CNST *54
+ .s_Leftst-5d7bba0a: CNST *54
  					DATs --- [ Left steps           ] [ Right steps          ]
  					DATi #0
- .s_Gate6f391b6f:	CNST *5
+ .s_Gate-5d7bba09:	CNST *5
  					DATs Gate
  					DATi #0
- .s_LPF6f391b70:	CNST *4
+ .s_LPF-5d7bba08:	CNST *4
  					DATs LPF
  					DATi #0
- .s_BPF6f391b71:	CNST *53
+ .s_BPF-5d7bba07:	CNST *53
  					DATs BPF
  					DATi #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #213 #212 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_HPFAtt6f391b72:	CNST *54
+ .s_HPFAtt-5d7bba06: CNST *54
  					DATs HPF
  					DATi #32 #209 #32 #32 #32 #32 #32 #32 #32 #32
  					DATs Attack        ||        Release
  					DATi #32 #32 #32 #32 #32 #32 #32 #32 #210 #0
- .s_Divisi6f391b73:	CNST *17
+ .s_Divisi-5d7bba05: CNST *17
  					DATs Division by zero
  					DATi #0
- .s_init6f391b74:	CNST *5
+ .s_init-5d7bba04:	CNST *5
  					DATs init
  					DATi #0
- .s_reset6f391b75:	CNST *6
+ .s_reset-5d7bba03:	CNST *6
  					DATs reset
  					DATi #0

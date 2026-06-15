@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 21:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 29:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 29:33
- 					DATA &.s_MUTEst774f3f67 &.s_REPEAT774f3f68
- 					DATA &.s_SKIPst774f3f69 &.s_HOLDst774f3f6a
- 					DATA &.s_ACCENT774f3f6b &.s_STUTTE774f3f6c
- 					DATA &.s_REVERS774f3f6d &.s_TAPEST774f3f6e
+ 					DATA &.s_MUTEst-cf25fcd &.s_REPEAT-cf25fcc
+ 					DATA &.s_SKIPst-cf25fcb &.s_HOLDst-cf25fca
+ 					DATA &.s_ACCENT-cf25fc9 &.s_STUTTE-cf25fc8
+ 					DATA &.s_REVERS-cf25fc7 &.s_TAPEST-cf25fc6
  ; signature extern native abort() -> unknown @ 41:1
  ; signature extern native trace() -> unknown @ 42:1
  ; signature extern native yield() -> unknown @ 43:1
@@ -200,7 +200,7 @@
  								MOVi %1 $localClock 			; write(localClock, 1, localSignal)
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 189:36
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 189:36
  					.f0:		PEEK %0 &lastInStep 			; if (global lastInStep != inStep) 
  								EQUi %0 $inStep @.f1
  								PEEK %0 &steps $inStep			; global currentOutStep = (int) global steps[inStep]
@@ -217,7 +217,7 @@
  								IORi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 199:49
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 199:49
  								GOTO @.e3  						; } else 
  					.f2:		PEEK %0 &bottomOperator 		; switch (global bottomOperator == 0 to 5) 
  								SWCH %0 *5 @.s4
@@ -226,13 +226,13 @@
  								ADDi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 202:80
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 202:80
  								GOTO @.e5  
  					.s4#STUTTER: ANDi %1 $localClock #0x3FF		; read(i | (localClock & 0x3FF), 1, localSignal)
  								IORi %1 $i %1
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 203:64
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 203:64
  								GOTO @.e5  
  					.s4#TAPE_STOP: MOVi $si #0x0 				; si = 0x0
  								MOVi $sr #0x10000 				; sr = 0x10000
@@ -244,7 +244,7 @@
  								IORi %1 $i %1
  								MOVi %2 #2 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 211:41
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 211:41
  								ANDi $f $si #0xFFFF				; f = si & 0xFFFF
  								SUBi %0 $localSignal:2 $localSignal:0 ; localSignal[0] = (int) localSignal[0] + (((int) localSignal[2] - (int) localSignal[0]) * f >> 16)
  								MULi %0 %0 $f
@@ -280,27 +280,27 @@
  								COPY &signal %0 *2
  								RETU   							; }
 
- .s_MUTEst774f3f67:	CNST *24
+ .s_MUTEst-cf25fcd:	CNST *24
  					DATs MUTE steps that are off
  					DATi #0
- .s_REPEAT774f3f68:	CNST *36
+ .s_REPEAT-cf25fcc:	CNST *36
  					DATs REPEAT steps that are on before off
  					DATi #0
- .s_SKIPst774f3f69:	CNST *24
+ .s_SKIPst-cf25fcb:	CNST *24
  					DATs SKIP steps that are off
  					DATi #0
- .s_HOLDst774f3f6a:	CNST *53
+ .s_HOLDst-cf25fca:	CNST *53
  					DATs HOLD steps that are on, turn on WRITE PROT when done
  					DATi #0
- .s_ACCENT774f3f6b:	CNST *14
+ .s_ACCENT-cf25fc9:	CNST *14
  					DATs ACCENT effect
  					DATi #0
- .s_STUTTE774f3f6c:	CNST *15
+ .s_STUTTE-cf25fc8:	CNST *15
  					DATs STUTTER effect
  					DATi #0
- .s_REVERS774f3f6d:	CNST *15
+ .s_REVERS-cf25fc7:	CNST *15
  					DATs REVERSE effect
  					DATi #0
- .s_TAPEST774f3f6e:	CNST *17
+ .s_TAPEST-cf25fc6:	CNST *17
  					DATs TAPE STOP effect
  					DATi #0

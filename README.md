@@ -61,10 +61,14 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
     - `createP8Bank.nuxjs.js`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
     - `gazlCompactor.nuxjs.js`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
+    - `gazl-validate.js`: GAZL signature validator (staged from `GAZL`); run it with
+      `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` to catch signature and
+      argument-count mismatches. Auto-loads the Permut8 native manifest at
+      `docs/nativeCallbackSignatures.gazl`.
     - `update-firmware-toolchain.sh`: builds Unix tools in `tools/bin` when needed,
-      rebuilds the NuXJS runtime, refreshes the firmware compiler files from the
-      authoritative `GAZL` copy, and updates the vendored IVG renderer used for sticker
-      validation.
+      rebuilds the NuXJS runtime, refreshes the firmware compiler files and signature
+      validator from the authoritative `GAZL` copy, and updates the vendored IVG renderer
+      used for sticker validation.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
 
 - `GAZL`:

@@ -5,9 +5,9 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 25:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
- 					DATA &.s_-794f7ba9 &.s_-794f7ba9 &.s_-794f7ba9
- 					DATA &.s_DRIVEL-794f7ba8 &.s_-794f7ba9 &.s_-794f7ba9
- 					DATA &.s_-794f7ba9 &.s_BIAS-794f7ba7
+ 					DATA &.s_-72aac6cb &.s_-72aac6cb &.s_-72aac6cb
+ 					DATA &.s_DRIVEL-72aac6ca &.s_-72aac6cb &.s_-72aac6cb
+ 					DATA &.s_-72aac6cb &.s_BIAS-72aac6c9
  ; signature extern native abort() -> unknown @ 39:1
  ; signature extern native trace() -> unknown @ 40:1
  ; signature extern native yield() -> unknown @ 42:1
@@ -90,8 +90,8 @@
  init:				FUNC		; signature func init() -> void @ 109:15
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_Folder-794f7ba6 	; trace("Folder init")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 111:22
+ 								MOVp %1 &.s_Folder-72aac6c8 	; trace("Folder init")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 111:22
  								RETU   							; }
 
 
@@ -183,21 +183,21 @@
  								MOVi %4 $outGain 
  								CALL &fold %0 *5				; expects fold(int, int, int, int) -> int @ 154:73
  								POKE &signal:1 %0 
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 155:11
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 155:11
  								FORi $i #BATCH_SIZE @.l2		; }
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_-794f7ba9:		CNST *2
+ .s_-72aac6cb:		CNST *2
  					DATi #32 #0
- .s_DRIVEL-794f7ba8: CNST *50
+ .s_DRIVEL-72aac6ca: CNST *50
  					DATi #32 #32 #32 #32
  					DATs |------- DRIVE ------| |------- LEVEL ------|
  					DATi #0
- .s_BIAS-794f7ba7:	CNST *51
+ .s_BIAS-72aac6c9:	CNST *51
  					DATi #32 #32 #32 #32
  					DATs |------- BIAS -------| |---------------------|
  					DATi #0
- .s_Folder-794f7ba6: CNST *12
+ .s_Folder-72aac6c8: CNST *12
  					DATs Folder init
  					DATi #0

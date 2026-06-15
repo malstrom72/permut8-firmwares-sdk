@@ -21,12 +21,14 @@ IF "%simd%"=="simd" (
 
 SET src_impala=GAZL\impala
 SET src_nuxjs=GAZL\externals\NuXJS
+SET src_validator=GAZL\tools\gazl-validate.js
 SET dst=examples\Firmwares
 SET bin=tools\bin
 
 FOR %%f IN (^
 	"%src_impala%\impala.nuxjs.js" ^
 	"%src_impala%\impalaCompiler.js" ^
+	"%src_validator%" ^
 	"%src_nuxjs%\tools\NuXJSREPL.cpp" ^
 	"%src_nuxjs%\src\NuXJS.cpp" ^
 	"%src_nuxjs%\src\stdlibJS.cpp") DO (
@@ -58,6 +60,11 @@ COPY /Y "%src_impala%\impala.nuxjs.js"   "%dst%\impala.nuxjs.js"   >NUL
 COPY /Y "%src_impala%\impalaCompiler.js" "%dst%\impalaCompiler.js" >NUL
 COPY /Y "%src_impala%\impala.nuxjs.js"   "%bin%\impala.nuxjs.js"   >NUL
 COPY /Y "%src_impala%\impalaCompiler.js" "%bin%\impalaCompiler.js" >NUL
+
+REM Stage the GAZL signature validator next to the other SDK tools. Run it from the
+REM SDK root so it auto-loads the Permut8 native manifest at docs\nativeCallbackSignatures.gazl:
+REM   tools\bin\NuXJS tools\gazl-validate.js <compiled>.gazl
+COPY /Y "%src_validator%" "tools\gazl-validate.js" >NUL
 
 REM Build IVG2PNG.exe
 SET CPP_OPTIONS=/DNUXPIXELS_SIMD=%simd_flag%

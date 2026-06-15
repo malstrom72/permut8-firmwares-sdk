@@ -1,0 +1,17 @@
+; Permut8 host native signature manifest for GAZL signature validation.
+;
+; These are the native functions the Permut8 host registers for firmware code,
+; described in docs/Permut8 Firmware API.md ("Native Functions"). Run the GAZL
+; validator from the SDK root so it auto-loads this file:
+;
+;     tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl
+;
+; The validator cross-checks both direct and indirect native call sites against
+; these signatures by name. Keep entries in host-registration order so additions
+; are easy to diff.
+
+; signature extern native abort() -> void
+; signature extern native trace(ptr message) -> void
+; signature extern native yield() -> void
+; signature extern native write(int offset, int frameCount, ptr values) -> void
+; signature extern native read(int offset, int frameCount, ptr values) -> void

@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 11:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 13:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 13:33
- 					DATA &.s_BITSCL61c75609 &.s_SINSAM61c7560a
- 					DATA &.s_ROTSRA61c7560b &.s_DLYLEF61c7560c
- 					DATA &.s_SHARPS61c7560d &.s_SHARPF61c7560e
- 					DATA &.s_SMOOTH61c7560f &.s_SMOOTH61c75610
+ 					DATA &.s_BITSCL15edb1b1 &.s_SINSAM15edb1b2
+ 					DATA &.s_ROTSRA15edb1b3 &.s_DLYLEF15edb1b4
+ 					DATA &.s_SHARPS15edb1b5 &.s_SHARPF15edb1b6
+ 					DATA &.s_SMOOTH15edb1b7 &.s_SMOOTH15edb1b8
  ; signature extern native abort() -> unknown @ 25:1
  ; signature extern native trace() -> unknown @ 26:1
  ; signature extern native yield() -> unknown @ 27:1
@@ -85,8 +85,8 @@
  					$s:			INPp
  ;-----------------------------------------------------------------------------
  								MOVp %1 $s 						; trace(s)
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 90:10
- 								CALL ^abort %0 *1				; expects function() -> unknown @ 91:9
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 90:10
+ 								CALL ^abort %0 *1				; expects abort() -> unknown @ 91:9
  								RETU   							; }
 
 
@@ -111,7 +111,7 @@
  					$y:			INPf
  ;-----------------------------------------------------------------------------
  								NEQf $y #0.0 @.f0				; if (y == 0.0) error("Division by zero")
- 								MOVp %1 &.s_Divisi61c75611 		; error("Division by zero")
+ 								MOVp %1 &.s_Divisi15edb1b9 		; error("Division by zero")
  								CALL &error %0 *2				; expects error(ptr) -> void @ 104:41
  								GOTO @.e1  
  					.f0:		DIVf %1 $x $y					; z = x - (float)trunc(x / y) * y
@@ -514,11 +514,11 @@
  								MOVi %1 $localClock 			; write(localClock, 1, localSignal)
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 347:37
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 347:37
  								SUBi %1 $localClock $localDelayR ; read(localClock - localDelayR, 1, localSignal)
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 348:50
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 348:50
  								MOVi $left $localSignal:0 		; left = (int) localSignal[0]
  								MOVi $right $localSignal:1 		; right = (int) localSignal[1]
  								SWCH $localOp1 *5 @.s7			; switch (localOp1 == 0 to 5) 
@@ -559,7 +559,7 @@
  					.s7#STEREO_DELAY: SUBi %1 $localClock $localDelayL ; read(localClock - localDelayL, 1, localSignal)
  								MOVi %2 #1 
  								ADRL %3 $localSignal *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 373:52
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 373:52
  								MOVi $left $localSignal:0 		; left = (int) localSignal[0]
  					.s7:		NOOP
  					.e8:		LEQi $left $peak @.f9			; if (left > peak) peak = left
@@ -622,45 +622,45 @@
  					.s13:		NOOP
  					.e14:		POKE &signal:0 $left 			; global signal[0] = left
  								POKE &signal:1 $right 			; global signal[1] = right
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 407:11
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 407:11
  								ADDi %0 $localClock $clockDir	; localClock = (localClock + clockDir) & 0xFFFF
  								ANDi $localClock %0 #0xFFFF
  								FORi $innerLoopIndex #64 @.l6	; }
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_BITSCL61c75609:	CNST *54
+ .s_BITSCL15edb1b1:	CNST *54
  					DATs BIT (S)|--- CLEAR BITS ----| |-------- DELAY -------|
  					DATi #0
- .s_SINSAM61c7560a:	CNST *54
+ .s_SINSAM15edb1b2:	CNST *54
  					DATs SIN (S)|----- AMOUNT ------| |-------- DELAY -------|
  					DATi #0
- .s_ROTSRA61c7560b:	CNST *54
+ .s_ROTSRA15edb1b3:	CNST *54
  					DATs ROT (S)|------ RATE -------| |-------- DELAY -------|
  					DATi #0
- .s_DLYLEF61c7560c:	CNST *54
+ .s_DLYLEF15edb1b4:	CNST *54
  					DATs DLY |----- LEFT DELAY -----| |----- RIGHT DELAY ----|
  					DATi #0
- .s_SHARPS61c7560d:	CNST *24
+ .s_SHARPS15edb1b5:	CNST *24
  					DATs SHARP SHELF  _
  					DATi #209 #32 #32
  					DATs ON = _
  					DATi #0
- .s_SHARPF61c7560e:	CNST *24
+ .s_SHARPF15edb1b6:	CNST *24
  					DATs SHARP FOLD
  					DATi #32 #32 #32 #210 #209 #32 #32
  					DATs ON =
  					DATi #32 #210 #0
- .s_SMOOTH61c7560f:	CNST *24
+ .s_SMOOTH15edb1b7:	CNST *24
  					DATs SMOOTH SHELF _
  					DATi #209 #32 #32
  					DATs ON = _
  					DATi #0
- .s_SMOOTH61c75610:	CNST *24
+ .s_SMOOTH15edb1b8:	CNST *24
  					DATs SMOOTH FOLD
  					DATi #32 #32 #210 #209 #32 #32
  					DATs ON =
  					DATi #32 #210 #0
- .s_Divisi61c75611:	CNST *17
+ .s_Divisi15edb1b9:	CNST *17
  					DATs Division by zero
  					DATi #0

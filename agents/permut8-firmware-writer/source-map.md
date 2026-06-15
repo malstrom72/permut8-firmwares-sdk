@@ -55,10 +55,15 @@ Use these repository files as the grounding map for Permut8 firmware work.
 - [tools/createP8Bank.nuxjs.js](../../tools/createP8Bank.nuxjs.js): bank writer.
 - [tools/gazlCompactor.nuxjs.js](../../tools/gazlCompactor.nuxjs.js): optional release-size GAZL
   text compactor.
+- [tools/gazl-validate.js](../../tools/gazl-validate.js): GAZL signature validator (staged
+  from GAZL). Run via `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` from the SDK
+  root; it auto-loads the Permut8 native manifest at
+  [docs/nativeCallbackSignatures.gazl](../../docs/nativeCallbackSignatures.gazl).
 - [tools/update-firmware-toolchain.sh](../../tools/update-firmware-toolchain.sh):
   builds Unix tools in `tools/bin` when needed, rebuilds the NuXJS runtime, stages the
-  Impala compiler, refreshes the firmware runtime files in `examples/Firmwares` from the
-  authoritative `GAZL` copy, and builds the IVG renderer for sticker validation.
+  Impala compiler and the GAZL signature validator, refreshes the firmware runtime files in
+  `examples/Firmwares` from the authoritative `GAZL` copy, and builds the IVG renderer for
+  sticker validation.
 - [tools/convert-user-guide.sh](../../tools/convert-user-guide.sh): regenerates the
   Markdown user guide from source material.
 - [GAZL/externals/NuXJS](../../GAZL/externals/NuXJS): bundled NuXJS command-line

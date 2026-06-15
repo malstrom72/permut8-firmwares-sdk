@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 11:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 19:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 19:33
- 					DATA &.s_18PPVV-711d671 &.s_116AAO-711d670
- 					DATA &.s_132NNL-711d66f &.s_164TAP-711d66e
- 					DATA &.s_1PPVVT-711d66d &.s_2AAOOI-711d66c
- 					DATA &.s_12NNLL-711d66b &.s_contTA-711d66a
+ 					DATA &.s_18PPVV-626e2859 &.s_116AAO-626e2858
+ 					DATA &.s_132NNL-626e2857 &.s_164TAP-626e2856
+ 					DATA &.s_1PPVVT-626e2855 &.s_2AAOOI-626e2854
+ 					DATA &.s_12NNLL-626e2853 &.s_contTA-626e2852
  ; signature extern native abort() -> unknown @ 31:1
  ; signature extern native trace() -> unknown @ 32:1
  ; signature extern native yield() -> unknown @ 33:1
@@ -407,14 +407,14 @@
  								COPY &signal $bp *2				; copy (2 from bp to global signal)
  								COPY $bp &temp *2				; copy (2 from global temp to bp)
  								ADDp $bp $bp $dir				; bp = bp + dir
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 295:11
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 295:11
  								FORi $bi #BATCH_SIZE @.l3		; }
  					.e2:		PEEK %0 &clock 					; clock = global clock - BATCH_SIZE
  								SUBi $clock %0 #BATCH_SIZE
  								MOVi %1 $clock 					; write(clock, BATCH_SIZE, global buffer)
  								MOVi %2 #BATCH_SIZE 
  								MOVp %3 &buffer 
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 299:42
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 299:42
  								MOVp $bp &buffer 				; for (bp = global buffer to global buffer + BATCH_SIZE * 2) *bp = 0
  								! MULi <A> #BATCH_SIZE #2
  								ADDp %0 &buffer <A>
@@ -431,7 +431,7 @@
  								SUBi %2 $clock $tapData:TAP_DELAY ; read(clock - (int) tapData[TAP_DELAY], BATCH_SIZE, tapped)
  								MOVi %3 #BATCH_SIZE 
  								ADRL %4 $tapped *0
- 								CALL ^read %1 *4				; expects function(int, int, ptr) -> unknown @ 306:62
+ 								CALL ^read %1 *4				; expects read(int, int, ptr) -> unknown @ 306:62
  								! SHLi <A> #1 #RECTIFIER_BIT	; if (((int) tapData[TAP_BITS] & (1 << RECTIFIER_BIT)) != 0) 
  								ANDi %1 $tapData:TAP_BITS <A>
  								EQUi %1 #0 @.f8
@@ -515,30 +515,30 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_18PPVV-711d671:	CNST *55
+ .s_18PPVV-626e2859: CNST *55
  					DATs 1/8                           P  P  V  V  T  T  R  R
  					DATi #32 #32 #0
- .s_116AAO-711d670:	CNST *55
+ .s_116AAO-626e2858: CNST *55
  					DATs 1/16                          A  A  O  O  I  I  A  E
  					DATi #32 #32 #0
- .s_132NNL-711d66f:	CNST *55
+ .s_132NNL-626e2857: CNST *55
  					DATs 1/32                          N  N  L  L  M  M  N  C
  					DATi #32 #32 #0
- .s_164TAP-711d66e:	CNST *55
+ .s_164TAP-626e2856: CNST *55
  					DATs 1/64 |-------- TAPS --------|
  					DATi #32 #195 #32 #32 #193 #32 #32 #194 #32 #32 #192 #32 #32 #195 #32 #32 #193 #32 #32
  					DATs D  T
  					DATi #32 #32 #0
- .s_1PPVVT-711d66d:	CNST *55
+ .s_1PPVVT-626e2855: CNST *55
  					DATs /1                            P  P  V  V  T  T  R  R
  					DATi #32 #32 #0
- .s_2AAOOI-711d66c:	CNST *55
+ .s_2AAOOI-626e2854: CNST *55
  					DATs /2                            A  A  O  O  I  I  A  E
  					DATi #32 #32 #0
- .s_12NNLL-711d66b:	CNST *55
+ .s_12NNLL-626e2853: CNST *55
  					DATs +1/2                          N  N  L  L  M  M  N  C
  					DATi #32 #32 #0
- .s_contTA-711d66a:	CNST *55
+ .s_contTA-626e2852: CNST *55
  					DATs cont |-------- TAPS --------|
  					DATi #32 #195 #32 #32 #193 #32 #32 #194 #32 #32 #192 #32 #32 #195 #32 #32 #193 #32 #32
  					DATs D  T

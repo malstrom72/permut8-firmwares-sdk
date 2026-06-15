@@ -5,10 +5,10 @@
  FALSE:				! DEFi #0	; signature const FALSE : int @ 19:1
  TRUE:				! DEFi #1	; signature const TRUE : int @ 27:1
  panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 27:33
- 					DATA &.s_stdREV51e285e1 &.s_fastCR51e285e2
- 					DATA &.s_slowCH51e285e3 &.s_rndAK451e285e4
- 					DATA &.s_161651e285e5 &.s_321651e285e6 &.s_8851e285e7
- 					DATA &.s_168Gat51e285e8
+ 					DATA &.s_stdREV-1743317d &.s_fastCR-1743317c
+ 					DATA &.s_slowCH-1743317b &.s_rndAK4-1743317a
+ 					DATA &.s_1616-17433179 &.s_3216-17433178 &.s_88-17433177
+ 					DATA &.s_168Gat-17433176
  ; signature extern native abort() -> unknown @ 40:1
  ; signature extern native trace() -> unknown @ 41:1
  ; signature extern native yield() -> unknown @ 42:1
@@ -127,8 +127,8 @@
  reset:				FUNC		; signature func reset() -> void @ 173:16
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_reset51e285e9 		; trace("reset")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 175:16
+ 								MOVp %1 &.s_reset-17433175 		; trace("reset")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 175:16
  								POKE &doReset #TRUE 			; global doReset = TRUE
  								RETU   							; }
 
@@ -147,8 +147,8 @@
  					$fxs:		LOCA *8
  					$fxCountFloat: LOCf
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_update51e285ea 		; trace("update")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 198:17
+ 								MOVp %1 &.s_update-17433174 	; trace("update")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 198:17
  								POKE &dirXor #0 				; global dirXor = 0
  								PEEK %0 &params:SWITCHES_PARAM_INDEX  ; if (((int) global params[SWITCHES_PARAM_INDEX] & SWITCHES_REVERSE_MASK) != 0) 
  								ANDi %0 %0 #SWITCHES_REVERSE_MASK
@@ -247,8 +247,8 @@
  					$s:			LOCi
  					$t:			LOCi
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_init51e285eb 		; trace("init")
- 								CALL ^trace %0 *2				; expects function(ptr) -> unknown @ 278:15
+ 								MOVp %1 &.s_init-17433173 		; trace("init")
+ 								CALL ^trace %0 *2				; expects trace(ptr) -> unknown @ 278:15
  								CALL &update %0 *1				; expects update() -> void @ 279:10
  								MOVp $p &FX_PARAMS 				; p = global FX_PARAMS
  								MOVi $i #0 						; for (i = 0 to 3) 
@@ -376,11 +376,11 @@
  					.f5:		MOVi %1 $clock 					; write(clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects function(int, int, ptr) -> unknown @ 385:33
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 385:33
  								MOVi %1 $clock 					; read(clock, 1, inp)
  								MOVi %2 #1 
  								ADRL %3 $inp *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 386:22
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 386:22
  								SWCH $held *8 @.s9				; switch (held == 0 to 8) 
  					.s9#REVERSE_FX:	EQUi $trig #FALSE @.f11		; if (trig != FALSE) 
  								MOVi $pos $clock 				; pos = clock
@@ -388,7 +388,7 @@
  								MOVi %1 $pos 					; read(pos, 1, outp)
  								MOVi %2 #1 
  								ADRL %3 $outp *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 394:23
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 394:23
  								GOTO @.e10  					; }
  					.s9#TAPE_STOP_FX: EQUi $trig #FALSE @.f12	; if (trig != FALSE) 
  								SHLi $pos $clock #16			; pos = clock << 16
@@ -397,7 +397,7 @@
  								SHRi %1 $pos #16				; read(pos >> 16, 2, samples)
  								MOVi %2 #2 
  								ADRL %3 $samples *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 403:32
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 403:32
  								SUBi %0 $samples:2 $samples:0	; outp[0] = (int) samples[0] + (((int) samples[2] - (int) samples[0]) * x >> 16)
  								MULi %0 %0 $x
  								SHRi %0 %0 #16
@@ -416,7 +416,7 @@
  					.f14:		SHRi %1 $pos #1					; read(pos >> 1, 1, outp)
  								MOVi %2 #1 
  								ADRL %3 $outp *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 417:28
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 417:28
  								ADDi $pos $pos #1				; pos = pos + 1
  								GOTO @.e10  					; }
  					.s9#TRANCE_GATE_EFFECT:	SHRi %0 $clock $fxParams:FX_PARAM_TRANCE_GATE_RATE ; x = (clock >> (int) fxParams[FX_PARAM_TRANCE_GATE_RATE]) & 0x7FF
@@ -444,7 +444,7 @@
  					.s9#BIT_CRUSH_EFFECT: ANDi %1 $clock $fxParams:FX_PARAM_BIT_CRUSH_MASK ; read(clock & (int) fxParams[FX_PARAM_BIT_CRUSH_MASK], 1, outp)
  								MOVi %2 #1 
  								ADRL %3 $outp *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 437:67
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 437:67
  								! XORi <A> #0x7F #-1			; outp[0] = (int) outp[0] & ~0x7F
  								ANDi $outp:0 $outp:0 <A>
  								! XORi <A> #0x7F #-1			; outp[1] = (int) outp[1] & ~0x7F
@@ -458,7 +458,7 @@
  								MOVi %1 $pos 					; read(pos, 1, samples)
  								MOVi %2 #1 
  								ADRL %3 $samples *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 446:26
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 446:26
  								ANDi %0 $clock $fxParams:FX_PARAM_REPEAT_OFF_3 ; if ((clock & (int) fxParams[FX_PARAM_REPEAT_OFF_3]) == (int) fxParams[FX_PARAM_REPEAT_OFF_3]) 
  								NEQi %0 $fxParams:FX_PARAM_REPEAT_OFF_3 @.f21
  								ADDi $pos $pos $fxParams:FX_PARAM_REPEAT_OFF_3 ; pos = pos + (int) fxParams[FX_PARAM_REPEAT_OFF_3]
@@ -476,7 +476,7 @@
  					.e24:		MOVi %1 $pos 					; read(pos, 1, &samples[2])
  								MOVi %2 #1 
  								ADRL %3 $samples:2 *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 458:30
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 458:30
  								SUBi %0 $samples:2 $samples:0	; outp[0] = (int) samples[0] + (((int) samples[2] - (int) samples[0]) * x >> (int) fxParams[FX_PARAM_SHIFT_10])
  								MULi %0 %0 $x
  								SHRi %0 %0 $fxParams:FX_PARAM_SHIFT_10
@@ -491,11 +491,11 @@
  					.f26:		MOVi %1 $pos 					; read(pos, 1, samples)
  								MOVi %2 #1 
  								ADRL %3 $samples *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 467:26
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 467:26
  								SUBi %1 $pos $fxParams:FX_PARAM_1_LSHIFT_9 ; read(pos - (int) fxParams[FX_PARAM_1_LSHIFT_9], 1, &samples[2])
  								MOVi %2 #1 
  								ADRL %3 $samples:2 *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 468:68
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 468:68
  								ANDi $x $clock $fxParams:FX_PARAM_MASK_10 ; x = clock & (int) fxParams[FX_PARAM_MASK_10]
  								SUBi %0 $samples:2 $samples:0	; outp[0] = (int) samples[0] + (((int) samples[2] - (int) samples[0]) * x >> (int) fxParams[FX_PARAM_SHIFT_10])
  								MULi %0 %0 $x
@@ -519,11 +519,11 @@
  								SUBi %1 $pos $fxParams:FX_PARAM_1_LSHIFT_9 ; read(pos - (int) fxParams[FX_PARAM_1_LSHIFT_9], 1, samples)
  								MOVi %2 #1 
  								ADRL %3 $samples *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 481:64
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 481:64
  								SUBi %1 $pos $fxParams:FX_PARAM_1_LSHIFT_10	; read(pos - (int) fxParams[FX_PARAM_1_LSHIFT_10], 1, &samples[2])
  								MOVi %2 #1 
  								ADRL %3 $samples:2 *0
- 								CALL ^read %0 *4				; expects function(int, int, ptr) -> unknown @ 482:69
+ 								CALL ^read %0 *4				; expects read(int, int, ptr) -> unknown @ 482:69
  								SUBi %0 $samples:2 $samples:0	; outp[0] = (int) samples[0] + (((int) samples[2] - (int) samples[0]) * x >> (int) fxParams[FX_PARAM_SHIFT_9])
  								MULi %0 %0 $x
  								SHRi %0 %0 $fxParams:FX_PARAM_SHIFT_9
@@ -552,15 +552,15 @@
  								SHRi %0 %0 #15
  								ADDi %0 $inp:1 %0
  								POKE &signal:1 %0 
- 								CALL ^yield %0 *1				; expects function() -> unknown @ 502:10
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ 502:10
  								ADDi $clock $clock #1			; clock = clock + 1
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_stdREV51e285e1:	CNST *25
+ .s_stdREV-1743317d: CNST *25
  					DATs std  REVERSE     STRETCH
  					DATi #0
- .s_fastCR51e285e2:	CNST *50
+ .s_fastCR-1743317c: CNST *50
  					DATs fast
  					DATi #32 #197 #32 #32
  					DATs CRUSH
@@ -569,14 +569,14 @@
  					DATi #32 #32 #32 #32 #195
  					DATs --- Enabled Effects
  					DATi #0
- .s_slowCH51e285e3:	CNST *53
+ .s_slowCH-1743317b: CNST *53
  					DATs slow
  					DATi #32 #197 #32 #32 #197 #32 #32
  					DATs CHOP
  					DATi #32 #32 #197 #32 #32 #197 #32 #32
  					DATs SLOW
  					DATi #32 #32 #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_rndAK451e285e4:	CNST *54
+ .s_rndAK4-1743317a: CNST *54
  					DATs rnd
  					DATi #32 #32 #197 #32 #32 #197 #32 #32 #197 #32
  					DATs AK47
@@ -585,26 +585,26 @@
  					DATi #32 #209 #32 #32
  					DATs Random Order Seed
  					DATi #32 #32 #210 #0
- .s_161651e285e5:	CNST *6
+ .s_1616-17433179:	CNST *6
  					DATs 16/16
  					DATi #0
- .s_321651e285e6:	CNST *6
+ .s_3216-17433178:	CNST *6
  					DATs 32/16
  					DATi #0
- .s_8851e285e7:		CNST *53
+ .s_88-17433177:	CNST *53
  					DATs 8/8
  					DATi #32 #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_168Gat51e285e8:	CNST *54
+ .s_168Gat-17433176: CNST *54
  					DATs 16/8
  					DATi #32 #209 #32 #32
  					DATs Gates (prev step off = trigger new effect)
  					DATi #32 #32 #210 #0
- .s_reset51e285e9:	CNST *6
+ .s_reset-17433175:	CNST *6
  					DATs reset
  					DATi #0
- .s_update51e285ea:	CNST *7
+ .s_update-17433174: CNST *7
  					DATs update
  					DATi #0
- .s_init51e285eb:	CNST *5
+ .s_init-17433173:	CNST *5
  					DATs init
  					DATi #0
