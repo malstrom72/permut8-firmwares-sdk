@@ -122,6 +122,11 @@ On Windows:
 NuXJS.exe impala.nuxjs.js ringmod_code.impala ringmod_code.gazl
 ```
 
+The compiler prints nothing on success and exits with status 0; it writes the `.gazl`
+and returns. Any message on stderr, or a non-zero exit status, means the compile failed
+and no `.gazl` was written. Check the exit code, or that the output file was created or
+updated, in scripts rather than looking for a success message.
+
 The generated `.gazl` file is the code format loaded by the Permut8 virtual machine and embedded in `.p8bank` firmware banks. This command was verified by compiling `ringmod_code.impala` to `ringmod_code.gazl`, packaging the result, and loading the generated bank in Permut8.
 
 ## Reusable Impala Snippets
