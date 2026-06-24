@@ -79,7 +79,8 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
       built NuXJS executables are kept out of `GAZL/`.
 
 - `IVG`:
-    - Vendored IVG renderer, fonts, tools, tests, and documentation used for sticker graphics.
+    - Vendored IVG renderer, fonts, tools, tests, and documentation used for sticker graphics,
+      copied from [malstrom72/IVG](https://github.com/malstrom72/IVG).
 
 - `agents`:
     - Agent instruction packages for AI assistants working with this SDK. See
@@ -173,9 +174,11 @@ For a linked local development workflow, see
 ## Documentation Notes
 
 The files under `GAZL/` and `IVG/` are vendored subsystem snapshots. `GAZL/` is intended to
-remain a straight copy of [malstrom72/GAZL](https://github.com/malstrom72/GAZL) where
-practical. Prefer the top-level Permut8 docs for firmware authoring, and use the vendored
-docs when you need exact language, VM, or renderer behavior.
+remain a straight copy of [malstrom72/GAZL](https://github.com/malstrom72/GAZL) and `IVG/` of
+[malstrom72/IVG](https://github.com/malstrom72/IVG) where practical. The IVG/ImpD docs are
+mirrored into the top-level `docs/` by `tools/sync-ivg-docs.sh`. Prefer the top-level Permut8
+docs for firmware authoring, and use the vendored docs when you need exact language, VM, or
+renderer behavior.
 
 AI tools have been used to assist with documentation and repetitive edits in this repository.
 The original firmware examples, tools, and core subsystem code should be treated as the
