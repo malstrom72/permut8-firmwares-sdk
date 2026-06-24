@@ -12,6 +12,7 @@
 // written as latin1 so byte content round-trips exactly.
 
 const fs = require('fs');
+const path = require('path');
 
 const ENCODING = 'latin1';
 
@@ -127,6 +128,27 @@ function postprocessMarkdown(path) {
 	writeFile(path, text);
 }
 
+function prunePageImages(guideDir, jsonFile) {
+	const data = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
+
+	if (data.pages) {
+		for (const page of Object.values(data.pages)) {
+			delete page.image;
+		}
+	}
+
+	const artifactDir = path.join(guideDir, path.basename(jsonFile, '.docling.json') + '_artifacts');
+	if (fs.existsSync(artifactDir)) {
+		for (const name of fs.readdirSync(artifactDir)) {
+			if (/^page_\d+_.*\.png$/.test(name)) {
+				fs.unlinkSync(path.join(artifactDir, name));
+			}
+		}
+	}
+
+	fs.writeFileSync(jsonFile, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
+
 const args = process.argv.slice(2);
 if (args.length < 2) {
 	usageAndExit();
@@ -136,3 +158,6 @@ for (let i = 1; i < args.length; ++i) {
 	stripPrefix(args[i], prefix);
 }
 postprocessMarkdown(args[1]);
+if (args.length >= 3) {
+	prunePageImages(prefix, args[2]);
+}
