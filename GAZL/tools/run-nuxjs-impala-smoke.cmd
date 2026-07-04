@@ -77,7 +77,7 @@ IF ERRORLEVEL 1 (
 )
 FINDSTR /R /C:"\.s_GRBLEN.*-" "%OUTPUT%" >NUL
 IF NOT ERRORLEVEL 1 (
-  ECHO NuXJS smoke test emitted a string label containing '-' (invalid GAZL identifier character).
+  ECHO NuXJS smoke test emitted a string label containing '-' ^(invalid GAZL identifier character^).
   DEL "%OUTPUT%" >NUL 2>NUL
   DEL "%LABEL_SOURCE%" >NUL 2>NUL
   DEL "%INVALID_SOURCE%" >NUL 2>NUL
@@ -86,7 +86,7 @@ IF NOT ERRORLEVEL 1 (
 )
 
 (
-  ECHO function main^()
+  ECHO function main^(^)
   ECHO locals int x
   ECHO {
   ECHO 	x^(^);
