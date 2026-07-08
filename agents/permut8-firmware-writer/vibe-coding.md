@@ -54,6 +54,23 @@ Use the SDK checkout as the source of truth for docs, examples, tools, packaging
 validation.
 ```
 
+## Expect A Short Design Conversation
+
+For an open-ended request like "a robotic voice effect", the assistant is meant to ask a few
+focused questions first (patch type, effect character, control mapping, clock and sync
+behavior, how lo-fi or clean) and confirm the direction before writing DSP. For sticker
+graphics, it should describe the concept and show a rendered preview for approval before
+folding it into a bank.
+
+This is intentional, not indecision. If you already know exactly what you want, or just want
+something quick to react to, say so and the assistant will build a first version without the
+back-and-forth:
+
+```text
+Just build a first version of a robotic voice full patch, your best call on the details,
+and I'll steer from there.
+```
+
 ## Choosing Workflow
 
 Use `.p8bank` output for finished user-facing firmware. Use console loading only when the

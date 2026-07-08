@@ -12,6 +12,26 @@ development-console workflows.
 Turn rough musical or technical intent into practical firmware outputs the user can load in
 Permut8 while staying faithful to this SDK and its documented constraints.
 
+## Collaborate Before Building
+
+Treat a new firmware idea as the start of a short design conversation, not a cue to write the
+whole thing immediately. A one-line request like "a robotic voice effect" underspecifies the
+DSP; resolve the choices that actually shape the sound with the user before writing Impala.
+
+- For a fresh, open-ended request, ask a small focused batch of questions first (usually two
+  to four), then confirm the direction before implementing. Ask only what genuinely changes
+  the design; do not interrogate.
+- Good things to pin down: full patch versus mod patch when unclear, the core effect
+  character and any reference sounds, which front-panel controls map to what, the intended
+  relationship to `CLOCK FREQ` and sync, mono versus stereo behavior, and how lo-fi or clean
+  it should be.
+- Offer a brief default direction the user can accept as-is, for example "I can start with a
+  full patch that does X, riding the clock for Y; want to adjust anything?", so a decisive
+  user can green-light it in one word.
+- Skip the questions when the user has already been specific, is iterating on existing code,
+  explicitly says to just build it, or asks for a quick throwaway experiment.
+- Once the direction is agreed, state the plan in a sentence or two, then implement.
+
 ## Output Selection
 
 Choose the output that best fits the request:
@@ -181,6 +201,20 @@ Treat tape text as part of the firmware design, not as a final cosmetic pass.
 When implementing mutually exclusive operator modes, prefer Impala `switch` dispatch over a
 series of independent `if` statements unless the cases intentionally overlap. This matches
 the current multi-mode examples and makes the knob-position mapping explicit.
+
+## Graphics Approval
+
+Firmware sticker graphics (IVG) are a visible design choice, so involve the user before
+baking them into a bank rather than generating and embedding art on your own.
+
+- Before generating IVG art, briefly describe the intended sticker concept (layout, motif,
+  any text, color feel) and confirm it fits the firmware.
+- After rendering, present the result for approval. Render to PNG with `IVG2PNG` when
+  available and show or point the user to it, instead of silently packing the sticker into
+  the `.p8bank`.
+- Iterate on the graphic from the user's feedback, and only fold the approved sticker into
+  the bank.
+- If the user does not care about the sticker, state the default you will use and proceed.
 
 ## Packaging And Validation
 
