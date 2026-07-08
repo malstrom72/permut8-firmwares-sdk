@@ -84,7 +84,9 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
 
 - `agents`:
     - Agent instruction packages for AI assistants working with this SDK. See
-      [agents/permut8-firmware-writer](agents/permut8-firmware-writer/).
+      [agents/permut8-firmware-writer](agents/permut8-firmware-writer/). For a project
+      setup and iteration workflow, see
+      [vibe-coding.md](agents/permut8-firmware-writer/vibe-coding.md).
 
 ## Quick Start
 
@@ -141,6 +143,16 @@ the Permut8 console, the console patch tool reloads the changed `.gazl` automati
 
 Use [Firmware Assets Guide](docs/Firmware%20Assets%20Guide.md) for tape text,
 firmware sticker graphics, special characters, and about text layout.
+
+## Vibe-Coding
+
+You can build firmwares by prompting an AI coding assistant instead of writing Impala
+by hand. See
+[`agents/permut8-firmware-writer/vibe-coding.md`](agents/permut8-firmware-writer/vibe-coding.md)
+for a starter prompt with the SDK clone URL, a recommended separate project layout, a
+minimal project-local `AGENTS.md`, guidance on choosing the console versus `.p8bank`
+workflow, and how to ask the assistant to ground its work in the SDK docs, examples, and
+validation steps.
 
 ## Validation
 
