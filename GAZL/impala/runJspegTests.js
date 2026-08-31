@@ -4,9 +4,12 @@ const fs = require('fs');
 const path = require('path');
 
 const { compileWithJsImpala } = require('./impalaJsCompilerRunner');
+const { gazlCmd, haveGazlCmd, parseExpectedRun, runExpected, assembleOnly, NEEDS_HOST }
+        = require('./gazlAssembleCheck');
 
 const args = process.argv.slice(2);
 const makeGold = args.some((arg) => arg === 'makegold' || arg === '--makegold');
+const skipRun = args.some((arg) => arg === '--no-run');
 
 const IMPALA_ENCODING = 'latin1';
 const RANDOM_ID = 0x4d2;
@@ -53,8 +56,14 @@ function formatError(err) {
 }
 
 function main() {
-        let totalFiles = 0;
         let errorCount = 0;
+        let ranCount = 0;
+        let assembledCount = 0;
+        let compileOnlyCount = 0;
+        const gazlCmdBuilt = haveGazlCmd();
+        if (!gazlCmdBuilt && !makeGold && !skipRun) {
+                console.log(`(no ${path.relative(repoRoot, gazlCmd)} - skipping assemble+run checks)`);
+        }
 
         const sourceFiles = fs
                 .readdirSync(sourcesDir)
@@ -75,55 +84,90 @@ function main() {
                         console.error('<<< Error reading source >>>');
                         console.error(formatError(err));
                         errorCount += 1;
-                        totalFiles += 1;
                         continue;
                 }
 
                 let output;
                 try {
-                        output = compileWithJsImpala(source, { randomId: RANDOM_ID, retabulate: false });
+                        /* `sourceName` so a golden shows what a user actually gets - the CLI passes the
+                           basename too. Without it the goldens were the one place rows carried no file
+                           name, which is part of how the option stayed provably dead unnoticed. */
+                        output = compileWithJsImpala(source, { randomId: RANDOM_ID, retabulate: false,
+                                        sourceName: file });
                 } catch (err) {
                         console.error('<<< Error compiling >>>');
                         console.error(formatError(err));
                         errorCount += 1;
-                        totalFiles += 1;
                         continue;
                 }
 
+                /* Writing the golden REPLACES the only record of what this compiler should emit, so it is
+                   the one moment the assemble and expected-run checks below matter most - they are what
+                   catches a golden that faithfully records corrupt output. Hence write and fall through
+                   rather than `continue`. */
                 if (makeGold) {
                         writeImpalaFile(goldenPath, output);
                         console.log(`Updated ${path.relative(repoRoot, goldenPath)}`);
-                        totalFiles += 1;
+                } else {
+                        let expected;
+                        try {
+                                expected = readImpalaFile(goldenPath);
+                        } catch (err) {
+                                console.error('<<< Missing golden >>>');
+                                console.error(formatError(err));
+                                errorCount += 1;
+                                continue;
+                        }
+
+                        /* `output` is the compiler's own \n-only text and `expected` was just read raw, so
+                           only the golden side can carry CRLF. */
+                        if (canonicalizeNewlines(expected) !== output) {
+                                console.error('<<< Output differs! >>>');
+                                ensureErroneousDir();
+                                const erroneousPath = path.join(erroneousDir, `${name}.gazl`);
+                                writeImpalaFile(erroneousPath, output);
+                                console.error(`Wrote actual output to ${path.relative(repoRoot, erroneousPath)}`);
+                                errorCount += 1;
+                                continue;
+                        }
+                }
+
+                const expectedRun = parseExpectedRun(source);
+                if (skipRun || !gazlCmdBuilt) {
+                        console.log('OK');
                         continue;
                 }
 
-                let expected;
-                try {
-                        expected = readImpalaFile(goldenPath);
-                } catch (err) {
-                        console.error('<<< Missing golden >>>');
-                        console.error(formatError(err));
-                        errorCount += 1;
-                        totalFiles += 1;
+                if (!expectedRun) {
+                        const verdict = assembleOnly(goldenPath);
+                        if (verdict === NEEDS_HOST) {
+                                console.log('OK (compile-only)');
+                                compileOnlyCount += 1;
+                        } else if (verdict !== undefined) {
+                                console.error(`<<< ${verdict} >>>`);
+                                errorCount += 1;
+                        } else {
+                                console.log('OK (assembled)');
+                                assembledCount += 1;
+                        }
                         continue;
                 }
 
-                if (canonicalizeNewlines(expected) !== canonicalizeNewlines(output)) {
-                        console.error('<<< Output differs! >>>');
-                        ensureErroneousDir();
-                        const erroneousPath = path.join(erroneousDir, `${name}.gazl`);
-                        writeImpalaFile(erroneousPath, output);
-                        console.error(`Wrote actual output to ${path.relative(repoRoot, erroneousPath)}`);
+                const failure = runExpected(goldenPath, expectedRun);
+                if (failure) {
+                        console.error(`<<< ${failure} >>>`);
                         errorCount += 1;
                 } else {
-                        console.log('OK');
+                        console.log(`OK (ran: ${expectedRun.want.join(' ')})`);
+                        ranCount += 1;
                 }
-
-                totalFiles += 1;
         }
 
         console.log('');
-        console.log(`Total errors: ${errorCount} / ${totalFiles}`);
+        console.log(`Assembled and ran: ${ranCount}`);
+        console.log(`Assembled only: ${assembledCount}`);
+        console.log(`Compiled but NOT link-checked (needs a host): ${compileOnlyCount}`);
+        console.log(`Total errors: ${errorCount} / ${sourceFiles.length}`);
 
         if (errorCount !== 0) {
                 process.exit(1);

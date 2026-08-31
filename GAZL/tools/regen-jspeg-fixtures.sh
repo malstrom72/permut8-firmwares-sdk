@@ -30,12 +30,4 @@ if [ $changed -eq 0 ]; then
     exit 1
 fi
 
-gazl_files=("$testdir"/*.expected.gazl)
-if [ ${#gazl_files[@]} -eq 0 ]; then
-    echo "No .expected.gazl outputs found in $testdir" >&2
-    exit 1
-fi
-
-bash ./tools/gazl-validate.sh "${gazl_files[@]}"
-
 exit 0

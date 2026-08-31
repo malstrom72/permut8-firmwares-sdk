@@ -11,26 +11,16 @@ mkdir -p output
 # Build GAZLCmd release
 (cd tools && bash buildGAZLCmd.sh release)
 
+# Every node-only gate, shared with build.cmd so the two cannot run different subsets.
+bash tools/test-js.sh
+
 # Build Impala
 bash tools/BuildImpala.sh
-
-# Run the Impala test suite from the source directory
-(cd impala && node jspegCompilerTests.js && node runJspegTests.js)
-
-# Validate generated .gazl metadata for the JSPEG fixtures.
-for gazl_file in impala/testdata/*.expected.gazl; do
-	case "$gazl_file" in
-		impala/testdata/externAssignment.expected.gazl|impala/testdata/returnContractCaller.expected.gazl)
-			continue
-			;;
-	esac
-	bash tools/gazl-validate.sh "$gazl_file"
-done
-bash tools/gazl-validate.sh \
-	impala/testdata/returnContractCaller.expected.gazl \
-	impala/testdata/returnContractProviderFloat.expected.gazl
 
 # Verify the staged Impala compiler by compiling with NuXJS and running with GAZLCmd.
 ./output/NuXJS output/impala.nuxjs.js \
 	impala/ImpalaDemo.impala output/ImpalaDemo.gazl 0x4d2 impala/ImpalaDemo.impala
 ./output/GAZLCmd output/ImpalaDemo.gazl main
+
+# ImpalaDemo imports nothing, so it cannot tell whether the closure walk survived staging.
+bash tools/run-nuxjs-impala-smoke.sh

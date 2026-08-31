@@ -18,9 +18,9 @@ SET FOUND=0
 FOR %%F IN ("%TESTDIR%\*.impala") DO (
   SET SRC=%%~fF
   SET OUT=%%~dpnF.expected.gazl
-  CALL node "%COMPILER%" compile "%%SRC%%" "%%OUT%%" %SEED% >NUL
+  node "%COMPILER%" compile "!SRC!" "!OUT!" %SEED% >NUL
   IF ERRORLEVEL 1 EXIT /b %ERRORLEVEL%
-  ECHO Rebuilt %%OUT%%
+  ECHO Rebuilt !OUT!
   SET FOUND=1
 )
 
@@ -28,22 +28,5 @@ IF %FOUND%==0 (
   ECHO No .impala sources found in %TESTDIR%
   EXIT /b 1
 )
-
-SET FILES=
-FOR %%G IN ("%TESTDIR%\*.expected.gazl") DO (
-  IF NOT DEFINED FILES (
-    SET FILES="%%~fG"
-  ) ELSE (
-    SET FILES=!FILES! "%%~fG"
-  )
-)
-
-IF NOT DEFINED FILES (
-  ECHO No .expected.gazl outputs found in %TESTDIR%
-  EXIT /b 1
-)
-
-CALL tools\gazl-validate.cmd !FILES!
-IF ERRORLEVEL 1 EXIT /b %ERRORLEVEL%
 
 EXIT /b 0
