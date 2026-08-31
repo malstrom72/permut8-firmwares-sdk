@@ -26,7 +26,9 @@ The development folder should contain:
 - generated `*_code.gazl` files
 - optional `*_logo.ivg` and `*_about.txt` files used by matching firmware names
 
-The firmware-code package uses `NuXJS`, `impala.nuxjs.js`, and `impalaCompiler.js`. The RingMod compile path in this SDK has been verified with that toolchain, and this is the only supported Impala compiler path for this repository.
+The firmware-code package uses `NuXJS`, `impala.nuxjs.js`, `impalaCompiler.js`, and `impalaImportClosure.js`. All four must sit in the same folder: `impala.nuxjs.js` loads the other two from its own directory. The RingMod compile path in this SDK has been verified with that toolchain, and this is the only supported Impala compiler path for this repository.
+
+The compiler is Impala 2. See [What's New In Impala 2](../GAZL/docs/impala/WhatsNewInImpala2.md) for what it adds over 1.0 and for the short list of 1.0 spellings it now refuses; `--legacy` downgrades most of those to warnings. All firmware examples in this SDK compile under 2.0 without it.
 
 `NuXJS` is a small command-line JavaScript runtime. The SDK uses the NuXJS source
 bundled by the vendored [malstrom72/GAZL](https://github.com/malstrom72/GAZL) copy under
@@ -44,9 +46,9 @@ references/permut8-firmwares-sdk/tools/update-firmware-toolchain.sh
 ```
 
 The update script builds `tools/bin/NuXJS` from the NuXJS C++ sources under
-`GAZL/externals/NuXJS`, stages `GAZL/impala/impala.nuxjs.js` and
-`GAZL/impala/impalaCompiler.js`, builds `tools/bin/IVG2PNG`, and copies the firmware-folder
-runtime files into `examples/Firmwares/`. Built executables are not committed under `GAZL/`
+`GAZL/externals/NuXJS`, stages `GAZL/impala/impala.nuxjs.js`,
+`GAZL/impala/impalaCompiler.js`, and `GAZL/impala/impalaImportClosure.js`, builds
+`tools/bin/IVG2PNG`, and copies the firmware-folder runtime files into `examples/Firmwares/`. Built executables are not committed under `GAZL/`
 or `IVG/`, so those folders can stay aligned with upstream.
 Modern C++ toolchains may print deprecation warnings for old standard-library helpers;
 those warnings do not prevent a successful build.
@@ -150,7 +152,11 @@ The example firmware folder includes compile-loop scripts:
 They watch the current folder and recompile any `.impala` file newer than its matching `.gazl` file.
 Run the macOS script by double-clicking it in Finder or launching it from Terminal. Run the
 Windows script from the `Permut8 Firmware Code` folder. Both scripts expect `NuXJS`,
-`impala.nuxjs.js`, and `impalaCompiler.js` to be in the same folder as the firmware sources.
+`impala.nuxjs.js`, `impalaCompiler.js`, and `impalaImportClosure.js` to be in the same folder
+as the firmware sources.
+
+Because they compile every `.impala` in the folder, a unit meant only to be `import`ed will
+also be compiled on its own and leave a matching `.gazl` behind. That output is harmless.
 
 The macOS loop is essentially:
 

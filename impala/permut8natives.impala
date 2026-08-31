@@ -1,0 +1,35 @@
+/*
+	The native functions the Permut8 host registers for firmware code, as Impala prototypes.
+	`import "permut8natives.impala"` and every call is checked at Impala compile time, with a caret
+	on the offending argument:
+
+	    error[E406]: Argument type mismatch for argument 1 when calling write (pointer vs expected int)
+
+	This replaces `docs/nativeCallbackSignatures.gazl`, a `; signature`-only file that existed solely
+	so `gazl-validate` could cross-check compiled GAZL after the fact. Impala 2 retired that tool: a
+	prototype the compiler reads beats a manifest a separate tool compares against, and this one
+	cannot drift out of the language it describes.
+
+	Importing is optional. A firmware may keep declaring the name-only `extern native abort` form,
+	which still compiles and still asserts nothing. Declare prototypes where you want the check.
+	Do not do both for the same name in one program: the top-level namespace is flat, so a name-only
+	`extern native` alongside an imported prototype is a duplicate declaration.
+
+	Entries are in host-registration order so additions are easy to diff. See
+	`docs/Permut8 Firmware API.md` for what each one does.
+*/
+
+// Kills the firmware and restores normal Permut8 operation.
+extern native abort()
+
+// Traces a null-terminated string to the Prawn console, and to stdout (macOS) or DebugView (Windows).
+extern native trace(int pointer message)
+
+// Returns processing to the Permut8 audio engine; resumes here when the next sample is due.
+extern native yield()
+
+// Writes `frameCount` interleaved 12-bit stereo frames to delay memory at absolute position `offset`.
+extern native write(int offset, int frameCount, int pointer values)
+
+// Reads `frameCount` interleaved 12-bit stereo frames from delay memory at absolute position `offset`.
+extern native read(int offset, int frameCount, int pointer values)

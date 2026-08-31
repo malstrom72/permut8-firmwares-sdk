@@ -48,8 +48,8 @@ Use examples as implementation references, not as generic templates.
   stickers and bank examples.
 - Use [Impala Snippets.txt](../../examples/Firmwares/Impala%20Snippets.txt) when a firmware
   needs reusable tables or helper routines, such as Permut8-style exponential tables or
-  string/numeric conversion. Copy only the needed snippet into the firmware source; Impala
-  has no source include mechanism.
+  string/numeric conversion. Copy only the needed snippet into the firmware source. Impala 2
+  also has `import`, so a helper set shared across firmwares can live in its own unit.
 
 When adapting an example:
 

@@ -26,22 +26,30 @@ references\permut8-firmwares-sdk\tools\bin\NuXJS.exe ^
 A successful compile proves the Impala source can be translated to the GAZL text that
 Permut8 loads and that `.p8bank` files embed.
 
-## Validate GAZL Signatures
+## Check Native Signatures
 
-Run the GAZL signature validator on the compiled `.gazl` to catch signature and
-argument-count mismatches across function definitions and call sites. Run it from the SDK
-root so it auto-loads the Permut8 native manifest at `docs/nativeCallbackSignatures.gazl`:
+Impala 2 checks native calls at compile time, so this is no longer a separate step. Import
+the Permut8 native prototypes and every call is checked against them, with a caret on the
+offending argument:
 
-```sh
-references/permut8-firmwares-sdk/tools/bin/NuXJS \
-  references/permut8-firmwares-sdk/tools/gazl-validate.js \
-  <path-to-compiled.gazl>
+```impala
+import "permut8natives.impala"
 ```
 
-It exits non-zero and prints each conflict (with definition and call-site origins) when it
-finds one; `--warn-only` downgrades failures to warnings. This complements the compile
-check — the compiler already rejects in-firmware mismatches, and the validator additionally
-guards against signature drift in the embedded GAZL.
+Copy [`impala/permut8natives.impala`](../impala/permut8natives.impala) next to your firmware
+source, or import it by relative path. A wrong argument type or count then fails the compile:
+
+```text
+mysynth.impala:42:19: error[E406]: Argument type mismatch for argument 1 when calling write (pointer vs expected int)
+```
+
+Importing is optional. The name-only `extern native abort` form still compiles and still
+asserts nothing, so declare prototypes where you want the check. Do not do both for the same
+name in one program — the top-level namespace is flat, so that is a duplicate declaration.
+
+This replaces the `gazl-validate` pass used through Impala 1.0. Upstream retired that tool
+along with its `docs/nativeCallbackSignatures.gazl` manifest: a prototype the compiler reads
+cannot drift out of the language it describes, the way a separately-compared manifest could.
 
 ## Optional: Compact GAZL
 

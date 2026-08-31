@@ -107,6 +107,18 @@ extern native write
 extern native read
 ```
 
+Those name-only declarations compile but assert nothing about call sites. Impala 2 also
+accepts full prototypes, which the compiler checks every call against:
+
+```impala
+extern native write(int offset, int frameCount, int pointer values)
+```
+
+[`impala/permut8natives.impala`](../impala/permut8natives.impala) declares all five that way.
+Copy it next to your firmware source and `import "permut8natives.impala"` instead of
+declaring the natives yourself — do not do both for the same name, as the top-level namespace
+is flat and that is a duplicate declaration.
+
 ### `abort()`
 
 Stops the firmware and restores normal Permut8 operation. Use this for fatal initialization or configuration errors.

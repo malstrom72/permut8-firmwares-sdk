@@ -114,7 +114,9 @@ subsystem behavior.
 - Do not invent host globals, native functions, entry points, parameter constants, or bank
   fields.
 - Use `docs/Permut8 Firmware API.md` for host API and callback behavior.
-- Use `GAZL/docs/Impala.md` and examples when Impala syntax is uncertain.
+- Use `GAZL/docs/impala/Impala.md` and examples when Impala syntax is uncertain. The compiler is
+  Impala 2; `GAZL/docs/impala/WhatsNewInImpala2.md` covers what 2.0 adds and the few 1.0
+  spellings it refuses.
 - Use `docs/Firmware Assets Guide.md` and `docs/IVG Documentation.md` before changing sticker
   graphics.
 - Use `docs/Firmware Assets Guide.md` before creating or changing `panelTextRows`.

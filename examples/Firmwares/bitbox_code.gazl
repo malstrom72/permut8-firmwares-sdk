@@ -1,27 +1,46 @@
- ; Compiled with Impala version 1.0
+ ; Compiled with Impala version 2.0
 
  ; signatures version=1
- PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #3	; signature const PRAWN_FIRMWARE_PATCH_FORMAT : int @ 10:1
- FALSE:				! DEFi #0	; signature const FALSE : int @ 11:1
- TRUE:				! DEFi #1	; signature const TRUE : int @ 13:1
- panelTextRows:		CNST *8		; signature array panelTextRows[8] : unknown @ 13:33
- 					DATA &.s_A4f4669f3 &.s_BBASSD4f4669f4 &.s_C4f4669f5
- 					DATA &.s_D4f4669f6 &.s_A4f4669f3 &.s_BHIHAT4f4669f7
- 					DATA &.s_CSNARE4f4669f8 &.s_D4f4669f6
- ; signature extern native abort() -> unknown @ 25:1
- ; signature extern native trace() -> unknown @ 26:1
- ; signature extern native yield() -> unknown @ 27:1
- ; signature extern native write() -> unknown @ 28:1
- ; signature extern native read() -> unknown @ 30:1
+ PRAWN_FIRMWARE_PATCH_FORMAT: ! DEFi #3	; signature const PRAWN_FIRMWARE_PATCH_FORMAT : int @ bitbox_code.impala:9:1
+ FALSE:				! DEFi #0	; signature const FALSE : int @ bitbox_code.impala:10:1
+ TRUE:				! DEFi #1	; signature const TRUE : int @ bitbox_code.impala:11:1
+ .z.panelTextRows:	! DEFi #8
+ panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ bitbox_code.impala:13:1
+ 					DATA &.s_A_d86f9977 &.s_BBASSD_d86f9978 &.s_C_d86f9979
+ 					DATA &.s_D_d86f997a &.s_A_d86f9977 &.s_BHIHAT_d86f997b
+ 					DATA &.s_CSNARE_d86f997c &.s_D_d86f997a
+ ; signature extern native abort() -> unknown @ bitbox_code.impala:24:1
+ ; signature extern native trace() -> unknown @ bitbox_code.impala:25:1
+ ; signature extern native yield() -> unknown @ bitbox_code.impala:26:1
+ ; signature extern native write() -> unknown @ bitbox_code.impala:27:1
+ ; signature extern native read() -> unknown @ bitbox_code.impala:28:1
+ ; signature extern const DEBUG : int @ bitbox_code.impala:30:1
+ ; signature extern const SWITCHES_SYNC_MASK : int @ bitbox_code.impala:32:1
+ ; signature extern const SWITCHES_TRIPLET_MASK : int @ bitbox_code.impala:33:1
+ ; signature extern const SWITCHES_DOTTED_MASK : int @ bitbox_code.impala:34:1
+ ; signature extern const SWITCHES_WRITE_PROTECT_MASK : int @ bitbox_code.impala:35:1
+ ; signature extern const SWITCHES_REVERSE_MASK : int @ bitbox_code.impala:36:1
+ ; signature extern const CLOCK_FREQ_PARAM_INDEX : int @ bitbox_code.impala:38:1
+ ; signature extern const SWITCHES_PARAM_INDEX : int @ bitbox_code.impala:39:1
+ ; signature extern const OPERATOR_1_PARAM_INDEX : int @ bitbox_code.impala:40:1
+ ; signature extern const OPERAND_1_HIGH_PARAM_INDEX : int @ bitbox_code.impala:41:1
+ ; signature extern const OPERAND_1_LOW_PARAM_INDEX : int @ bitbox_code.impala:42:1
+ ; signature extern const OPERATOR_2_PARAM_INDEX : int @ bitbox_code.impala:43:1
+ ; signature extern const OPERAND_2_HIGH_PARAM_INDEX : int @ bitbox_code.impala:44:1
+ ; signature extern const OPERAND_2_LOW_PARAM_INDEX : int @ bitbox_code.impala:45:1
+ ; signature extern const PARAM_COUNT : int @ bitbox_code.impala:46:1
  					GLOB *1
- clock:				DATi #0		; signature global clock : int @ 49:1
+ clock:				DATi #0		; signature global clock : int @ bitbox_code.impala:48:1
  					GLOB *1
- hostPosition:		DATi #0		; signature global hostPosition : int @ 50:1
- params:			GLOB *PARAM_COUNT ; signature array params[PARAM_COUNT] : unknown @ 51:1
- displayLEDs:		GLOB *4		; signature array displayLEDs[4] : unknown @ 52:1
+ hostPosition:		DATi #0		; signature global hostPosition : int @ bitbox_code.impala:49:1
+ .z.params:			! DEFi #PARAM_COUNT
+ params:			GLOB *.z.params	; signature array params[PARAM_COUNT] : unknown @ bitbox_code.impala:50:1
+ .z.displayLEDs:	! DEFi #4
+ displayLEDs:		GLOB *.z.displayLEDs ; signature array displayLEDs[4] : unknown @ bitbox_code.impala:51:1
  					CNST *1
- clockFreqLimit:	DATi #132300 ; signature readonly clockFreqLimit : int @ 53:1
- signal:			GLOB *2		; signature array signal[2] : unknown @ 54:1
+ clockFreqLimit:	DATi #132300 ; signature readonly clockFreqLimit : int @ bitbox_code.impala:52:1
+ .z.signal:			! DEFi #2
+ signal:			GLOB *.z.signal	; signature array signal[2] : unknown @ bitbox_code.impala:53:1
  					CNST *1
  					! SHLi <A> #1 #OPERATOR_1_PARAM_INDEX
  					! SHLi <B> #1 #OPERAND_1_HIGH_PARAM_INDEX
@@ -34,13 +53,14 @@
  					! IORi <A> <A> <B>
  					! SHLi <B> #1 #OPERAND_2_LOW_PARAM_INDEX
  					! IORi <A> <A> <B>
- updateMask:		DATi <A>	; signature readonly updateMask : int @ 123:1
- SOUNDS_COUNT:		! DEFi #4	; signature const SOUNDS_COUNT : int @ 123:27
- DRUM_COUNT:		! DEFi #3	; signature const DRUM_COUNT : int @ 124:25
- DRUM_PARAM_COUNT:	! DEFi #8	; signature const DRUM_PARAM_COUNT : int @ 125:31
+ updateMask:		DATi <A>	; signature readonly updateMask : int @ bitbox_code.impala:54:1
+ SOUNDS_COUNT:		! DEFi #4	; signature const SOUNDS_COUNT : int @ bitbox_code.impala:123:1
+ DRUM_COUNT:		! DEFi #3	; signature const DRUM_COUNT : int @ bitbox_code.impala:124:1
+ DRUM_PARAM_COUNT:	! DEFi #8	; signature const DRUM_PARAM_COUNT : int @ bitbox_code.impala:125:1
  					! MULi <A> #DRUM_COUNT #SOUNDS_COUNT
  					! MULi <A> <A> #DRUM_PARAM_COUNT
- DRUM_PARAMS:		CNST *<A>	; signature array DRUM_PARAMS[<A>] : unknown @ 129:74
+ .z.DRUM_PARAMS:	! DEFi #<A>
+ DRUM_PARAMS:		CNST *.z.DRUM_PARAMS ; signature array DRUM_PARAMS[] : unknown @ bitbox_code.impala:129:1
  					DATA #111360 #3008 #75535 #0 #0 #0 #0 #6 #197888 #4335
  					DATA #52429 #0 #0 #0 #0 #2 #142336 #1856 #50000 #0 #0 #0
  					DATA #0 #3 #68352 #320 #35643 #0 #0 #0 #0 #2 #0 #0 #0
@@ -51,14 +71,16 @@
  					DATA #2432 #36651 #0 #459 #23332 #42339 #10 #229632 #3168
  					DATA #57673 #23423 #24248 #14417 #57671 #24 #205312 #2560
  					DATA #53255 #29321 #42598 #1311 #58496 #14
- stepSounds:		GLOB *16	; signature array stepSounds[16] : unknown @ 154:28
+ .z.stepSounds:		! DEFi #16
+ stepSounds:		GLOB *.z.stepSounds	; signature array stepSounds[16] : unknown @ bitbox_code.impala:154:1
 
  ;-----------------------------------------------------------------------------
- update:			FUNC		; signature func update() -> void @ 171:17
+ update:			FUNC		; signature func update() -> void @ bitbox_code.impala:171:1
  								PARA *1
  					$operand1Bits: LOCi
  					$operand2Bits: LOCi
- 					$drumSounds: LOCA *DRUM_COUNT
+ .z.update.drumSounds: ! DEFi #DRUM_COUNT
+ 					$drumSounds: LOCA *.z.update.drumSounds
  					$step:		LOCi
  					$n:			LOCi
  					$i:			LOCi
@@ -99,7 +121,7 @@
 
 
  ;-----------------------------------------------------------------------------
- process:			FUNC		; signature func process() -> void @ 202:18
+ process:			FUNC		; signature func process() -> void @ bitbox_code.impala:202:1
  								PARA *1
  					$rnd:		LOCi
  					$rndXor:	LOCi
@@ -225,8 +247,8 @@
  								PEEK %1 &clock 					; write(global clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 268:41
- 								CALL ^yield %0 *1				; expects yield() -> unknown @ 269:11
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ bitbox_code.impala:268:41
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ bitbox_code.impala:269:11
  								PEEK %0 &signal:0 				; global signal[0] = (((int) global signal[0] * pump) >> 12) + y
  								MULi %0 %0 $pump
  								SHRi %0 %0 #12
@@ -240,8 +262,8 @@
  								PEEK %1 &clock 					; write(global clock, 1, global signal)
  								MOVi %2 #1 
  								MOVp %3 &signal 
- 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ 272:41
- 								CALL ^yield %0 *1				; expects yield() -> unknown @ 273:11
+ 								CALL ^write %0 *4				; expects write(int, int, ptr) -> unknown @ bitbox_code.impala:272:41
+ 								CALL ^yield %0 *1				; expects yield() -> unknown @ bitbox_code.impala:273:11
  								ADDi $pump $pump #0x2			; pump = pump + 0x2
  								LEQi $pump #0x1000 @.f16		; if (pump > 0x1000) pump = 0x1000
  								MOVi $pump #0x1000 				; pump = 0x1000
@@ -249,21 +271,21 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_A4f4669f3:		CNST *2
+ .s_A_d86f9977:		CNST *2
  					DATs A
  					DATi #0
- .s_BBASSD4f4669f4:	CNST *17
+ .s_BBASSD_d86f9978: CNST *17
  					DATs B      BASS DRUM
  					DATi #0
- .s_C4f4669f5:		CNST *2
+ .s_C_d86f9979:		CNST *2
  					DATs C
  					DATi #0
- .s_D4f4669f6:		CNST *2
+ .s_D_d86f997a:		CNST *2
  					DATs D
  					DATi #0
- .s_BHIHAT4f4669f7:	CNST *47
+ .s_BHIHAT_d86f997b: CNST *47
  					DATs B      HI-HAT                      + BASS DRUM
  					DATi #0
- .s_CSNARE4f4669f8:	CNST *48
+ .s_CSNARE_d86f997c: CNST *48
  					DATs C                                  = SNARE DRUM
  					DATi #0

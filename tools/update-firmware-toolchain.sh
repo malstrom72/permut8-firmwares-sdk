@@ -18,7 +18,6 @@ esac
 
 src_impala="GAZL/impala"
 src_nuxjs="GAZL/externals/NuXJS"
-src_validator="GAZL/tools/gazl-validate.js"
 dst="examples/Firmwares"
 bin="tools/bin"
 runtime_nuxjs="$bin/NuXJS"
@@ -26,7 +25,7 @@ runtime_nuxjs="$bin/NuXJS"
 for path in \
 	"$src_impala/impala.nuxjs.js" \
 	"$src_impala/impalaCompiler.js" \
-	"$src_validator" \
+	"$src_impala/impalaImportClosure.js" \
 	"$src_nuxjs/tools/NuXJSREPL.cpp" \
 	"$src_nuxjs/src/NuXJS.cpp" \
 	"$src_nuxjs/src/stdlibJS.cpp"; do
@@ -53,18 +52,17 @@ if [ -f "$bin/NuXJS.exe" ]; then
 fi
 
 # Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
-# rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js from
-# its own directory, so both files must sit side by side wherever NuXJS runs.
-cp "$src_impala/impala.nuxjs.js" "$dst/impala.nuxjs.js"
-cp "$src_impala/impalaCompiler.js" "$dst/impalaCompiler.js"
-cp "$src_impala/impala.nuxjs.js" "$bin/impala.nuxjs.js"
-cp "$src_impala/impalaCompiler.js" "$bin/impalaCompiler.js"
+# rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js and
+# impalaImportClosure.js (which resolves `import` into a single translation unit)
+# from its own directory, so all three must sit side by side wherever NuXJS runs.
+for name in impala.nuxjs.js impalaCompiler.js impalaImportClosure.js; do
+	cp "$src_impala/$name" "$dst/$name"
+	cp "$src_impala/$name" "$bin/$name"
+done
 
-# Stage the GAZL signature validator next to the other SDK tools. Run it from the
-# SDK root so it auto-loads the Permut8 native manifest at docs/nativeCallbackSignatures.gazl
-# (the validator looks for ../docs/ relative to its own location):
-#   tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl
-cp "$src_validator" "tools/gazl-validate.js"
+# impala/permut8natives.impala is deliberately NOT staged into "$dst": the compile loop there
+# builds every *.impala in the folder, and a prototype-only unit would just yield a stray .gazl.
+# Authors copy it next to their firmware, or import it by relative path.
 
 c_sources=(
 	IVG/externals/libpng/png.c

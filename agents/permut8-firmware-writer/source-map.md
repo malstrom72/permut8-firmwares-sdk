@@ -45,8 +45,8 @@ Use these repository files as the grounding map for Permut8 firmware work.
   formats, preset values, factory/user bank examples, and firmware-bank preset design.
 - [examples/Firmwares/Impala Snippets.txt](../../examples/Firmwares/Impala%20Snippets.txt):
   copy-paste Impala utility snippets, including Permut8-style exponential tables and
-  string/numeric helpers. Use only the needed snippets because Impala has no source include
-  mechanism.
+  string/numeric helpers. Impala 2 does have `import`, so shared helpers can live in their own
+  unit instead; paste a snippet when you only need one piece of it.
 - [examples/screenshots](../../examples/screenshots): screenshots of example banks and
   no-firmware state for visual alignment.
 
@@ -55,15 +55,14 @@ Use these repository files as the grounding map for Permut8 firmware work.
 - [tools/createP8Bank.nuxjs.js](../../tools/createP8Bank.nuxjs.js): bank writer.
 - [tools/gazlCompactor.nuxjs.js](../../tools/gazlCompactor.nuxjs.js): optional release-size GAZL
   text compactor.
-- [tools/gazl-validate.js](../../tools/gazl-validate.js): GAZL signature validator (staged
-  from GAZL). Run via `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` from the SDK
-  root; it auto-loads the Permut8 native manifest at
-  [docs/nativeCallbackSignatures.gazl](../../docs/nativeCallbackSignatures.gazl).
+- [impala/permut8natives.impala](../../impala/permut8natives.impala): the Permut8 host natives
+  as Impala prototypes. Copy it next to a firmware source and `import "permut8natives.impala"`
+  to have the compiler check native call sites. Replaces the retired `gazl-validate` pass and
+  its `nativeCallbackSignatures.gazl` manifest.
 - [tools/update-firmware-toolchain.sh](../../tools/update-firmware-toolchain.sh):
   builds Unix tools in `tools/bin` when needed, rebuilds the NuXJS runtime, stages the
-  Impala compiler and the GAZL signature validator, refreshes the firmware runtime files in
-  `examples/Firmwares` from the authoritative `GAZL` copy, and builds the IVG renderer for
-  sticker validation.
+  Impala compiler, refreshes the firmware runtime files in `examples/Firmwares` from the
+  authoritative `GAZL` copy, and builds the IVG renderer for sticker validation.
 - [tools/convert-user-guide.sh](../../tools/convert-user-guide.sh): regenerates the
   Markdown user guide from source material.
 - [GAZL/externals/NuXJS](../../GAZL/externals/NuXJS): bundled NuXJS command-line
@@ -75,9 +74,16 @@ Use these repository files as the grounding map for Permut8 firmware work.
 ## Language And Renderer References
 
 - [GAZL/README.md](../../GAZL/README.md): GAZL subsystem overview.
-- [GAZL/docs/Impala.md](../../GAZL/docs/Impala.md): Impala language reference.
+- [GAZL/docs/impala/Impala.md](../../GAZL/docs/impala/Impala.md): Impala language reference.
+- [GAZL/docs/impala/WhatsNewInImpala2.md](../../GAZL/docs/impala/WhatsNewInImpala2.md): what
+  changed from Impala 1.0 — structs, typed pointers, `import`, `functype`, `return`, `sizeof`,
+  and the short list of 1.0 spellings 2.0 refuses. Read this before porting old firmware.
+- [GAZL/docs/impala/Impala2.md](../../GAZL/docs/impala/Impala2.md): the full 2.0 reference and
+  the reasoning behind its design.
+- [GAZL/docs/impala/MemorySafetyModel.md](../../GAZL/docs/impala/MemorySafetyModel.md): what
+  bounds checking does and does not cover.
 - [GAZL/docs/Overview.md](../../GAZL/docs/Overview.md): VM architecture and assembly model.
-- [GAZL/docs/InstructionSet.md](../../GAZL/docs/InstructionSet.md): opcode reference.
+- [GAZL/docs/gazl/InstructionSet.md](../../GAZL/docs/gazl/InstructionSet.md): opcode reference.
 - [IVG/README.md](../../IVG/README.md): IVG subsystem overview.
 - [docs/IVG Documentation.md](../../docs/IVG%20Documentation.md): IVG language reference.
 - [docs/ImpD Documentation.md](../../docs/ImpD%20Documentation.md): ImpD language reference.

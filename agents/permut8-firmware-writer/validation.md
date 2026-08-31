@@ -7,9 +7,11 @@ Use the repository validation guide as the canonical checklist:
 Expected agent practice:
 
 - Compile touched `.impala` files to `.gazl` whenever the local toolchain can run.
-- Validate the compiled `.gazl` for signature/argument-count conflicts by running
-  `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` from the SDK root (it auto-loads
-  the Permut8 native manifest at `docs/nativeCallbackSignatures.gazl`).
+- Native call signatures are checked by the Impala 2 compiler, not by a separate pass. To get
+  that check, copy `impala/permut8natives.impala` next to the firmware source and
+  `import "permut8natives.impala"`; a bad argument type or count is then a compile error
+  (`E406`). Do not combine an imported prototype with a name-only `extern native` for the
+  same name — the top-level namespace is flat, so that is a duplicate declaration.
 - Generate or regenerate the `.p8bank` with `tools/createP8Bank.nuxjs.js`.
 - For user-facing banks, check that program slots are intentional and preferably include
   named example programs that exercise the firmware's important behaviors.
