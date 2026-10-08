@@ -1,0 +1,49 @@
+name: CI
+
+# Gate for landing anything on main: every example firmware must compile with the committed
+# toolchain, and - on branches that carry the Permut8 host harness - every firmware's output
+# checksum must match tools/permut8FirmwareChecksums.txt. The macOS job doubles as proof that
+# the committed arm64 binaries in tools/bin and examples/Firmwares actually run.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  firmwares:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile every example firmware
+        run: |
+          cd examples/Firmwares
+          if [ "$RUNNER_OS" = "Windows" ]; then NUXJS=./NuXJS.exe; else NUXJS=./NuXJS; chmod +x "$NUXJS"; fi
+          mkdir -p "$RUNNER_TEMP/gazl"
+          fails=0
+          for f in *_code.impala; do
+            if ! "$NUXJS" impala.nuxjs.js "$f" "$RUNNER_TEMP/gazl/${f%.impala}.gazl"; then
+              echo "::error file=examples/Firmwares/$f::compile failed"
+              fails=$((fails + 1))
+            fi
+          done
+          echo "compiled $(ls "$RUNNER_TEMP/gazl" | wc -l) firmwares, $fails failed"
+          exit "$fails"
+
+      - name: Firmware output checksums
+        run: |
+          if [ -f tools/checkPermut8Firmwares.sh ]; then
+            chmod +x tools/bin/NuXJS tools/bin/GAZLCmd 2>/dev/null || true
+            bash tools/checkPermut8Firmwares.sh
+          else
+            echo "This branch predates the Permut8 host harness; checksum suite skipped."
+          fi
