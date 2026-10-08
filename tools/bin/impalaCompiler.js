@@ -1168,6 +1168,7 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
         rec.oobIndex  = undefined;
         rec.struct    = undefined;
         rec.dynIndex  = undefined;
+        rec.baseMeta  = undefined;
         rec.readonly  = false;        /* pooled slots: never inherit a previous symbol's writability */
         return rec;
     };
@@ -2966,10 +2967,29 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
         slot.type     = arrayOf ? 'p' : 'S';
         slot.elem     = arrayOf || (structName !== undefined ? structDesc(structName) : undefined);
         slot.dynIndex = dynIndex;                                 /* frame place + one runtime word-index -> terminal emits GETL/SETL */
+        slot.baseMeta = (base === undefined ? slot.baseMeta : undefined);
+                                                                  /* a PENDING base (see baseOperand) survives a re-place
+                                                                     that supplies no base: `.field` and a constant `[k]`
+                                                                     only grow offParts. `baseMeta` set always implies
+                                                                     `base` undefined, so there is no stale one to keep. */
         slot.extent   = undefined;                                /* pooled slot: never inherit another array's extent or
                                                                      another subscript's finding. The two callers that DO
                                                                      have an extent assign it after the call. */
         slot.oobIndex = undefined;
+    };
+
+    /* A place's base as a REGISTER, materializing a pending computation the first time one is actually
+       needed. Impala 1 never allocates a register except here, at the point of use, and always frees the
+       source operands first so the destination can reuse a dying one (`makeRValue`, which this defers to).
+       A place that mints its base eagerly loses both: it picks a register before any consumer has said
+       where the value goes, so the consumer's only remedy is a copy - and it holds a second register while
+       doing it. The pending operands stay borrowed until this runs, which is what keeps them valid. */
+    baseOperand = function (place) {
+        if (place.baseMeta !== undefined) {
+            place.base = makeRValue(place.baseMeta);
+            place.baseMeta = undefined;
+        }
+        return place.base;
     };
 
     /* A place resolved to a terminal SCALAR location (a scalar field, or a scalar array element) becomes a
@@ -3031,6 +3051,10 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
             returnBack(idx);
             return stride;
         }
+        /* `acc` is read only by the first emit and `dst` is written only by it, so freeing `acc` here lets
+           the accumulator run in one register down the axes (`MULi %0 %0 #stride`). `idx` must NOT move up:
+           it is read by the SECOND emit, which `dst === idx` would clobber before the add. */
+        returnBack(acc);
         var dst = borrow(live ? '%' : '<');
         if (one) {                                                /* `1 * stride` IS `stride` - the THIRD degenerate
                                                                      step, and `a[1, x]` is as ordinary as row 0 */
@@ -3041,8 +3065,7 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
                 emit(live ? '+' : '<> +', 'i', dst, dst, idx);
             }
         }
-        returnBack(acc);
-        returnBack(idx);
+        returnBack(idx);                                 /* `acc` was freed before the borrow, above */
         return (live ? dst : '#' + dst);
     };
 
@@ -3174,7 +3197,8 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
                 x.offParts.push(part);
             }
             if (elemStruct) setPlace(x, x.baseKind, x.base, x.offParts, elemName, undefined, x.dynIndex);
-            else            emitPlaceValue(x, x.baseKind, x.base, x.offParts, x.dynIndex, eType, eTail);
+            else            emitPlaceValue(x, x.baseKind, baseOperand(x), x.offParts,
+                                    x.dynIndex, eType, eTail);
 
         } else if (x.baseKind === 'local' && x.dynIndex === undefined) {
             /* a frame place with a single runtime index: keep it frame-relative so it emits one
@@ -3182,10 +3206,13 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
                scalar is 1). Only a genuinely RUNTIME index reaches here - every assemble-time one, named
                or negative, folded above, because GETL/SETL have no immediate-index form. */
             if (elemStruct) {
+                returnBack(idxRV);                       /* dead at the MULi, and freeing it first lets the
+                                                                     scaled index reuse its slot - the frame index is
+                                                                     then held until the terminal access, so a slot
+                                                                     taken here is one held across the whole statement */
                 var frameIdx = borrow('%');
                 emit('*', 'i', frameIdx, idxRV, '#' + extentSymbol(elemName));
                 emitRangeCheck(frameIdx, extent, sourceCode, sourceOffset);   /* scaled: `.z.` counts words */
-                returnBack(idxRV);
                 setPlace(x, 'local', x.base, x.offParts, elemName, undefined, frameIdx);
             } else {
                 emitRangeCheck(idxRV, extent, sourceCode, sourceOffset);
@@ -3195,14 +3222,17 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
         } else {
             var arrPtr = placeAddress(x);                /* pointer base or a second runtime index: materialize */
             if (elemStruct) {
-                var elemPtr = borrow('%'), scaled = borrow('%');
+                /* Scale the index, then leave `base + scaled` PENDING rather than minting a register for
+                   it. Nothing here knows where the address is wanted - a following `.field` folds it into
+                   a PEEK, `&` hands the whole computation to an assignment - so choosing a register now
+                   can only be undone by a copy later. baseOperand picks one if and when someone needs it.
+                   `arrPtr` and `scaled` stay borrowed until then; that is what keeps them valid. */
+                returnBack(idxRV);
+                var scaled = borrow('%');
                 emit('*', 'i', scaled, idxRV, '#' + extentSymbol(elemName));
                 emitRangeCheck(scaled, extent, sourceCode, sourceOffset);
-                emit('+', 'p', elemPtr, arrPtr, scaled);
-                returnBack(scaled);
-                returnBack(idxRV);
-                returnBack(arrPtr);
-                setPlace(x, 'pointer', elemPtr, [], elemName);
+                setPlace(x, 'pointer', undefined, [], elemName);
+                x.baseMeta = makeMeta(undefined, '+', 'p', undefined, arrPtr, scaled);
             } else {                                              /* scalar stride 1 -> PEEK/POKE arrPtr idx directly */
                 emitRangeCheck(idxRV, extent, sourceCode, sourceOffset);
                 emitPlaceValue(x, 'pointer', arrPtr, [], idxRV, eType, eTail);
@@ -3214,27 +3244,50 @@ $$parser.sourceName = Object.prototype.hasOwnProperty.call(_hostOptions, 'source
                                                                      it. A LIST - see checkIndexUse */
     };
 
-    /* a place's address: fold its offset parts into the base - ADRL for a local, ADDp for a pointer. */
+    /* A place's address as a finished operand, for the sites that feed it to another instruction. Just the
+       deferred form put through the one allocator: `makeRValue` frees the operands before it borrows, so
+       the address reuses a dying register instead of taking a fresh one and stranding the old. Writing the
+       emission out a second time here is what used to strand it - the pointer branch borrowed a new
+       register and never returned the base, so a repeated `bank[i].sub = w` climbed a register a
+       statement. Nothing to keep in step now: there is one description of an address. */
     placeAddress = function (place) {
+        placeAddressMeta(place);
+        return makeRValue(place);
+    };
+
+    /* The same address as ONE DEFERRED instruction on the record itself, for the sites where the address
+       IS the result: an assignment or an argument then emits it straight into its target (`ADDp $p $p
+       #.z.Voice`, `ADRL %3 $v:off`) instead of a temp plus a MOVp. ADRL for a local, ADDp for a
+       pointer/global base carrying an offset, a plain move of the base without one. An offset scratch
+       rides inside the operand (`#<D>`, `$v:<D>`), so whoever consumes the meta frees it on the same
+       path it frees every other operand. A local frame place holding a runtime index is the one address
+       that takes two instructions: it materializes, and the deferred meta is a move of the result. */
+    placeAddressMeta = function (place) {
         place = metaSlot(place);
-        var off = foldOffset(place.offParts);
-        var a;
-        if (place.baseKind === 'local') {                         /* size hint = the pointed-at sub-object, not the enclosing frame */
-            var sz = '*0';                                        /* ALWAYS `*0` - see the note on ADRL spans above. */
-            a = borrow('%');
-            emit('=&', 'p', a, place.base + (off ? ':' + off : ''), sz);
-            if (place.dynIndex !== undefined) {                   /* fold the frame place's runtime index in (GETL/SETL fallback) */
-                emit('+', 'p', a, a, place.dynIndex);
-                returnBack(place.dynIndex);
-                place.dynIndex = undefined;
-            }
-        } else {                                                  /* pointer / globalAddr */
-            if (!off) return place.base;
-            a = borrow('%');
-            emit('+', 'p', a, place.base, '#' + off);
+        if (place.baseKind === 'local' && place.dynIndex !== undefined) {
+            /* Two instructions, so only the SECOND can be deferred: lift the index out and let
+               placeAddress emit the ADRL alone, then leave the ADDp that folds it back in. Deferring a
+               move of the finished address instead would cost a third instruction whenever the consumer
+               wants it somewhere other than the temp placeAddress happened to borrow. */
+            var idx = place.dynIndex;
+            place.dynIndex = undefined;
+            return makeMeta(place, '+', 'p', undefined, placeAddress(place), idx);
         }
-        if (off && ('' + off).charAt(0) === '<') returnBack(off);
-        return a;
+        var off = foldOffset(place.offParts);
+        var pending = place.baseMeta;
+        if (pending !== undefined && !off) {                       /* the pending base IS the address: adopt it whole, so
+                                                                      the assignment emits that ADDp into its target */
+            return makeMeta(place, pending.operator, pending.type, undefined,
+                    pending.operands[1], pending.operands[2]);
+        }
+        var base = baseOperand(place);
+        if (place.baseKind === 'local') {                          /* `*0` ALWAYS - see the note on ADRL spans below */
+            makeMeta(place, '=&', 'p', undefined, base + (off ? ':' + off : ''), '*0');
+        } else if (off) {
+            makeMeta(place, '+', 'p', undefined, base, '#' + off);
+        } else {
+            makeMeta(place, ':=', 'p', undefined, base, undefined);
+        }
     };
 
     /* ADRL SPANS: `*0` unless the compiler owns every access through the pointer.
@@ -3333,8 +3386,9 @@ var _sn = strideStruct(field.elem);
             return;
         }
 
-        /* terminal scalar field */
-        emitPlaceValue(x, bk, base, newParts, dynIndex, field.type, field.elem);
+        /* terminal scalar field: a PEEK needs the base in a register, so a pending one lands here */
+        emitPlaceValue(x, bk, (x.place ? baseOperand(x) : base),
+                newParts, dynIndex, field.type, field.elem);
     };
 
     checkPtrAssign = function (leftx, rightx, sourceCode, sourceOffset) {
@@ -3670,11 +3724,15 @@ var _sn = strideStruct(field.elem);
                 fail('Cannot assign to a readonly value', sourceCode, sourceOffset, 'E404',
                         'declare it `global` instead of `readonly` if it has to be written');
             }
+            /* placeAddress leaves a value meta behind, so snapshot the place first - and resolve a pending
+               base while snapshotting, or the statement's own place is rebuilt around a computation that
+               has already been consumed. */
+            baseOperand(leftx);
             var savedBK = leftx.baseKind, savedBase = leftx.base,
                 savedParts = leftx.offParts, savedStruct = leftx.struct;
             var dst = placeAddress(leftx);
             var src = placeAddress(rightx);
-            makeMeta(x, 'copy', '?', dst, src, structAllocSize(leftx.struct));
+            makeMeta(x, 'copy', '?', dst, src, structAllocSize(savedStruct));
             emitMeta(x);
             returnBack(src);
             returnBack(dst);
@@ -3979,15 +4037,7 @@ var _sn = strideStruct(field.elem);
            same decay. */
         if (operator === '&' && expr.place) {
             var structName = expr.struct, arrayElem = expr.arrayOf;   /* both read BEFORE makeMeta clears the place */
-            if (expr.baseKind === 'local' && (!expr.offParts || expr.offParts.length === 0) && expr.dynIndex === undefined) {
-                /* a whole local's address is a single ADRL with no offset scratch - leave it DEFERRED as
-                   '=&' so an assignment emits ADRL straight into its target ($p) instead of a temp + MOVp,
-                   exactly like &scalar / &array[i] defer in reference() */
-                var sz = '*0';                                /* ALWAYS `*0` - see the note on ADRL spans above. */
-                makeMeta(expr, '=&', 'p', undefined, expr.base, sz);
-            } else {                                          /* offset fold or global/pointer base: materialize now */
-                makeMeta(expr, ':=', 'p', undefined, placeAddress(expr), undefined);
-            }
+            placeAddressMeta(expr);                  /* deferred, so `p = &p[1]` is one ADDp into $p */
             setElem(expr, (arrayElem !== undefined ? arrayElem
                     : (structName !== undefined ? structDesc(structName) : undefined)));
             return;
