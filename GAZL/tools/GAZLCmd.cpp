@@ -24,11 +24,15 @@
 #include <iostream>
 #include <string>
 #include <ctime>
+#include <chrono>
 #include <fstream>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <stdint.h>
 #include <string>
+#include <vector>
+#include <algorithm>
 #include "../src/GAZL.h"
 
 using namespace GAZL;
@@ -149,21 +153,44 @@ Status gazlAtan2(Processor* vpu) {
 	return OK;
 };
 
+Status gazlExit(Processor*) {
+	return TERMINATED;					// expected, clean termination (e.g. a firmware harness reaching its frame budget)
+}
+
+/*
+	--forward=native:function[,native:function...]: satisfy `^native` call sites with GAZL functions. Each listed native
+	name is registered as one of these stubs; after assembly the paired GAZL function is looked up by name and every call
+	to the native pushCall()s it - the `^native` call then behaves exactly like a `&function` call (args and return value
+	in the same window). This is how the Permut8 firmware harness supplies yield/read/write/trace as concatenated GAZL
+	(see tools/permut8Host.js).
+*/
+const int MAX_FORWARDS = 8;
+static Pointer forwardTargets[MAX_FORWARDS];
+template<int INDEX> Status forwardNative(Processor* p) {
+	return p->pushCall(forwardTargets[INDEX]) != 0 ? OK : BAD_CALL;
+}
+
 
 const int DATA_MEMORY_SIZE = 128 * 1024;
 const int CODE_MEMORY_SIZE = 128 * 1024;
+const int FUNCTION_TABLE_SIZE = CODE_MEMORY_SIZE;	// A function is at least one instruction, so this can never overflow.
 const int CALL_STACK_SIZE = 2048;
 
 static const NativeFunc NATIVE_TABLE[] = {
-	abort, assertFail, printInt, printFloat, print, printLF, input, gazlAtan2, gazlSqrt, gazlLog
+	abort, assertFail, printInt, printFloat, print, printLF, input, gazlAtan2, gazlSqrt, gazlLog, gazlExit,
+	forwardNative<0>, forwardNative<1>, forwardNative<2>, forwardNative<3>,							// --forward slots;
+	forwardNative<4>, forwardNative<5>, forwardNative<6>, forwardNative<7>							// names registered on demand
 };
 
 static const char* NATIVE_NAMES[] = {
-	"abort", "assertFail", "printInt", "printFloat", "print", "printLF", "input", "atan2", "sqrt", "log"
+	"abort", "assertFail", "printInt", "printFloat", "print", "printLF", "input", "atan2", "sqrt", "log", "exit"
 };
+
+const int FIRST_FORWARD_INDEX = 11;						// index of forwardNative<0> in NATIVE_TABLE
 
 static Value memory[DATA_MEMORY_SIZE];
 static Instruction code[CODE_MEMORY_SIZE];
+static UInt functionTable[FUNCTION_TABLE_SIZE];
 static CallStackEntry callStack[CALL_STACK_SIZE];
 
 #if defined(LIBFUZZ) || defined(LIBFUZZ_STANDALONE)
@@ -205,27 +232,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 			globals.registerNative(NATIVE_NAMES[i], i);
 		}
 		
-		UInt codeSize;
-		UInt globalsSize;
-		UInt constsSize;
-			
+		ProgramSizes sizes = { 0, 0, 0, 0 };
+
 		{
-			std::istringstream gazlStream(std::string(reinterpret_cast<const char*>(Data), reinterpret_cast<const char*>(Data) + Size));			
+			std::istringstream gazlStream(std::string(reinterpret_cast<const char*>(Data), reinterpret_cast<const char*>(Data) + Size));
 			{
-				Assembler assem(CODE_MEMORY_SIZE, code, DATA_MEMORY_SIZE, memory, globals);
+				Assembler assem(CODE_MEMORY_SIZE, code, FUNCTION_TABLE_SIZE, functionTable, DATA_MEMORY_SIZE, memory, globals);
 				assem.newUnit("string");
 				while (!gazlStream.eof()) {
 					std::string line;
 					getline(gazlStream, line);
 					assem.feed(line.c_str());
 				}
-				assem.finalize(codeSize, globalsSize, constsSize);
+				assem.finalize(sizes);
 			}
 		}
-		
+
 		{
-			Processor pmachine(codeSize, code, DATA_MEMORY_SIZE, memory, globalsSize, constsSize, CALL_STACK_SIZE
-					, callStack, NATIVE_TABLE, 0);
+			Processor pmachine(sizes.codeSize, code, sizes.functionCount, functionTable, DATA_MEMORY_SIZE, memory
+					, sizes.globalsSize, sizes.constsSize, CALL_STACK_SIZE, callStack, NATIVE_TABLE, 0);
 			Pointer mainFunction = globals.findFunction("main");
 			if (mainFunction != 0) {
 				Status status = pmachine.enterCall(mainFunction);
@@ -299,34 +324,96 @@ int main(int argc, const char* argv[]) {
 		unitTest();
 	#endif
 
-		if (argc < 2) {
+		// Separate `--` options from positional arguments so the positional layout stays
+		// `<file> [<function>] [<define symbol> <define value> ...]` regardless of flag placement.
+		std::vector<const char*> pos;
+		int benchRepeat = 0;	// 0 = normal single run; >0 = benchmark mode with this many measured iterations
+		int benchWarmup = 3;	// iterations run and discarded before measuring
+		bool noLibm = false;	// --no-libm: don't register the atan2/sqrt/log natives (for programs that define their own)
+		const char* noNativeSpec = 0;	// --no-native=name,...: don't register the listed built-in natives (for programs defining same-named functions)
+		const char* forwardSpec = 0;	// --forward=native:function,...: satisfy ^native calls with GAZL functions (see forwardNative)
+		for (int i = 0; i < argc; ++i) {
+			const char* a = argv[i];
+			if (i > 0 && a[0] == '-' && a[1] == '-') {
+				if (strncmp(a, "--bench", 7) == 0) {
+					benchRepeat = (a[7] == '=') ? atoi(a + 8) : 10;
+				} else if (strncmp(a, "--warmup", 8) == 0) {
+					benchWarmup = (a[8] == '=') ? atoi(a + 9) : benchWarmup;
+				} else if (strcmp(a, "--no-libm") == 0) {
+					noLibm = true;
+				} else if (strncmp(a, "--forward=", 10) == 0) {
+					forwardSpec = a + 10;
+				} else if (strncmp(a, "--no-native=", 12) == 0) {
+					noNativeSpec = a + 12;
+				} else {
+					throw CmdException(std::string("Unknown option: ") + a);
+				}
+			} else {
+				pos.push_back(a);
+			}
+		}
+
+		if (pos.size() < 2) {
 			std::cerr << "GAZLCmd <filename> [<function> = 'main'] [<define symbol> <define value> ...]" << std::endl;
+			std::cerr << "        [--bench[=N]] [--warmup=W]   run N timed iterations (default 10), W warmups (default 3)"
+					<< std::endl;
+			std::cerr << "        [--no-libm]                  skip the atan2/sqrt/log natives (for self-contained libm)"
+					<< std::endl;
+			std::cerr << "        [--no-native=name,...]       skip the named built-in natives (the program defines its own)"
+					<< std::endl;
+			std::cerr << "        [--forward=nat:func,...]     satisfy ^nat native calls with GAZL functions"
+					<< std::endl;
 			return 0;
 		}
 
 		Symbols globals;
 
-		for (int i = 0; i < sizeof (NATIVE_TABLE) / sizeof (*NATIVE_TABLE); ++i)
+		for (int i = 0; i < sizeof (NATIVE_NAMES) / sizeof (*NATIVE_NAMES); ++i) {	// NAMES, not TABLE: the unnamed tail of
+			if (noLibm && (strcmp(NATIVE_NAMES[i], "atan2") == 0 || strcmp(NATIVE_NAMES[i], "sqrt") == 0	// NATIVE_TABLE is the
+					|| strcmp(NATIVE_NAMES[i], "log") == 0))											// --forward slots
+				continue;								// a self-contained libm (e.g. perfTest) defines these itself
+			if (noNativeSpec != 0) {					// --no-native: the program defines a same-named GAZL function itself
+				const std::string spec(std::string(",") + noNativeSpec + ",");
+				if (spec.find(std::string(",") + NATIVE_NAMES[i] + ",") != std::string::npos) continue;
+			}
 			globals.registerNative(NATIVE_NAMES[i], i);
-
-		for (int i = 3; i + 2 <= argc; i += 2) {
-			Value v;
-			v.i = atoi(argv[i + 1]);
-			globals.defineConstant(argv[i + 0], false, v);
 		}
-		
-		UInt codeSize;
-		UInt globalsSize;
-		UInt constsSize;
-			
+
+		for (size_t i = 3; i + 2 <= pos.size(); i += 2) {
+			Value v;
+			v.i = atoi(pos[i + 1]);
+			globals.defineConstant(pos[i + 0], false, v);
+		}
+
+		// --forward: register each native name now (the assembler must resolve `^name`); the paired GAZL function names
+		// are remembered and looked up after assembly.
+		std::vector<std::string> forwardFunctionNames;
+		if (forwardSpec != 0) {
+			std::string spec(forwardSpec);
+			size_t at = 0;
+			while (at < spec.size()) {
+				const size_t comma = spec.find(',', at);
+				const std::string pair = spec.substr(at, comma == std::string::npos ? std::string::npos : comma - at);
+				const size_t colon = pair.find(':');
+				if (colon == std::string::npos) throw CmdException(std::string("--forward: expected native:function, got '") + pair + "'");
+				if (forwardFunctionNames.size() >= MAX_FORWARDS) throw CmdException("--forward: too many forwards");
+				globals.registerNative(pair.substr(0, colon).c_str(), FIRST_FORWARD_INDEX + static_cast<int>(forwardFunctionNames.size()));
+				forwardFunctionNames.push_back(pair.substr(colon + 1));
+				if (comma == std::string::npos) break;
+				at = comma + 1;
+			}
+		}
+
+		ProgramSizes sizes = { 0, 0, 0, 0 };
+
 		{
-			std::ifstream gazlStream(argv[1], std::ifstream::binary);
+			std::ifstream gazlStream(pos[1], std::ifstream::binary);
 			if (!gazlStream.good()) throw CmdException("Could not open input file");
 			gazlStream.exceptions(std::ios_base::badbit);
-			
+
 			{
-				Assembler assem(CODE_MEMORY_SIZE, code, DATA_MEMORY_SIZE, memory, globals);
-				assem.newUnit(argv[1]);
+				Assembler assem(CODE_MEMORY_SIZE, code, FUNCTION_TABLE_SIZE, functionTable, DATA_MEMORY_SIZE, memory, globals);
+				assem.newUnit(pos[1]);
 				
 				int lineCounter = 1;
 				while (gazlStream.good()) {
@@ -344,10 +431,10 @@ int main(int argc, const char* argv[]) {
 				}
 				if (gazlStream.bad()) throw CmdException("Problem with input stream");
 
-				assem.finalize(codeSize, globalsSize, constsSize);
-				
-				std::cerr << "Code size: " << codeSize << ", globals size: " << globalsSize << ", consts size: "
-						<< constsSize << std::endl;
+				assem.finalize(sizes);
+
+				std::cerr << "Code size: " << sizes.codeSize << ", globals size: " << sizes.globalsSize << ", consts size: "
+						<< sizes.constsSize << ", functions: " << sizes.functionCount << std::endl;
 				std::cerr << "--------------------------------------------------------------------------------"
 						<< std::endl;
 			}
@@ -356,21 +443,71 @@ int main(int argc, const char* argv[]) {
 		}
 		
 		{
-			clock_t c0 = clock();
-			Processor pmachine(codeSize, code, DATA_MEMORY_SIZE, memory, globalsSize, constsSize, CALL_STACK_SIZE
-					, callStack, NATIVE_TABLE, 0);
-			const char* mainFunctionName = argc >= 3 ? argv[2] : "main";
+			Processor pmachine(sizes.codeSize, code, sizes.functionCount, functionTable, DATA_MEMORY_SIZE, memory
+					, sizes.globalsSize, sizes.constsSize, CALL_STACK_SIZE, callStack, NATIVE_TABLE, 0);
+
+			for (size_t i = 0; i < forwardFunctionNames.size(); ++i) {		// resolve --forward targets against the assembled program
+				forwardTargets[i] = globals.findFunction(forwardFunctionNames[i].c_str());
+				if (forwardTargets[i] == NULL_POINTER)
+					throw CmdException(std::string("--forward: no function '") + forwardFunctionNames[i] + "'");
+			}
+
+			const char* mainFunctionName = pos.size() >= 3 ? pos[2] : "main";
 			Pointer mainFunction = globals.findFunction(mainFunctionName);
 			if (mainFunction == 0) throw CmdException(std::string("Could not locate function: ") + mainFunctionName);
-			Status status = pmachine.enterCall(mainFunction);
-			assert(status == OK);
-			status = pmachine.run();
-			clock_t c1 = clock();
-			
-			std::cerr << "--------------------------------------------------------------------------------"
-					<< std::endl;
-			std::cerr << "Status: " << status << ", time: " << static_cast<double>(c1 - c0) / CLOCKS_PER_SEC
-					<< "s" << std::endl;
+
+			// Enter `main` and run it to completion, chunking across TIME_OUT so long workloads finish.
+			// (Opcode counts can't be recovered here: the print* natives call resetTimeOut(), which clobbers
+			// the cycle budget mid-run. Benchmarks compare wall time of the identical workload instead.)
+			auto runToCompletion = [&]() {
+				Status status = pmachine.enterCall(mainFunction);
+				if (status != OK) throw CmdException(std::string("enterCall returned status ") + std::to_string(status));
+				do {
+					pmachine.resetTimeOut(0x7FFFFFFF);
+					status = pmachine.run();
+				} while (status == TIME_OUT);
+				// TERMINATED is a clean, expected stop via the exit() native (e.g. a firmware harness reaching its budget).
+				if (status != OK && status != TERMINATED) throw CmdException(std::string("run returned status ") + std::to_string(status));
+			};
+
+			if (benchRepeat > 0) {
+				std::vector<double> samples;			// milliseconds, measured iterations only
+				for (int iter = 0; iter < benchWarmup + benchRepeat; ++iter) {
+					auto t0 = std::chrono::steady_clock::now();
+					runToCompletion();
+					auto t1 = std::chrono::steady_clock::now();
+					if (iter >= benchWarmup)
+						samples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
+				}
+				std::sort(samples.begin(), samples.end());
+				const double mn = samples.front();
+				const double median = samples[samples.size() / 2];
+				double sum = 0.0;
+				for (size_t i = 0; i < samples.size(); ++i) sum += samples[i];
+				const double mean = sum / samples.size();
+				double var = 0.0;
+				for (size_t i = 0; i < samples.size(); ++i) var += (samples[i] - mean) * (samples[i] - mean);
+				const double stddev = std::sqrt(var / samples.size());
+
+				std::cerr << "--------------------------------------------------------------------------------"
+						<< std::endl;
+				// Leading newline: workload output (e.g. printInt with no trailing LF) may not end the line.
+				std::cout << "\nbench\t" << pos[1]
+						<< "\titers=" << benchRepeat
+						<< "\tmin_ms=" << mn
+						<< "\tmedian_ms=" << median
+						<< "\tmean_ms=" << mean
+						<< "\tstddev_ms=" << stddev << std::endl;
+			} else {
+				clock_t c0 = clock();
+				runToCompletion();
+				clock_t c1 = clock();
+
+				std::cerr << "--------------------------------------------------------------------------------"
+						<< std::endl;
+				std::cerr << "Status: 0, time: " << static_cast<double>(c1 - c0) / CLOCKS_PER_SEC
+						<< "s" << std::endl;
+			}
 		}
 	}
 	catch (const std::exception& x) {

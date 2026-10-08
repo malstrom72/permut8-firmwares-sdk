@@ -77,7 +77,7 @@ instructions when available.
 ## Helper Scripts
 
 - `build.sh` / `build.cmd` – build both the **beta** and **release** targets and run all tests
-- `tools/updateIVGTests.sh` / `.cmd` – regenerate golden PNGs from all `.ivg` test files
+- `tools/testIVG.sh update` / `.cmd update` – regenerate golden PNGs from all `.ivg` test files
 - `tools/updateDocumentation.sh` – rebuild HTML documentation using Pandoc and PikaScript
 	(Mac / Linux only)
 
@@ -129,7 +129,8 @@ by Fredrik Lidström, a TypeScript wrapper around the legacy
 - [NuXPixels Documentation](docs/NuXPixels%20Documentation.md)
 - [ivgfont Documentation](docs/ivgfont%20Documentation.md)
 - [Developer Guide](docs/Developer%20Guide.md)
-- [Fuzzing](docs/Fuzzing.md)
+- [Coding Style](docs/CodingStyle.md)
+- [Fuzzing](docs/fuzzing.md)
 
 ## AI Usage
 

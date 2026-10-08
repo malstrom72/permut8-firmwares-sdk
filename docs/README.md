@@ -35,9 +35,12 @@ only when you need exact language or renderer behavior.
 - [IVG Documentation](IVG%20Documentation.md): vector graphics language used for stickers.
 - [ImpD Documentation](ImpD%20Documentation.md): imperative data language used by IVG.
 - [GAZL Overview](../GAZL/docs/Overview.md): VM architecture and textual representation.
-- [Impala Language Reference](../GAZL/docs/Impala.md): the Impala source language.
-- [GAZL Instruction Set](../GAZL/docs/InstructionSet.md): opcode reference.
-- [GAZL Usage Example](../GAZL/docs/UsageExample.md): compile and run a simple program.
+- [Impala Language Reference](../GAZL/docs/impala/Impala.md): the Impala source language.
+- [What's New In Impala 2](../GAZL/docs/impala/WhatsNewInImpala2.md): structs, typed pointers,
+  `import`, `functype`, `return`, `sizeof`, and what 2.0 refuses from 1.0 sources.
+- [Impala 2 Reference](../GAZL/docs/impala/Impala2.md): the full 2.0 language reference.
+- [GAZL Instruction Set](../GAZL/docs/gazl/InstructionSet.md): opcode reference.
+- [GAZL Usage Example](../GAZL/docs/impala/UsageExample.md): compile and run a simple program.
 
 ## Vendored Subsystem Docs
 

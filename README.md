@@ -55,20 +55,26 @@ Additional tools are needed only for maintaining or rebuilding the SDK itself:
     - `examples/Firmwares/ringmod_code.impala` is the best compact full-patch starting point.
     - `examples/Firmwares/linSubMod_code.impala` is the best compact mod-patch starting point.
 
+- `impala`:
+    - `permut8natives.impala`: the Permut8 host natives as Impala prototypes. `import` it to
+      have the compiler check every native call site. See [Validation](docs/Validation.md).
+
 - `tools`:
     - `bin`: prebuilt SDK helper executables and runtime scripts used by the documented
       compile, package, and validation commands.
     - `createP8Bank.nuxjs.js`: wraps compiled GAZL plus optional logo/about assets into a `.p8bank`.
     - `gazlCompactor.nuxjs.js`: strips comments and redundant whitespace from compiled GAZL
       for smaller release banks.
-    - `gazl-validate.js`: GAZL signature validator (staged from `GAZL`); run it with
-      `tools/bin/NuXJS tools/gazl-validate.js <compiled>.gazl` to catch signature and
-      argument-count mismatches. Auto-loads the Permut8 native manifest at
-      `docs/nativeCallbackSignatures.gazl`.
+    - `permut8Host.nuxjs.js`, `runPermut8Firmware.{sh,cmd}`: run a compiled firmware outside the
+      plugin and print a deterministic checksum of its audio output. See
+      [Validation](docs/Validation.md#run-the-firmware).
+    - `checkPermut8Firmwares.{sh,cmd}` and `permut8FirmwareChecksums.txt`: check every example
+      firmware against its committed checksum, so a refactor or toolchain bump that changes
+      behavior is caught immediately.
     - `update-firmware-toolchain.sh`: builds Unix tools in `tools/bin` when needed,
-      rebuilds the NuXJS runtime, refreshes the firmware compiler files and signature
-      validator from the authoritative `GAZL` copy, and updates the vendored IVG renderer
-      used for sticker validation.
+      rebuilds the NuXJS runtime, refreshes the firmware compiler files from the
+      authoritative `GAZL` copy, and updates the vendored IVG renderer used for sticker
+      validation.
     - `convert-user-guide.sh` and `bootstrap-docling.sh`: maintain generated user-guide docs.
 
 - `GAZL`:
@@ -122,8 +128,13 @@ Load the generated `.p8bank` in Permut8. This compile/package/load path has been
 verified with the RingMod example and is the recommended sanity check for the SDK.
 
 The `NuXJS` executable runs the Impala compiler for firmware work. `NuXJS` runs
-`impala.nuxjs.js`, which loads the JSPEG-generated `impalaCompiler.js` and emits
-the `.gazl` file that Permut8 can load.
+`impala.nuxjs.js`, which loads the JSPEG-generated `impalaCompiler.js` and
+`impalaImportClosure.js` from its own directory, and emits the `.gazl` file that Permut8 can
+load. All three scripts must sit side by side.
+
+The compiler is Impala 2. See
+[What's New In Impala 2](GAZL/docs/impala/WhatsNewInImpala2.md) for what it adds over 1.0
+and the short list of 1.0 spellings it refuses.
 
 ## Firmware Authoring
 
@@ -160,10 +171,12 @@ Use [Validation](docs/Validation.md) for the practical checks before returning o
 shipping a firmware:
 
 1. Compile Impala to GAZL.
-2. Package a `.p8bank`.
-3. Check about text line count and width.
-4. Render static IVG sticker graphics with `IVG2PNG` where possible.
-5. Load the generated bank in Permut8 when plugin access is available.
+2. Run the compiled firmware under the host harness to prove it executes and to detect any change
+   in its audio output.
+3. Package a `.p8bank`.
+4. Check about text line count and width.
+5. Render static IVG sticker graphics with `IVG2PNG` where possible.
+6. Load the generated bank in Permut8 when plugin access is available.
 
 ## Development Folder
 

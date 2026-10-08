@@ -1,25 +1,66 @@
 # Repository Guidelines
 
-To run the test suite use the helper script with up to three minutes allowed for execution:
+## Read this before touching Impala or GAZL
+
+Two invariants govern almost every design decision in this repository. Getting either wrong produces
+changes that look reasonable and are wrong at the level of the whole system.
+
+**1. Impala is a transliterator, not a compiler.** The ~1:1 mapping between Impala constructs and GAZL
+instructions is sacred. No hidden optimization passes, no runtime machinery the programmer cannot
+predict from the source, and never stricter than the machine it targets. Optimization belongs in the
+assembler, where more is known. See the design principles in [`docs/impala/Impala2.md`](docs/impala/Impala2.md).
+
+**2. The build has TWO stages, and a constant is not always a number Impala knows.** GAZL programs are
+distributed as assembly TEXT, and that text is assembled on the END USER's machine immediately before
+running. The host injects named constant values at that moment (`Symbols::defineConstant`, `! DEFi`,
+`<A>`-`<Z>`, `! IFDF`), so one shipped `.gazl` file compiles to different code under different
+conditions. Impala therefore emits references to constants whose values it never saw, and that is
+correct and intended, not a gap to close. Do not make Impala demand a numeric value where a symbol
+would do; do not fold a named constant away; do not treat "not known at Impala compile time" as an
+error. The full rules, with verified examples, are in
+[`design/impala/TwoStageConstants.md`](design/impala/TwoStageConstants.md) - **read it before changing any constant
+handling, folding, bounds check or diagnostic.**
+
+Say "Impala compile time" or "GAZL assembly time" explicitly. Bare "compile time" is ambiguous here
+and is the usual root of the mistake.
+
+## Building and testing
+
+For a change that touches only the JavaScript compiler, the fast gate is enough. It needs no C++
+toolchain, and `build.sh` and `build.cmd` both call it, so the two cannot drift apart:
 
 ```bash
-timeout 180 ./build.sh
+timeout 300 bash tools/test-js.sh
 ```
 
-Always execute this command before committing changes to verify that the build and regression tests succeed.
+The full sequence builds the C++ tools as well, and runs the demo end to end:
+
+```bash
+timeout 900 bash build.sh
+```
+
+Always run one of these before committing, and the full one before committing anything outside
+`impala/`. Budget generously: the JS gate alone takes about a minute and a half, most of it a
+3000-program fuzz run.
+
+## Code style
+
+The canonical coding style and design principles live in [`design/CodingStyle.md`](design/CodingStyle.md) and are
+shared across these projects, so there is one source of truth. Follow it for error handling, RAII, naming, class
+layout, comments, and formatting. This file holds only the operational notes specific to this repository.
 
 ## Repository layout
 The project uses a consistent folder structure. Build output is written to `output/` and no source files live there. Useful locations:
 
-- `tools/` – scripts for building and maintaining the code and documentation.
-- `projects/` – Xcode and Visual Studio project files.
-- `docs/` – documentation.
+- `tools/` - scripts for building and maintaining the code and documentation, plus the C++ sources
+  that are not part of the VM library itself (`GAZLCmd.cpp`, `GAZLWasm.cpp`, `GAZLEnterCallTest.cpp`).
+- `projects/` - Xcode and Visual Studio project files.
+- `docs/` - end-user documentation for GAZL, Impala and the C++ embedding API.
+- `design/` - design notes, audits, proposals and internals, for working ON the toolchain. Start at `design/README.md`.
 - `externals/` - projects and source code from other repositories (only touch this content when explicitly asked to).
-- `src/` – C++ source code for the library. The library is distributed as source rather than prebuilt binaries.
-- `tests/` – regression tests.
-- `examples/` – small sample programs.
-- `benchmarks/` – JavaScript performance tests.
-- `output/` – contains only build artifacts (and any runtime dependencies), no source files.
+- `src/` - C++ source code for the library. The library is distributed as source rather than prebuilt binaries.
+- `tests/` - regression tests.
+- `output/` - contains only build artifacts (and any runtime dependencies), no source files.
 
 Root-level `build.sh` and `build.cmd` (mirrored implementations) should build and test both the beta and release targets.
 
@@ -27,22 +68,8 @@ BuildCpp.sh and BuildCpp.cmd are copied from another repository. Only make chang
 
 ## Formatting rules
 
-- Tabs (width 4) for indentation.
-- Opening braces stay on the same line as the control statement and closing braces are on their own line.
-- Maximum line width is 120 characters. End-of-line comments may start at column 120.
-- Line continuations should start with the operator and be indented two tabs from the original line.
-- `#if`/`#endif` blocks should appear one tab *left* of the current indentation level.
-- Class comment – put a plain C-style block comment immediately above each class, *not* Doxygen.  
-	```
-	/**
-		One-sentence summary of what the class does.
-		Extra details if truly needed.
-	**/
-	```
-	* The two asterisks open/close the block; everything inside is indented with one tab.  
-- Small method comment – use a single end-of-line comment:  
-	void blahblah(int blah);	/// brief description of `blahblah`
-- Inside comment text, wrap any variable, parameter, class or function names in back-ticks, e.g. `blah` is the temporary buffer.
+Code style (indentation, braces, line width, comments, naming) is defined in
+[`design/CodingStyle.md`](design/CodingStyle.md). Only the operational hygiene note below is repo-specific.
 
 When handling files with command-line tools (which may break tab characters):
 - Always run `expand -t 4` on the file before processing.

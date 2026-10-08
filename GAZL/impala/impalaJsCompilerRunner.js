@@ -4,6 +4,8 @@ const fs = require("fs");
 const path = require("path");
 const Module = require("module");
 
+const { locateInUnit: locateOffsetInUnit } = require("./impalaImportClosure");
+
 const OUTPUT_TAB_WIDTH = 4;
 const INPUT_TAB_STOPS = [0, 20, 32, 64];
 const LINE_BREAK_PATTERN = /\r\n|\r|\n/;
@@ -100,18 +102,70 @@ function renderErrorContext(lineText, pointerOffset) {
 	};
 }
 
-function formatErrorWithLocation(source, options, rawIndex, baseMessage, explicitLocationLabel) {
+// A compile of an import closure sees ONE concatenated source, so a raw line number indexes the
+// concatenation and the file name is always the root unit - the wrong file, on the wrong line, for
+// everything past the first unit. `options.units` (the spans the closure walk handed over) maps an
+// offset back to the unit that owns it; the NuXJS front end resolves diagnostics the same way.
+function locateInUnit(source, options, index) {
+	return locateOffsetInUnit((options && options.units) || [], source, index);
+}
+
+// "Undeclared identifier: f" reads as a lie when `f` is defined further down - the name is right
+// there in the file. It is the single-pass compiler: a name must be declared before it is USED, and
+// across an import closure "before" means "in an earlier unit", which no ordering can give both
+// halves of a cycle. Say where the definition actually is and what unblocks it.
+const FORWARD_REF_PATTERN = /^(Undeclared identifier|Unknown type):? (\w+)$/;
+
+function forwardReferenceHint(source, options, index, message) {
+	const matched = FORWARD_REF_PATTERN.exec(message);
+	if (!matched) {
+		return undefined;
+	}
+	const name = matched[2];
+	const ahead = source.slice(index).search(new RegExp(
+		"^[ \\t]*(?:export[ \\t]+)?(?:(?:inline[ \\t]+)?(?:function|struct|functype)[ \\t]+" + name + "\\b"
+			+ "|(?:global|readonly|temporary)[ \\t]+[^\\n]*\\b" + name + "\\b)", "m"));
+	if (ahead < 0) {
+		return undefined;                     // genuinely undeclared, not merely declared too late
+	}
+	const at = index + ahead;
+	const where = locateInUnit(source, options, at);
+	const site = (where ? `${where.name}:${where.line}` : `line ${getLineInfo(source, at).line}`);
+	// A function or global can be forward-declared; a TYPE cannot - `extern struct` declares a
+	// host-owned layout, a different thing entirely - so it has to be defined earlier, full stop.
+	const remedy = (matched[1] === "Unknown type"
+		? "a type cannot be forward-declared, so its unit has to be compiled first - break the import"
+			+ " cycle so the defining unit is a plain dependency"
+		: `add a forward \`extern\` for ${name} above this point`);
+	return `${name} is defined later, at ${site} - this compiler is single-pass, so a name must be`
+		+ ` declared before it is used; ${remedy}`
+		+ (options && options.units ? ' (import cycles: see docs/impala/Impala2.md "Cycles")' : "");
+}
+
+function formatDiagnostic(source, options, rawIndex, severity, code, message, hint) {
 	const { index, line, lineStart, lineEnd, lineText } = getLineInfo(source, rawIndex);
 	const context = renderErrorContext(lineText, index - lineStart);
-	const locationLabel = explicitLocationLabel ?? (options && options.sourceName ? ` ${options.sourceName}` : " source");
-	const detail = context.displayLine.length > 0 || lineEnd > lineStart ? `\n${context.displayLine}\n${context.pointerLine}` : "\n^";
-	return `${baseMessage}${locationLabel} at line ${line}, column ${context.column}, offset ${index}.${detail}`;
+	const where = locateInUnit(source, options, index);
+	const label = where ? where.name : (options && options.sourceName ? options.sourceName : "<source>");
+	const position = `${label}:${where ? where.line : line}:${context.column}`;
+	if (!hint) {
+		hint = forwardReferenceHint(source, options, index, message);
+	}
+	const codeText = code ? `[${code}]` : "";
+	let text = `${position}: ${severity}${codeText}: ${message}`;
+	if (context.displayLine.length > 0 || lineEnd > lineStart) {
+		text += `\n${context.displayLine}\n${context.pointerLine}`;
+	}
+	if (hint) {
+		text += `\n${position}: note: ${hint}`;
+	}
+	return text;
 }
 
 function formatThrownCompilerError(err, source, options) {
 	if (err && typeof err === "object" && Number.isFinite(err.impalaOffset)) {
 		const baseMessage = err.impalaMessage || (err.message ? err.message.split(" : ")[0] : "JSPEG impala compiler error");
-		return formatErrorWithLocation(source, options, err.impalaOffset, baseMessage);
+		return formatDiagnostic(source, options, err.impalaOffset, "error", err.impalaCode, baseMessage, err.impalaHint);
 	}
 	if (err && err.message) {
 		return err.message;
@@ -144,6 +198,22 @@ function loadCompilerModule(compilerSource, compilerFilename) {
 	return compilerModule.exports;
 }
 
+/* The generated bundle keeps ALL parser state inside impalaCompilerImpl (every `var $$parser.x = ...`
+   in the grammar becomes a per-call local), so one loaded copy is safe to reuse across compiles - and
+   re-reading + re-_compile-ing 200 KB per call also threw away V8's optimized code every time, which
+   cost ~5x on fuzz runs that compile thousands of programs. A caller supplying its own compilerSource
+   (a test comparing an alternate build) bypasses this and loads fresh. */
+const compilerModuleCache = new Map();
+
+function loadCompilerModuleCached(compilerPath) {
+	let cached = compilerModuleCache.get(compilerPath);
+	if (cached === undefined) {
+		cached = loadCompilerModule(fs.readFileSync(compilerPath, "utf8"), compilerPath);
+		compilerModuleCache.set(compilerPath, cached);
+	}
+	return cached;
+}
+
 function compileWithJsImpala(source, options = {}) {
 	const {
 		compilerPath: compilerPathOption,
@@ -152,13 +222,16 @@ function compileWithJsImpala(source, options = {}) {
 		retabulate: shouldRetabulate = true,
 		trailingNewline,
 		randomId,
+		legacy,
+		onWarning,
 	} = options;
 
 	const compilerPath = compilerPathOption ? path.resolve(compilerPathOption) : path.join(__dirname, "impalaCompiler.js");
-	const compilerText = compilerSource ?? fs.readFileSync(compilerPath, "utf8");
 
 	const outputLines = [];
-	const compilerExports = loadCompilerModule(compilerText, compilerPath);
+	const compilerExports = compilerSource === undefined
+		? loadCompilerModuleCached(compilerPath)
+		: loadCompilerModule(compilerSource, compilerPath);
 	const compilerFn = resolveCompilerExport(compilerExports);
 	if (typeof compilerFn !== "function") {
 		throw new Error("JSPEG impala compiler did not export a function");
@@ -173,6 +246,31 @@ function compileWithJsImpala(source, options = {}) {
 	if (sourceName !== undefined) {
 		compilerOptions.sourceName = sourceName;
 	}
+	if (options.units !== undefined) {
+		compilerOptions.units = options.units;   // origins name the unit that owns the text, not the root
+	}
+	if (legacy) {
+		compilerOptions.legacy = true;
+	}
+	// The BOOLEAN compiler flags, in ONE list. Copied rather than spread because `options` also carries
+	// runner-only keys (`compilerPath`, `retabulate`, `onWarning`) and keys this function TRANSFORMS
+	// (`warn`, `sourceName`), so an `Object.assign` would hand the compiler nonsense. A per-flag `if`
+	// chain is where a flag goes to die: one that reached here and was not in the chain compiled clean
+	// with the option silently ignored - the failure `impala.node.js`'s FLAGS map prevents one layer
+	// up. Add a flag to this list.
+	for (const flag of [ "rangeChecks" ]) {
+		if (options[flag]) {
+			compilerOptions[flag] = true;
+		}
+	}
+	compilerOptions.warn = (message, offset, code, hint) => {
+		const formatted = formatDiagnostic(source, options, offset ?? 0, "warning", code, message, hint);
+		if (typeof onWarning === "function") {
+			onWarning(formatted, message, offset);
+		} else {
+			console.error(formatted);
+		}
+	};
 	let compileResult;
 	try {
 		compileResult = compilerFn(source, compilerOptions);
@@ -181,7 +279,7 @@ function compileWithJsImpala(source, options = {}) {
 	}
 	const [ok, , index] = compileResult;
 	if (!ok) {
-		throw new Error(formatErrorWithLocation(source, options, index, "JSPEG impala compiler failed to compile"));
+		throw new Error(formatDiagnostic(source, options, index, "error", "E001", "syntax error", undefined));
 	}
 	if (index !== source.length) {
 		throw new Error(`JSPEG impala compiler stopped at ${index} of ${source.length}`);

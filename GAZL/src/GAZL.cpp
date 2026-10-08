@@ -84,11 +84,39 @@ const char* ASSEMBLER_ERROR_TEXTS[] = {
 	/* , UNKNOWN_NATIVE_FUNCTION					*/	, "Unknown native function"
 	/* , CONSTANT_DIVISION_BY_ZERO					*/	, "Constant zero divisor or modulus"
 	/* , EXPECTED_CONSTANT							*/	, "Expected constant"
+	/* , NOT_ENOUGH_FUNCTION_SPACE					*/	, "Not enough space for function table"
+	/* , LABEL_ON_FUNCTION							*/	, "Branch target lands on a FUNC"
 };
 
-inline int absolute(int i) { int x = i >> (sizeof (Int) * 8 - 1); return (i ^ x) - x; }
+// --- defined integer / FTOI semantics, shared by Processor::run() and calcConstant() so the
+// run-time and constant-folded paths can never diverge. These are the chosen normative results
+// (two's-complement wrap / count-mod-32 shifts / saturating FTOI -- the AArch64 & WebAssembly
+// choices), identical on every target. add/sub/mul and the shifts lower to a single native
+// instruction; idiv/imod/ftoi keep a real edge-case branch on purpose (see design/gazl/PortabilityAudit.md).
+inline int absolute(int i) { Int x = i >> (Int)(sizeof (Int) * 8 - 1); return (Int)(((UInt)i ^ (UInt)x) - (UInt)x); } // INT_MIN -> INT_MIN
 inline float absolute(float f) { return fabsf(f); }
 inline double absolute(double f) { return fabs(f); }
+inline Int idiv(Int a, Int b) { return (b == -1) ? (Int)(0u - (UInt)a) : a / b; }	// caller guarantees b != 0; INT_MIN / -1 -> INT_MIN
+inline Int imod(Int a, Int b) { return (b == -1) ? 0 : a % b; }						// caller guarantees b != 0; INT_MIN % -1 -> 0
+inline Int iadd(Int a, Int b) { return (Int)((UInt)a + (UInt)b); }					// two's-complement wrap
+inline Int isub(Int a, Int b) { return (Int)((UInt)a - (UInt)b); }					// two's-complement wrap
+inline Int imul(Int a, Int b) { return (Int)((UInt)a * (UInt)b); }					// two's-complement wrap
+inline Int ishl(Int a, Int n) { return (Int)((UInt)a << (n & 31)); }				// count mod 32; no neg-shift / overflow UB
+inline Int ashr(Int a, Int n) { return a >> (n & 31); }								// count mod 32; arithmetic (sign-extending)
+inline Int lshr(Int a, Int n) { return (Int)((UInt)a >> (n & 31)); }				// count mod 32; logical (zero-fill)
+inline Int ftoi(Float v) {															// v is the ALREADY-SCALED float
+	// Bit-pattern classification (no float comparisons) so the saturation/NaN handling survives
+	// /fp:fast & -ffast-math -- those imply finite-math-only, under which a `v != v` / `v >= 2^31`
+	// test is assumed unreachable and deleted, letting the out-of-range cast UB reappear.
+	UInt b;
+	memcpy(&b, &v, sizeof b);
+	const UInt e = (b >> 23) & 0xFF;											// biased exponent
+	if (e >= 158) {																// |v| >= 2^31 (exp 158), or inf/NaN (exp 255)
+		if (e == 255 && (b & 0x7FFFFF) != 0) return 0;							// NaN
+		return (b >> 31) != 0 ? (Int)(-2147483647 - 1) : 2147483647;			// sign -> INT_MIN / INT_MAX (+/-inf too)
+	}
+	return (Int)v;																// |v| < 2^31: cast is in range and defined
+}
 template<typename T> inline T minimum(T a, T b) { return (a < b) ? a : b; }
 template<typename T> inline T maximum(T a, T b) { return (a < b) ? b : a; }
 
@@ -138,22 +166,36 @@ template<class F> F pow10(F x) { return pow(10, x); }
 static float pow10(float x) { return powf(10.0f, x); }
 
 static Float stringToFloat(const Char* &p, const Char* e) {
-	Float d = 0;
-	Float sign = 1;
+	/*
+		Accumulate in double, convert to Float once at the end. Accumulating directly in float32
+		diverges across compilers: `d * 10 + digit` loses precision at each step near the float
+		range limit, and clang contracts it to a single-rounded fmadd while MSVC emits mul+add
+		(two roundings) -- so e.g. "2147483647.0" parsed to 2^31 on one and 2^31-128 on the other.
+		A <=15-digit integer is exact in double (so contraction cannot change it), and the single
+		closing double->float conversion is correctly rounded and identical on every target.
+	*/
+	double d = 0;
+	double sign = 1;
 	switch (p < e ? *p : 0) {
 		case '+': ++p; sign = 1; break;
 		case '-': ++p; sign = -1; break;
 	}
 	if (p < e && *p >= '0' && *p <= '9') {
-		do { d = d * 10 + (*p - '0'); } while (++p < e && *p >= '0' && *p <= '9');
+		do {
+			d = d * 10 + (*p - '0');
+		} while (++p < e && *p >= '0' && *p <= '9');
 		if (p + 1 < e && *p == '.' && p[1] >= '0' && p[1] <= '9') {
 			++p;
-			Float f = 1;
-			do { d += (*p - '0') * (f *= (Float)(0.1)); } while (++p < e && *p >= '0' && *p <= '9');
+			double f = 1;
+			do {
+				d += (*p - '0') * (f *= 0.1);
+			} while (++p < e && *p >= '0' && *p <= '9');
 		}
-		if (p + 1 < e && (*p == 'E' || *p == 'e')) d *= pow10((Float)(stringToInt(++p, e)));
+		if (p + 1 < e && (*p == 'E' || *p == 'e')) {
+			d *= pow10((double)(stringToInt(++p, e)));
+		}
 	}
-	return d * sign;
+	return static_cast<Float>(d * sign);
 }
 
 static Char* int2string(Int i, int radix, int minLength, Char buffer[33]) {
@@ -176,57 +218,22 @@ const Char* GAZL_VERSION_STRING = STR("GAZL_VERSION");
 const Char* GAZL_WORD_SIZE_STRING = STR("GAZL_WORD_SIZE");
 const Char* GAZL_MEMORY_SIZE_STRING = STR("GAZL_MEMORY_SIZE");
 
-// FIX : decide once and for all
-#define SUPPORT_ABS 1				// diff here is 0.88 (branching) -> 0.5 (opcode)
-#define SUPPORT_MIN_MAX 0			// preliminary tests show that min max in the tightest possible loop (iterating over n elements) is only 10% faster than writing the same code with a branch
-#define SUPPORT_FLOOR 1				// diff here is 1.57 (func call) -> 0.9 (opcode)
-#define SUPPORT_CEIL 0				// diff here is 1.57 (func call) -> 0.9 (opcode)
-#define SUPPORT_FMOD 0				// diff here is about 10%, lets skip it
-#define SUPPORT_COPY 1
-#define SUPPORT_REV_COMP_ALIASES 1
-#define SUPPORT_NOT_COMP_ALIASES 0
-#define SUPPORT_ALL_PERMUTATIONS 1
-#define SUPPORT_ALL_CONST_OPS 1
-#define SUPPORT_ALL_CONST_COMPS 1
-#define SUPPORT_OPTIONAL_OPS 1
-#define SUPPORT_COMPILE_TIME_POINTER_COMPS 0
-
 enum Opcode {
 	FUNC_CC_ = FIRST_OPCODE_VALUE, CALL_VVC, CALL_CVC, CALL_NVC, RETU_C__
 	, MOVE_VV_, MOVE_VC_
 	, PEEK_VC_, POKE_CV_, POKE_CC_
 	, PEEK_VVV, PEEK_VCV, POKE_VVV, POKE_CVV, POKE_VVC, POKE_CVC
 	, GETL_VVV, SETL_VVV, SETL_VVC, ADRL_VV_
-#if (SUPPORT_ABS)
 	, ABSI_VV_
-#endif
 	, ADDI_VVV, ADDI_VVC, SUBI_VVV, SUBI_VVC, SUBI_VCV
 	, MULI_VVV, MULI_VVC, DIVI_VVV, DIVI_VVC, DIVI_VCV, MODI_VVV, MODI_VVC, MODI_VCV
-#if (SUPPORT_MIN_MAX)
-	, MAXI_VVV, MAXI_VVC, MINI_VVV, MINI_VVC
-#endif
 	, ANDI_VVV, ANDI_VVC, IORI_VVV, IORI_VVC, XORI_VVV, XORI_VVC
 	, SHLI_VVV, SHLI_VVC, SHLI_VCV, SHRI_VVV, SHRI_VVC, SHRI_VCV, SHRU_VVV, SHRU_VVC, SHRU_VCV
-#if (SUPPORT_ABS)
 	, ABSF_VV_
-#endif
-#if (SUPPORT_FLOOR)
 	, FLOF_VV_
-#endif
-#if (SUPPORT_CEIL)
-	, CEIF_VV_
-#endif
 	, ADDF_VVV, ADDF_VVC, SUBF_VVV, SUBF_VVC, SUBF_VCV, MULF_VVV, MULF_VVC, DIVF_VVV, DIVF_VVC, DIVF_VCV
-#if (SUPPORT_FMOD)
-	, MODF_VVV, MODF_VVC, MODF_VCV
-#endif
-#if (SUPPORT_MIN_MAX)
-	, MAXF_VVV, MAXF_VVC, MINF_VVV, MINF_VVC
-#endif
 	, FTOI_VVC, ITOF_VVC
-#if (SUPPORT_COPY)
 	, COPY_VVC, COPY_VCC, COPY_CVC, COPY_CCC
-#endif
 	, FORi_VVB, FORi_VCB
 	, LSSI_VVB, LSSI_VCB, LSSI_CVB, EQUI_VVB, EQUI_VCB
 	, NLSI_VVB, NLSI_VCB, NLSI_CVB, NEQI_VVB, NEQI_VCB
@@ -237,29 +244,11 @@ enum Opcode {
 	, NOOP____, GLOB____, CNST____, DATA____, LOCA____, OUTP____
 	
 	, MOVE_CC_
-#if (SUPPORT_ABS)
 	, ABSI_CC_
-#endif
 	, ADDI_CCC, SUBI_CCC, MULI_CCC, DIVI_CCC, MODI_CCC, ANDI_CCC, IORI_CCC, XORI_CCC, SHLI_CCC, SHRI_CCC, SHRU_CCC
-#if (SUPPORT_MIN_MAX)
-	, MAXI_CCC, MINI_CCC
-#endif
-#if (SUPPORT_ABS)
 	, ABSF_CC_
-#endif
-#if (SUPPORT_FLOOR)
 	, FLOF_CC_
-#endif
-#if (SUPPORT_CEIL)
-	, CEIF_CC_
-#endif
 	, ADDF_CCC, SUBF_CCC, MULF_CCC, DIVF_CCC
-#if (SUPPORT_FMOD)
-	, MODF_CCC
-#endif
-#if (SUPPORT_MIN_MAX)
-	, MAXF_CCC, MINF_CCC
-#endif
 	, FTOI_CCC, ITOF_CCC
 	, LSSI_CCB, EQUI_CCB, NLSI_CCB, NEQI_CCB
 	, LSSF_CCB, EQUF_CCB, NLSF_CCB, NEQF_CCB
@@ -301,6 +290,11 @@ const int FREE_ADDRESS		= ADDRESS | UNCHECKED_ADDRESS;
 const int FWD_FREE			= FREE_ADDRESS | FORWARD;
 const int FWD_FREE_W		= ADDRESS_W | UNCHECKED_ADDRESS | FORWARD;
 const int FWD_FREE_R		= ADDRESS_R | UNCHECKED_ADDRESS | FORWARD;
+// GAZL 2: SPLIT THIS. Unioning FUNC with FREE_ADDRESS is what makes a function pointer and a data pointer
+// interchangeable everywhere except a direct CALL, so `p` means both "data pointer" and "any pointer".
+// Consequence: ADDp on a function pointer assembles AND does not trap - `&one + 1` is a valid ordinal, so
+// it silently calls a different function. The fix is a fourth storage type, suffix `t` (target), which
+// simply has no ADDt/SUBt/DIFt/LSSt forms. See design/gazl/GAZL2FunctionPointers.md.
 const int ANY_FREE			= NULL_PTR | FREE_ADDRESS | FUNC;
 const int ANY_FWD_FREE		= ANY_FREE | FORWARD;
 const int ANY_VAR_FREE_W	= ANY_VAR_W | UNCHECKED_ADDRESS;
@@ -324,285 +318,141 @@ struct Operator {
 };
 
 static const Operator OPERATORS[] = {
-#if (SUPPORT_ABS)
-#if (SUPPORT_ALL_CONST_OPS)
 	  { " ABSf_vc_", ABSF_CC_,	{ VAR_FLOAT_W	, CONST_FLOAT	, 0				}		, YIELDS_CONST	, CONST_FLOAT	} ,
-#endif
 	  { " ABSf_vv_", ABSF_VV_,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, 0				}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " ABSi_vc_", ABSI_CC_,	{ VAR_INT_W		, CONST_INT		, 0				}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " ABSi_vv_", ABSI_VV_,	{ VAR_INT_W		, VAR_INT_R		, 0				}		, 0				, 0				} ,
-#endif
-#if (SUPPORT_ALL_CONST_OPS)
 	  { " ADDf_vcc", ADDF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	} ,
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	  { " ADDf_vcv", ADDF_VVC,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, SWAP_1_AND_2	, 0				} ,
-#endif
 	  { " ADDf_vvc", ADDF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
 	, { " ADDf_vvv", ADDF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " ADDi_vcc", ADDI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " ADDi_vcv", ADDI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " ADDi_vvc", ADDI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " ADDi_vvv", ADDI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " ADDp_vcc", ADDI_CCC,	{ VAR_PTR_W		, FREE_ADDRESS	, CONST_INT		}		, YIELDS_CONST	, FREE_ADDRESS		}
-#endif
 	, { " ADDp_vcv", ADDI_VVC,	{ VAR_PTR_W		, FWD_FREE		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
 	, { " ADDp_vvc", ADDI_VVC,	{ VAR_PTR_W		, VAR_PTR_R		, CONST_INT		}		, 0				, 0				}
 	, { " ADDp_vvv", ADDI_VVV,	{ VAR_PTR_W		, VAR_PTR_R		, VAR_INT_R		}		, 0				, 0				}
 	, { " ADRL_vvs", ADRL_VV_,	{ VAR_PTR_W		, ANY_VAR_FREE	, CONST_INT_P	}		, LOCAL_BOUNDS	, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " ANDi_vcc", ANDI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " ANDi_vcv", ANDI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " ANDi_vvc", ANDI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " ANDi_vvv", ANDI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_OPTIONAL_OPS)
 	, { " CALL_c__", CALL_CVC,	{ FUNC | FORWARD, 0				, 0				}		, 0				, 0				}
-#endif
 	, { " CALL_cvs", CALL_CVC,	{ FUNC | FORWARD, TRANSIENT		, CONST_INT_P	}		, LOCAL_BOUNDS	, 0				}
-#if (SUPPORT_OPTIONAL_OPS)
 	, { " CALL_n__", CALL_NVC,	{ NATIVE|FORWARD, 0			, 0				}		, 0				, 0				}
-#endif
 	, { " CALL_nvs", CALL_NVC,	{ NATIVE|FORWARD, TRANSIENT	, CONST_INT_P	}		, LOCAL_BOUNDS	, 0				}
-#if (SUPPORT_OPTIONAL_OPS)
+	// GAZL 2: these take the generic VAR_PTR_R, so an INDIRECT call cannot demand a function pointer - only
+	// CALL_c__ above (FUNC | FORWARD) discriminates. Retype to `t`. See design/gazl/GAZL2FunctionPointers.md.
 	, { " CALL_v__", CALL_VVC,	{ VAR_PTR_R		, 0				, 0				}		, 0				, 0				}
-#endif
 	, { " CALL_vvs", CALL_VVC,	{ VAR_PTR_R		, TRANSIENT		, CONST_INT_P	}		, LOCAL_BOUNDS	, 0				}
-#if (SUPPORT_CEIL)
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " CEIf_vc_", CEIF_CC_,	{ VAR_FLOAT_W	, CONST_FLOAT	, 0				}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
-	, { " CEIf_vv_", CEIF_VV_,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, 0				}		, 0				, 0				}
-#endif
 	, { " CNST_s__", CNST____,	{ CONST_INT_P	, 0				, 0				}		, 0				, ADDRESS_R		}
-#if (SUPPORT_COPY)
 	, { " COPY_ccs", COPY_CCC,	{ FWD_ADDRESS_W	, FWD_ADDRESS_R	, CONST_INT_P	}		, 0				, 0				}
 	, { " COPY_cvs", COPY_CVC,	{ FWD_ADDRESS_W	, VAR_PTR_R		, CONST_INT_P	}		, 0				, 0				}
 	, { " COPY_vcs", COPY_VCC,	{ VAR_PTR_R		, FWD_ADDRESS_R	, CONST_INT_P	}		, 0				, 0				}
 	, { " COPY_vvs", COPY_VVC,	{ VAR_PTR_R		, VAR_PTR_R		, CONST_INT_P	}		, 0				, 0				}
-#endif
 	, { " DATA_c__", DATA____,	{ KONST			, 0				, 0				}		, 0				, 0				}
 	, { " DATf_c__", DATA____,	{ CONST_FLOAT	, 0				, 0				}		, 0				, 0				}
 	, { " DATi_c__", DATA____,	{ CONST_INT		, 0				, 0				}		, 0				, 0				}
+	// GAZL 2: ANY_FWD_FREE lets one DATp row mix function and data addresses indistinguishably
+	// (`DATp &func &data` assembles). Needs a sibling DATt. See design/gazl/GAZL2FunctionPointers.md.
 	, { " DATp_c__", DATA____,	{ ANY_FWD_FREE	, 0				, 0				}		, 0				, 0				}
 	, { " DATs____", DATA____,	{ 0				, 0				, 0				}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " DIFp_vcc", SUBI_CCC,	{ VAR_INT_W		, FREE_ADDRESS		, FREE_ADDRESS		}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " DIFp_vcv", SUBI_VCV,	{ VAR_INT_W		, FWD_FREE		, VAR_PTR_R		}		, 0				, 0				}
 	, { " DIFp_vvc", SUBI_VVC,	{ VAR_INT_W		, VAR_PTR_R		, FWD_FREE		}		, 0				, 0				}
 	, { " DIFp_vvv", SUBI_VVV,	{ VAR_INT_W		, VAR_PTR_R		, VAR_PTR_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " DIVf_vcc", DIVF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST|CHECK_DIV_BY_0, CONST_FLOAT }
-#endif
 	, { " DIVf_vcv", DIVF_VCV,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, 0				, 0				}
 	, { " DIVf_vvc", DIVF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, CHECK_DIV_BY_0, 0				}
 	, { " DIVf_vvv", DIVF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " DIVi_vcc", DIVI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST|CHECK_DIV_BY_0, CONST_INT }
-#endif
 	, { " DIVi_vcv", DIVI_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " DIVi_vvc", DIVI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, CHECK_DIV_BY_0, 0				}
 	, { " DIVi_vvv", DIVI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " EQUf_ccb", EQUF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " EQUf_cvb", EQUF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " EQUf_vcb", EQUF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
 	, { " EQUf_vvb", EQUF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " EQUi_ccb", EQUI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " EQUi_cvb", EQUI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " EQUi_vcb", EQUI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
 	, { " EQUi_vvb", EQUI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " EQUp_ccb", EQUI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " EQUp_cvb", EQUI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " EQUp_vcb", EQUI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
 	, { " EQUp_vvb", EQUI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_FLOOR)
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " FLOf_vc_", FLOF_CC_,	{ VAR_FLOAT_W	, CONST_FLOAT	, 0				}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
 	, { " FLOf_vv_", FLOF_VV_,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, 0				}		, 0				, 0				}
-#endif
 	, { " FORi_vcb", FORi_VCB,	{ VAR_INT_W		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
 	, { " FORi_vvb", FORi_VVB,	{ VAR_INT_W		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " FORp_vcb", FORi_VCB,	{ VAR_PTR_W		, FWD_FREE		, FWD_BRANCH	}		, 0				, 0				}
 	, { " FORp_vvb", FORi_VVB,	{ VAR_PTR_W		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " FUNC____", FUNC_CC_,	{ 0				, 0				, 0				}		, 0				, FUNC			}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GEQf_ccb", NLSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " GEQf_cvb", NLSF_CVB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQf_vcb", NLSF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQf_vvb", NLSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GEQi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " GEQi_cvb", NLSI_CVB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQi_vcb", NLSI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQi_vvb", NLSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GEQp_ccb", NLSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " GEQp_cvb", NLSI_CVB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQp_vcb", NLSI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
 	, { " GEQp_vvb", NLSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " GETL_vvv", GETL_VVV,	{ ANY_VAR_W		, ANY_VAR_FREE_R, VAR_INT_R		}		, 0				, 0				}
 	, { " GLOB_s__", GLOB____,	{ CONST_INT_P	, 0				, 0				}		, 0				, FREE_ADDRESS	}
 	, { " GOTO_b__", GOTO_B__,	{ FWD_BRANCH	, 0				, 0				}		, 0				, 0				}
-#if (SUPPORT_REV_COMP_ALIASES)
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GRTf_ccb", LSSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " GRTf_cvb", LSSF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTf_vcb", LSSF_CVB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTf_vvb", LSSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GRTi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " GRTi_cvb", LSSI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTi_vcb", LSSI_CVB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTi_vvb", LSSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " GRTp_ccb", LSSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " GRTp_cvb", LSSI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTp_vcb", LSSI_CVB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " GRTp_vvb", LSSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " INPf____", LOCA____,	{ 0				, 0				, 0				}		, 0				, VAR_FLOAT_R & ~TRANSIENT }
 	, { " INPi____", LOCA____,	{ 0				, 0				, 0				}		, 0				, VAR_INT_R & ~TRANSIENT }
 	, { " INPp____", LOCA____,	{ 0				, 0				, 0				}		, 0				, VAR_PTR_R & ~TRANSIENT }
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " IORi_vcc", IORI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " IORi_vcv", IORI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " IORi_vvc", IORI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " IORi_vvv", IORI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_REV_COMP_ALIASES)
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LEQf_ccb", NLSI_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " LEQf_cvb", NLSF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQf_vcb", NLSF_CVB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQf_vvb", NLSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LEQi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " LEQi_cvb", NLSI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQi_vcb", NLSI_CVB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQi_vvb", NLSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LEQp_ccb", NLSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
-#endif
 	, { " LEQp_cvb", NLSI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQp_vcb", NLSI_CVB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQp_vvb", NLSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " LOCA_s__", LOCA____,	{ CONST_INT_P	, 0				, 0				}		, 0				, ANY_VAR & ~TRANSIENT }
 	, { " LOCf____", LOCA____,	{ 0				, 0				, 0				}		, 0				, (VAR_FLOAT_R | VAR_FLOAT_W) & ~TRANSIENT }
 	, { " LOCi____", LOCA____,	{ 0				, 0				, 0				}		, 0				, (VAR_INT_R | VAR_INT_W) & ~TRANSIENT }
 	, { " LOCp____", LOCA____,	{ 0				, 0				, 0				}		, 0				, (VAR_PTR_R | VAR_PTR_W) & ~TRANSIENT }
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LSSf_ccb", LSSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " LSSf_cvb", LSSF_CVB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSf_vcb", LSSF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSf_vvb", LSSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LSSi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " LSSi_cvb", LSSI_CVB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSi_vcb", LSSI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSi_vvb", LSSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " LSSp_ccb", LSSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
 	, { " LSSp_cvb", LSSI_CVB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSp_vcb", LSSI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
 	, { " LSSp_vvb", LSSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_MIN_MAX)
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MAXf_vcc", MAXF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MAXf_vcv", MAXF_VVC,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MAXf_vvc", MAXF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
-	, { " MAXf_vvv", MAXF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MAXi_vcc", MAXI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MAXi_vcv", MAXI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MAXi_vvc", MAXI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
-	, { " MAXi_vvv", MAXI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MAXp_vcc", MAXI_CCC,	{ VAR_PTR_W		, ANY_FREE		, ANY_FREE		}		, YIELDS_CONST	, ANY_FREE	 }
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MAXp_vcv", MAXI_VVC,	{ VAR_PTR_W		, ANY_FWD_FREE	, VAR_PTR_R		}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MAXp_vvc", MAXI_VVC,	{ VAR_PTR_W		, VAR_PTR_R		, ANY_FWD_FREE	}		, 0				, 0				}
-	, { " MAXp_vvv", MAXI_VVV,	{ VAR_PTR_W		, VAR_PTR_R		, VAR_PTR_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MINf_vcc", MINF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MINf_vcv", MINF_VVC,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MINf_vvc", MINF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
-	, { " MINf_vvv", MINF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MINi_vcc", MINI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MINi_vcv", MINI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MINi_vvc", MINI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
-	, { " MINi_vvv", MINI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MINp_vcc", MINI_CCC,	{ VAR_PTR_W		, ANY_FREE		, ANY_FREE		}		, YIELDS_CONST	, ANY_FREE	 }
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
-	, { " MINp_vcv", MINI_VVC,	{ VAR_PTR_W		, ANY_FWD_FREE	, VAR_PTR_R		}		, SWAP_1_AND_2	, 0				}
-#endif
-	, { " MINp_vvc", MINI_VVC,	{ VAR_PTR_W		, VAR_PTR_R		, ANY_FWD_FREE	}		, 0				, 0				}
-	, { " MINp_vvv", MINI_VVV,	{ VAR_PTR_W		, VAR_PTR_R		, VAR_PTR_R		}		, 0				, 0				}
-#endif
-#if (SUPPORT_FMOD)
-#if (SUPPORT_ALL_CONST_OPS)
-	, { " MODf_vcc", MODF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST|CHECK_DIV_BY_0, CONST_FLOAT }
-#endif
-	, { " MODf_vcv", MODF_VCV,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, 0				, 0				}
-	, { " MODf_vvc", MODF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, CHECK_DIV_BY_0, 0				}
-	, { " MODf_vvv", MODF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#endif
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " MODi_vcc", MODI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST|CHECK_DIV_BY_0, CONST_INT }
-#endif
 	, { " MODi_vcv", MODI_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " MODi_vvc", MODI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, CHECK_DIV_BY_0, 0				}
 	, { " MODi_vvv", MODI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
@@ -613,120 +463,26 @@ static const Operator OPERATORS[] = {
 	, { " MOVi_vv_", MOVE_VV_,	{ VAR_INT_W		, VAR_INT_R		, 0				}		, 0				, 0				}
 	, { " MOVp_vc_", MOVE_VC_,	{ VAR_PTR_W		, ANY_FWD_FREE	, 0				}		, 0				, 0				}
 	, { " MOVp_vv_", MOVE_VV_,	{ VAR_PTR_W		, VAR_PTR_R		, 0				}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " MULf_vcc", MULF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " MULf_vcv", MULF_VVC,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " MULf_vvc", MULF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
 	, { " MULf_vvv", MULF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " MULi_vcc", MULI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " MULi_vcv", MULI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " MULi_vvc", MULI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " MULi_vvv", MULI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " NEQf_ccb", NEQF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " NEQf_cvb", NEQF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " NEQf_vcb", NEQF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
 	, { " NEQf_vvb", NEQF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " NEQi_ccb", NEQI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " NEQi_cvb", NEQI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " NEQi_vcb", NEQI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
 	, { " NEQi_vvb", NEQI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
 	, { " NEQp_ccb", NEQI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " NEQp_cvb", NEQI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { " NEQp_vcb", NEQI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
 	, { " NEQp_vvb", NEQI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_NOT_COMP_ALIASES)
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGEf_ccb", LSSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NGEf_cvb", LSSF_CVB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEf_vcb", LSSF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEf_vvb", LSSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGEi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NGEi_cvb", LSSI_CVB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEi_vcb", LSSI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEi_vvb", LSSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGEp_ccb", LSSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NGEp_cvb", LSSI_CVB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEp_vcb", LSSI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NGEp_vvb", LSSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGRf_ccb", NLSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NGRf_cvb", NLSF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRf_vcb", NLSF_CVB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRf_vvb", NLSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGRi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NGRi_cvb", NLSI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRi_vcb", NLSI_CVB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRi_vvb", NLSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NGRp_ccb", NLSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NGRp_cvb", NLSI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRp_vcb", NLSI_CVB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NGRp_vvb", NLSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLEf_ccb", LSSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NLEf_cvb", LSSF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEf_vcb", LSSF_CVB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEf_vvb", LSSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLEi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NLEi_cvb", LSSI_VCB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEi_vcb", LSSI_CVB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEi_vvb", LSSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLEp_ccb", LSSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0 }
-#endif
-	, { " NLEp_cvb", LSSI_VCB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEp_vcb", LSSI_CVB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-	, { " NLEp_vvb", LSSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLSf_ccb", NLSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NLSf_cvb", NLSF_CVB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSf_vcb", NLSF_VCB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSf_vvb", NLSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLSi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NLSi_cvb", NLSI_CVB,	{ CONST_INT		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSi_vcb", NLSI_VCB,	{ VAR_INT_R		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSi_vvb", NLSI_VVB,	{ VAR_INT_R		, VAR_INT_R		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_COMPS)
-	, { " NLSp_ccb", NLSI_CCB,	{ ANY_FREE		, ANY_FREE		, FWD_BRANCH	}		, YIELDS_GOTO	, 0				}
-#endif
-	, { " NLSp_cvb", NLSI_CVB,	{ ANY_FWD_FREE	, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSp_vcb", NLSI_VCB,	{ VAR_PTR_R		, ANY_FWD_FREE	, FWD_BRANCH	}		, 0				, 0				}
-	, { " NLSp_vvb", NLSI_VVB,	{ VAR_PTR_R		, VAR_PTR_R		, FWD_BRANCH	}		, 0				, 0				}
-#endif
 	, { " NOOP____", NOOP____,	{ 0				, 0				, 0				}		, 0				, 0				}
 	, { " OUTf____", LOCA____,	{ 0				, 0				, 0				}		, 0				, (VAR_FLOAT_R | VAR_FLOAT_W) & ~TRANSIENT }
 	, { " OUTi____", LOCA____,	{ 0				, 0				, 0				}		, 0				, (VAR_INT_R | VAR_INT_W) & ~TRANSIENT }
@@ -750,72 +506,47 @@ static const Operator OPERATORS[] = {
 	, { " RETU____", RETU_C__,	{ 0				, 0				, 0				}		, 0				, 0				}
 	, { " SETL_vvc", SETL_VVC,	{ ANY_VAR_FREE_W, VAR_INT_R		, KONST			}		, 0				, 0				}
 	, { " SETL_vvv", SETL_VVV,	{ ANY_VAR_FREE_W, VAR_INT_R		, ANY_VAR_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SHLi_vcc", SHLI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT_P	}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " SHLi_vcv", SHLI_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " SHLi_vvc", SHLI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT_P	}		, 0				, 0				}
 	, { " SHLi_vvv", SHLI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SHRi_vcc", SHRI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " SHRi_vcv", SHRI_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " SHRi_vvc", SHRI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT_P	}		, 0				, 0				}
 	, { " SHRi_vvv", SHRI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SHRu_vcc", SHRU_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT_P	}		, YIELDS_CONST	, CONST_INT_P	}
-#endif
 	, { " SHRu_vcv", SHRU_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " SHRu_vvc", SHRU_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT_P	}		, 0				, 0				}
 	, { " SHRu_vvv", SHRU_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SUBf_vcc", SUBF_CCC,	{ VAR_FLOAT_W	, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
 	, { " SUBf_vcv", SUBF_VCV,	{ VAR_FLOAT_W	, CONST_FLOAT	, VAR_FLOAT_R	}		, 0				, 0				}
 	, { " SUBf_vvc", SUBF_VVC,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
 	, { " SUBf_vvv", SUBF_VVV,	{ VAR_FLOAT_W	, VAR_FLOAT_R	, VAR_FLOAT_R	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SUBi_vcc", SUBI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " SUBi_vcv", SUBI_VCV,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, 0				, 0				}
 	, { " SUBi_vvc", SUBI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " SUBi_vvv", SUBI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " SUBp_vcc", SUBI_CCC,	{ VAR_PTR_W		, FREE_ADDRESS	, CONST_INT		}		, YIELDS_CONST	, FREE_ADDRESS		}
-#endif
 	, { " SUBp_vcv", SUBI_VCV,	{ VAR_PTR_W		, FWD_FREE		, VAR_INT_R		}		, 0				, 0				}
 	, { " SUBp_vvc", SUBI_VVC,	{ VAR_PTR_W		, VAR_PTR_R		, CONST_INT		}		, 0				, 0				}
 	, { " SUBp_vvv", SUBI_VVV,	{ VAR_PTR_W		, VAR_PTR_R		, VAR_INT_R		}		, 0				, 0				}
 	, { " SWCH_vsb", SWCH_VCC,	{ VAR_INT_R		, CONST_INT_P	, FWD_BRANCH	}		, 0				, 0				}
 	, { " TEMP_s__", GLOB____,	{ CONST_INT_P	, 0				, 0				}		, 0				, FREE_ADDRESS | TEMPORARY }
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " XORi_vcc", XORI_CCC,	{ VAR_INT_W		, CONST_INT		, CONST_INT		}		, YIELDS_CONST	, CONST_INT		}
-#endif
-#if (SUPPORT_ALL_PERMUTATIONS)
 	, { " XORi_vcv", XORI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
-#endif
 	, { " XORi_vvc", XORI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " XORi_vvv", XORI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " fTOi_vcc", FTOI_CCC,	{ VAR_INT_W		, CONST_FLOAT	, CONST_FLOAT	}		, YIELDS_CONST	, CONST_INT		}
-#endif
 	, { " fTOi_vvc", FTOI_VVC,	{ VAR_INT_W		, VAR_FLOAT_R	, CONST_FLOAT	}		, 0				, 0				}
-#if (SUPPORT_ALL_CONST_OPS)
 	, { " iTOf_vcc", ITOF_CCC,	{ VAR_FLOAT_W	, CONST_INT		, CONST_FLOAT	}		, YIELDS_CONST	, CONST_FLOAT	}
-#endif
 	, { " iTOf_vvc", ITOF_VVC,	{ VAR_FLOAT_W	, VAR_INT_R		, CONST_FLOAT	}		, 0				, 0				}
 
-#if (SUPPORT_ABS)
 	, { "!ABSf_cc_", ABSF_CC_,	{ COMPILE_TIME	, CONST_FLOAT	, 0				}		, 0				, CONST_FLOAT	}
 	, { "!ABSi_cc_", ABSI_CC_,	{ COMPILE_TIME	, CONST_INT		, 0				}		, 0				, CONST_INT_P	}
-#endif
 	, { "!ADDf_ccc", ADDF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, 0				, CONST_FLOAT	}
 	, { "!ADDi_ccc", ADDI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
 	, { "!ADDp_ccc", ADDI_CCC,	{ COMPILE_TIME	, FREE_ADDRESS	, CONST_INT		}		, 0				, FREE_ADDRESS		}
 	, { "!ANDi_ccc", ANDI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
-#if (SUPPORT_CEIL)
-	, { "!CEIf_cc_", CEIF_CC_,	{ COMPILE_TIME	, CONST_FLOAT	, 0				}		, 0				, CONST_FLOAT	}
-#endif
 	, { "!DEFf_c__", DEFI____,	{ CONST_FLOAT	, 0				, 0				}		, 0				, CONST_FLOAT	}
 	, { "!DEFi_c__", DEFI____,	{ CONST_INT		, 0				, 0				}		, 0				, CONST_INT		}
 	, { "!DEFp_c__", DEFI____,	{ FREE_ADDRESS		, 0			, 0				}		, 0				, FREE_ADDRESS		}
@@ -823,49 +554,17 @@ static const Operator OPERATORS[] = {
 	, { "!DIVf_ccc", DIVF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, CHECK_DIV_BY_0, CONST_FLOAT	}
 	, { "!DIVi_ccc", DIVI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, CHECK_DIV_BY_0, CONST_INT		}
 	, { "!EQUi_ccb", EQUI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!EQUp_ccb", EQUI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, 0				, 0				}
-#endif
-#if (SUPPORT_FLOOR)
 	, { "!FLOf_cc_", FLOF_CC_,	{ COMPILE_TIME	, CONST_FLOAT	, 0				}		, 0				, CONST_FLOAT	}
-#endif
 	, { "!GEQi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!GEQp_ccb", NLSI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, 0				, 0				}
-#endif
 	, { "!GOTO_b__", SKIP_B__,	{ FWD_BRANCH	, 0				, 0				}		, 0				, 0				}
 	, { "!GRTi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!GRTp_ccb", LSSI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { "!IFDF_cb_", IFDF_CB_,	{ KONST			, FWD_BRANCH	, 0				}		, 0				, 0				}
 	, { "!IFDF_nb_", IFDF_CB_,	{ NATIVE		, FWD_BRANCH	, 0				}		, 0				, 0				}
 	, { "!IFND_cb_", IFND_CB_,	{ KONST			, FWD_BRANCH	, 0				}		, 0				, 0				}
 	, { "!IFND_nb_", IFND_CB_,	{ NATIVE		, FWD_BRANCH	, 0				}		, 0				, 0				}
 	, { "!IORi_ccc", IORI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
 	, { "!LEQi_ccb", NLSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!LEQp_ccb", NLSI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
-#endif
 	, { "!LSSi_ccb", LSSI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!LSSp_ccb", LSSI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, 0				, 0				}
-#endif
-#if (SUPPORT_MIN_MAX)
-	, { "!MAXf_ccc", MAXF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, 0				, CONST_FLOAT	}
-	, { "!MAXi_ccc", MAXI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!MAXp_ccc", MAXI_CCC,	{ COMPILE_TIME	, FREE_ADDRESS	, FREE_ADDRESS	}		, 0			, FREE_ADDRESS		}
-#endif
-	, { "!MINf_ccc", MINF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, 0				, CONST_FLOAT	}
-	, { "!MINi_ccc", MINI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!MINp_ccc", MINI_CCC,	{ COMPILE_TIME	, FREE_ADDRESS	, FREE_ADDRESS	}		, 0			, FREE_ADDRESS		}
-#endif
-#endif
-#if (SUPPORT_FMOD)
-	, { "!MODf_ccc", MODF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, CHECK_DIV_BY_0, CONST_FLOAT	}
-#endif
 	, { "!MODi_ccc", MODI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, CHECK_DIV_BY_0, CONST_INT		}
 	, { "!MOVf_cc_", MOVE_CC_,	{ COMPILE_TIME	, CONST_FLOAT	, 0				}		, 0				, CONST_FLOAT	}
 	, { "!MOVi_cc_", MOVE_CC_,	{ COMPILE_TIME	, CONST_INT		, 0				}		, 0				, CONST_INT		}
@@ -873,9 +572,6 @@ static const Operator OPERATORS[] = {
 	, { "!MULf_ccc", MULF_CCC,	{ COMPILE_TIME	, CONST_FLOAT	, CONST_FLOAT	}		, 0				, CONST_FLOAT	}
 	, { "!MULi_ccc", MULI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
 	, { "!NEQi_ccb", NEQI_CCB,	{ CONST_INT		, CONST_INT		, FWD_BRANCH	}		, 0				, 0				}
-#if (SUPPORT_COMPILE_TIME_POINTER_COMPS)
-	, { "!NEQp_ccb", NEQI_CCB,	{ FREE_ADDRESS	, FREE_ADDRESS	, FWD_BRANCH	}		, 0				, 0				}
-#endif
 	, { "!SHLi_ccc", SHLI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
 	, { "!SHRi_ccc", SHRI_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT		}
 	, { "!SHRu_ccc", SHRU_CCC,	{ COMPILE_TIME	, CONST_INT		, CONST_INT		}		, 0				, CONST_INT_P	}
@@ -1042,9 +738,11 @@ const char* Symbols::getGlobalInfo(const Iterator& iterator, bool& isTemp, Point
 	return iterator->first.c_str();
 }
 
-Assembler::Assembler(UInt maxCodeSize, Instruction* codeBase, UInt maxMemorySize, Value* memoryBase, Symbols& globals)
-		: codeBase(codeBase), codeEnd(codeBase + maxCodeSize), memoryBase(memoryBase), memoryEnd(memoryBase + maxMemorySize)
-		, ip(codeBase), functionStart(0), localsSize(0), paramsSize(0), globalsPointer(memoryBase)
+Assembler::Assembler(UInt maxCodeSize, Instruction* codeBase, UInt maxFunctionCount, UInt* functionTable
+		, UInt maxMemorySize, Value* memoryBase, Symbols& globals)
+		: codeBase(codeBase), codeEnd(codeBase + maxCodeSize), maxFunctionCount(maxFunctionCount)
+		, functionTable(functionTable), memoryBase(memoryBase), memoryEnd(memoryBase + maxMemorySize)
+		, ip(codeBase), functionStart(0), functionCount(0), localsSize(0), paramsSize(0), globalsPointer(memoryBase)
 		, constantsPointer(memoryEnd), dataLabelType(0), dataPointer(0), dataEnd(0), globals(globals) {
 	for (Int i = 0; i < 128; ++i) compileTimeVars[i].types = 0;
 	Value v;
@@ -1169,6 +867,15 @@ void Assembler::finalizeFunction() {
 	assert(functionStart->opcode == FUNC_CC_);
 	if (ip == codeBase || (ip[-1].opcode != RETU_C__ && ip[-1].opcode != GOTO_B__))
 		throw Exception(MISSING_RETURN_INSTRUCTION);
+	/*
+		A jump or switch may never reach a `FUNC` (`FUNC` is `CALL`-only). Branch targets resolve to local `BRANCH`
+		labels; a label left at the function boundary `ip` (a trailing elided `NOOP`) is where the next `FUNC` lands.
+	*/
+	for (Symbols::SymbolMap::const_iterator it = locals.symbols.begin(); it != locals.symbols.end(); ++it) {
+		if ((it->second.types & BRANCH) != 0 && it->second.value.p == static_cast<Pointer>(ip - codeBase)) {
+			throw Exception(LABEL_ON_FUNCTION);
+		}
+	}
 	functionStart->p0.i = localsSize;
 	functionStart->p1.i = paramsSize;
 	functionStart = 0;
@@ -1177,13 +884,57 @@ void Assembler::finalizeFunction() {
 	locals.clear();
 }
 
-void Assembler::finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize) {
+void Assembler::finalize(ProgramSizes& sizes) {
 	newUnit(0);
 	if (dataPointer != 0) memset(dataPointer, 0, (dataEnd - dataPointer) * sizeof (*dataPointer));
 	globals.resolveForwardRefs();
-	codeSize = (UInt)(ip - codeBase);
-	globalsSize = (UInt)(globalsPointer - memoryBase);
-	constsSize = (UInt)(memoryEnd - constantsPointer);
+	sizes.codeSize = (UInt)(ip - codeBase);
+	sizes.functionCount = this->functionCount;
+	sizes.globalsSize = (UInt)(globalsPointer - memoryBase);
+	sizes.constsSize = (UInt)(memoryEnd - constantsPointer);
+}
+
+void Assembler::finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize, UInt& functionCount) {
+	ProgramSizes sizes;
+	finalize(sizes);
+	codeSize = sizes.codeSize;
+	globalsSize = sizes.globalsSize;
+	constsSize = sizes.constsSize;
+	functionCount = sizes.functionCount;
+}
+
+/*
+	Dry assembly. Assembles into internally-owned scratch that starts small and doubles on the three arena overflows,
+	so the caller neither sizes nor owns a guess and the answer is exact by construction - it IS a real assembly,
+	just thrown away. The cost is a transient allocation and at	most log2 of the largest final arena in restarts;
+	every other outcome, program errors included, is exactly feed()'s. Each attempt works on a COPY of the seed symbols,
+	so the caller's table never learns the program's names and a retry never sees a half-defined one.
+
+	In the future, we may replace this with a true dry-run that does not require any memory allocations.
+*/
+ProgramSizes Assembler::measure(const Char* source, const Symbols& globals) {
+	UInt codeMax = 256, memoryMax = 256, functionMax = 64;
+	while (true) {
+		std::vector<Instruction> code(codeMax);
+		std::vector<UInt> functions(functionMax);
+		std::vector<Value> memory(memoryMax);
+		Symbols scratch(globals);
+		Assembler assem(codeMax, &code[0], functionMax, &functions[0], memoryMax, &memory[0], scratch);
+		assem.newUnit(0);
+		try {
+			for (const Char* p = source; *p != 0; ) p = assem.feed(p);
+			ProgramSizes sizes;
+			assem.finalize(sizes);
+			return sizes;
+		}
+		catch (const Exception& x) {
+			if (x.error != NOT_ENOUGH_CODE_SPACE && x.error != NOT_ENOUGH_MEMORY_SPACE
+					&& x.error != NOT_ENOUGH_FUNCTION_SPACE) throw;
+			codeMax *= 2;								// ALL three, whichever tripped: every retry re-assembles the whole
+			memoryMax *= 2;								// source, so the retry count should be the MAX of the three logs,
+			functionMax *= 2;							// not their sum - transient over-allocation costs nothing here.
+		}
+	}
 }
 
 void Assembler::newUnit(const Char* unitName) { // FIX : use unitName (or not?)
@@ -1221,45 +972,25 @@ Value Assembler::calcConstant(const Operator* op, const Char* op1Begin, const Ch
 	parseOperand(op2Begin, op2End, op->accepts[2], &v2);
 	switch (op->opcode) {
 		case MOVE_CC_: break;
-	#if (SUPPORT_ABS)
 		case ABSI_CC_: v1.i = absolute(v1.i); break;
-	#endif
-		case ADDI_CCC: v1.i += v2.i; break;
-		case SUBI_CCC: v1.i -= v2.i; break;
-		case MULI_CCC: v1.i *= v2.i; break;
-		case DIVI_CCC: if (v2.i == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.i /= v2.i; break;
-		case MODI_CCC: if (v2.i == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.i %= v2.i; break;
+		case ADDI_CCC: v1.i = iadd(v1.i, v2.i); break;
+		case SUBI_CCC: v1.i = isub(v1.i, v2.i); break;
+		case MULI_CCC: v1.i = imul(v1.i, v2.i); break;
+		case DIVI_CCC: if (v2.i == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.i = idiv(v1.i, v2.i); break;
+		case MODI_CCC: if (v2.i == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.i = imod(v1.i, v2.i); break;
 		case ANDI_CCC: v1.i &= v2.i; break;
 		case IORI_CCC: v1.i |= v2.i; break;
 		case XORI_CCC: v1.i ^= v2.i; break;
-		case SHLI_CCC: v1.i <<= v2.i; break;
-		case SHRI_CCC: v1.i >>= v2.i; break;
-		case SHRU_CCC: v1.i = (UInt)(v1.i) >> v2.i; break;
-	#if (SUPPORT_MIN_MAX)
-		case MAXI_CCC: v1.i = maximum(v1.i, v2.i); break;
-		case MINI_CCC: v1.i = minimum(v1.i, v2.i); break;
-	#endif
-	#if (SUPPORT_ABS)
+		case SHLI_CCC: v1.i = ishl(v1.i, v2.i); break;
+		case SHRI_CCC: v1.i = ashr(v1.i, v2.i); break;
+		case SHRU_CCC: v1.i = lshr(v1.i, v2.i); break;
 		case ABSF_CC_: v1.f = absolute(v1.f); break;
-	#endif
-	#if (SUPPORT_FLOOR)
 		case FLOF_CC_: v1.f = floorf(v1.f); break;
-	#endif
-	#if (SUPPORT_CEIL)
-		case CEIF_CC_: v1.f = ceilf(v1.f); break;
-	#endif
 		case ADDF_CCC: v1.f += v2.f; break;
 		case SUBF_CCC: v1.f -= v2.f; break;
 		case MULF_CCC: v1.f *= v2.f; break;
 		case DIVF_CCC: if (v2.f == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.f /= v2.f; break;
-	#if (SUPPORT_FMOD)
-		case MODF_CCC: if (v2.f == 0) throw Exception(CONSTANT_DIVISION_BY_ZERO); v1.f = fmodf(v1.f, v2.f); break;
-	#endif
-	#if (SUPPORT_MIN_MAX)
-		case MAXF_CCC: v1.f = maximum(v1.f, v2.f); break;
-		case MINF_CCC: v1.f = minimum(v1.f, v2.f); break;
-	#endif
-		case FTOI_CCC: v1.i = (Int)(v1.f * v2.f); break;
+		case FTOI_CCC: v1.i = ftoi(v1.f * v2.f); break;
 		case ITOF_CCC: v1.f = (Float)(v1.i) * v2.f; break;
 		default: assert(0);
 	}
@@ -1447,7 +1178,10 @@ const Char* Assembler::feed(const Char* line) {
 							declare(globals, labelBegin, labelEnd, op->declareTypes, v, size);
 							break;
 					
-			case FUNC_CC_:	v.p = (Int)(ip - codeBase + IP_OFFSET);														// FUNC
+			case FUNC_CC_:	if (functionCount >= maxFunctionCount) throw Exception(NOT_ENOUGH_FUNCTION_SPACE);			// FUNC
+							v.p = (Int)(FUNCTION_OFFSET + functionCount);		// A function pointer is its stable declaration-order ordinal (not a code offset), resolved through `functionTable` at call time.
+							functionTable[functionCount] = (UInt)(ip - codeBase);
+							++functionCount;
 							declare(globals, labelBegin, labelEnd, op->declareTypes, v);
 							if (functionStart != 0) finalizeFunction();
 							if (ip >= codeEnd) throw Exception(NOT_ENOUGH_CODE_SPACE);
@@ -1537,15 +1271,16 @@ const Char* Assembler::feed(const Char* line) {
 	return eatEOL(e);
 }
 
-Processor::Processor() : codeSize(0), codeBase(0), memorySize(0), memoryBase(0), rwMemorySize(0), dataStackBase(0)
-		, dataStackEnd(0), ipStackBase(0), ipStackEnd(0), natives(0), ip(0), dsp(0), ipsp(0), userData(0)
-		, clockCyclesLeft(0) {
+Processor::Processor() : codeSize(0), codeBase(0), functionCount(0), functionTable(0), memorySize(0), memoryBase(0)
+		, rwMemorySize(0), dataStackBase(0), dataStackEnd(0), ipStackBase(0), ipStackEnd(0), natives(0), ip(0), dsp(0)
+		, ipsp(0), userData(0), clockCyclesLeft(0) {
 }
 
-Processor::Processor(UInt codeSize, const Instruction* code, UInt memorySize, Value* memory, UInt rwMemorySize
-		, UInt dataStackOffset, UInt dataStackSize, UInt ipStackSize, CallStackEntry* ipStack, NativeFunc const* natives
-		, void* userData)
-		: codeSize(codeSize), codeBase(code), memorySize(memorySize - 1), memoryBase(memory), rwMemorySize(rwMemorySize)
+Processor::Processor(UInt codeSize, const Instruction* code, UInt functionCount, const UInt* functionTable
+		, UInt memorySize, Value* memory, UInt rwMemorySize, UInt dataStackOffset, UInt dataStackSize, UInt ipStackSize
+		, CallStackEntry* ipStack, NativeFunc const* natives, void* userData)
+		: codeSize(codeSize), codeBase(code), functionCount(functionCount), functionTable(functionTable)
+		, memorySize(memorySize - 1), memoryBase(memory), rwMemorySize(rwMemorySize)
 		, dataStackBase(memory + dataStackOffset), dataStackEnd(memory + dataStackOffset + dataStackSize)
 		, ipStackBase(ipStack), ipStackEnd(ipStack + ipStackSize), natives(natives), ip(codeBase), dsp(dataStackBase)
 		, ipsp(ipStackBase), userData(userData), clockCyclesLeft(0x7FFFFFFFU) {
@@ -1556,13 +1291,14 @@ Processor::Processor(UInt codeSize, const Instruction* code, UInt memorySize, Va
 	assert(ipStack != 0);
 }
 
-Processor::Processor(UInt codeSize, const Instruction* code, UInt memorySize, Value* memory, UInt globalsSize
-		, UInt constsSize, UInt ipStackSize, CallStackEntry* ipStack, NativeFunc const* natives, void* userData)
-		: codeSize(codeSize), codeBase(code), memorySize(memorySize - 1), memoryBase(memory)
-		, rwMemorySize(memorySize - constsSize), dataStackBase(memory + globalsSize)
-		, dataStackEnd(memory + memorySize - constsSize), ipStackBase(ipStack), ipStackEnd(ipStack + ipStackSize)
-		, natives(natives), ip(codeBase), dsp(dataStackBase), ipsp(ipStackBase), userData(userData)
-		, clockCyclesLeft(0x7FFFFFFFU) {
+Processor::Processor(UInt codeSize, const Instruction* code, UInt functionCount, const UInt* functionTable
+		, UInt memorySize, Value* memory, UInt globalsSize, UInt constsSize, UInt ipStackSize, CallStackEntry* ipStack
+		, NativeFunc const* natives, void* userData)
+		: codeSize(codeSize), codeBase(code), functionCount(functionCount), functionTable(functionTable)
+		, memorySize(memorySize - 1), memoryBase(memory), rwMemorySize(memorySize - constsSize)
+		, dataStackBase(memory + globalsSize), dataStackEnd(memory + memorySize - constsSize), ipStackBase(ipStack)
+		, ipStackEnd(ipStack + ipStackSize), natives(natives), ip(codeBase), dsp(dataStackBase), ipsp(ipStackBase)
+		, userData(userData), clockCyclesLeft(0x7FFFFFFFU) {
 	assert(globalsSize + constsSize <= memorySize);
 	assert(code != 0);
 	assert(memory != 0);
@@ -1575,16 +1311,8 @@ Processor::Processor(UInt codeSize, const Instruction* code, UInt memorySize, Va
 #define C0 (ip->p0)
 #define C1 (ip->p1)
 #define C2 (ip->p2)
-#if (GAZL_CHECK_INT_DIVS_BY_ZERO)
 	#define CHECK_INT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
-#else
-	#define CHECK_INT_DIV_BY_ZERO(v)
-#endif
-#if (GAZL_CHECK_FLOAT_DIVS_BY_ZERO)
 	#define CHECK_FLOAT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
-#else
-	#define CHECK_FLOAT_DIV_BY_ZERO(v)
-#endif
 
 Int Processor::run() {
 	assert(codeBase != 0);
@@ -1605,11 +1333,15 @@ Int Processor::run() {
 	while (--clockCyclesLeft >= 0) {
 		switch (ip->opcode) {
 			case FUNC_CC_:	if ((dsp += (UInt)(C0.i)) + C1.i > dataStackEnd) { err = DATA_STACK_OVERFLOW; goto ret; } break;
-			case CALL_VVC:	ui = V0.p - IP_OFFSET;
-							if (ui >= codeSize || (codeBase + ui)->opcode != FUNC_CC_) { err = BAD_CALL; goto ret; }
+			case CALL_VVC:	ui = V0.p - FUNCTION_OFFSET;						// ui = function ordinal
+							if (ui >= functionCount) { err = BAD_CALL; goto ret; }
+							ui = functionTable[ui];						// ui = code offset
+							assert((codeBase + ui)->opcode == FUNC_CC_);
 							goto call;
-			case CALL_CVC:	ui = C0.p - IP_OFFSET;
-							assert(!(ui >= codeSize || (codeBase + ui)->opcode != FUNC_CC_));
+			case CALL_CVC:	ui = C0.p - FUNCTION_OFFSET;						// ui = function ordinal (constant, validated at assembly)
+							assert(ui < functionCount);
+							ui = functionTable[ui];						// ui = code offset
+							assert((codeBase + ui)->opcode == FUNC_CC_);
 							goto call;
 			call:			if (ipsp >= ipStackEnd) { err = IP_STACK_OVERFLOW; goto ret; }
 							ipsp->ip = ip;
@@ -1623,6 +1355,20 @@ Int Processor::run() {
 							this->ipsp = ipsp;
 							if ((nativeError = (*natives[C0.i])(this)) != 0) { err = nativeError; goto ret; }
 							clockCyclesLeft = this->clockCyclesLeft;
+							if (this->ip != ip) {
+								/*
+									The native pushed one or more calls (pushCall()): adopt the redirected state and
+									flow into the last-pushed callee. Its RETU chains through the pushed frames (LIFO)
+									and finally returns into this caller, exactly like nested `&function` calls.
+									(Blocking usage - enterCall() plus a nested run() - restores this->ip before
+									returning here, so it never takes this path.)
+								*/
+								assert(this->ipsp > ipsp && this->ipsp[-1].dsp != 0);	// plain pushCall frames on top
+								ipsp = this->ipsp;
+								dsp = this->dsp;
+								ip = this->ip;
+								continue;
+							}
 							break;
 			case RETU_C__:	ip = (--ipsp)->ip;
 							dsp = ipsp->dsp;
@@ -1643,82 +1389,55 @@ Int Processor::run() {
 			case SETL_VVV:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = V2; break; } else { err = BAD_POKE; goto ret; };
 			case SETL_VVC:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = C2; break; } else { err = BAD_POKE; goto ret; };
 			case ADRL_VV_:	V0.p = Pointer(&dsp[C1.i] - mb); break;
-		#if (SUPPORT_ABS)
 			case ABSI_VV_:	V0.i = absolute(V1.i); break;
-		#endif
-			case ADDI_VVV:	V0.i = V1.i + V2.i; break;
-			case ADDI_VVC:	V0.i = V1.i + C2.i; break;
-			case SUBI_VVV:	V0.i = V1.i - V2.i; break;
-			case SUBI_VVC:	V0.i = V1.i - C2.i; break;
-			case SUBI_VCV:	V0.i = C1.i - V2.i; break;
-		#if (SUPPORT_MIN_MAX)
-			case MAXI_VVV:	V0.i = maximum(V1.i, V2.i); break;
-			case MAXI_VVC:	V0.i = maximum(V1.i, C2.i); break;
-			case MINI_VVV:	V0.i = minimum(V1.i, V2.i); break;
-			case MINI_VVC:	V0.i = minimum(V1.i, C2.i); break;
-		#endif
-			case MULI_VVV:	V0.i = V1.i * V2.i; break;
-			case MULI_VVC:	V0.i = V1.i * C2.i; break;
-			case DIVI_VVV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = V1.i / V2.i; break;
-			case DIVI_VVC:	V0.i = V1.i / C2.i; break;
-			case DIVI_VCV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = C1.i / V2.i; break;
-			case MODI_VVV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = V1.i % V2.i; break;
-			case MODI_VVC:	V0.i = V1.i % C2.i; break;
-			case MODI_VCV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = C1.i % V2.i; break;
+			case ADDI_VVV:	V0.i = iadd(V1.i, V2.i); break;
+			case ADDI_VVC:	V0.i = iadd(V1.i, C2.i); break;
+			case SUBI_VVV:	V0.i = isub(V1.i, V2.i); break;
+			case SUBI_VVC:	V0.i = isub(V1.i, C2.i); break;
+			case SUBI_VCV:	V0.i = isub(C1.i, V2.i); break;
+			case MULI_VVV:	V0.i = imul(V1.i, V2.i); break;
+			case MULI_VVC:	V0.i = imul(V1.i, C2.i); break;
+			case DIVI_VVV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = idiv(V1.i, V2.i); break;
+			case DIVI_VVC:	V0.i = idiv(V1.i, C2.i); break;
+			case DIVI_VCV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = idiv(C1.i, V2.i); break;
+			case MODI_VVV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = imod(V1.i, V2.i); break;
+			case MODI_VVC:	V0.i = imod(V1.i, C2.i); break;
+			case MODI_VCV:	CHECK_INT_DIV_BY_ZERO(V2.i); V0.i = imod(C1.i, V2.i); break;
 			case ANDI_VVV:	V0.i = V1.i & V2.i; break;
 			case ANDI_VVC:	V0.i = V1.i & C2.i; break;
 			case IORI_VVV:	V0.i = V1.i | V2.i; break;
 			case IORI_VVC:	V0.i = V1.i | C2.i; break;
 			case XORI_VVV:	V0.i = V1.i ^ V2.i; break;
 			case XORI_VVC:	V0.i = V1.i ^ C2.i; break;
-			case SHLI_VVV:	V0.i = V1.i << V2.i; break;
-			case SHLI_VVC:	V0.i = V1.i << C2.i; break;
-			case SHLI_VCV:	V0.i = C1.i << V2.i; break;
-			case SHRI_VVV:	V0.i = V1.i >> V2.i; break;
-			case SHRI_VVC:	V0.i = V1.i >> C2.i; break;
-			case SHRI_VCV:	V0.i = C1.i >> V2.i; break;
-			case SHRU_VVV:	V0.i = (UInt)(V1.i) >> V2.i; break;
-			case SHRU_VVC:	V0.i = (UInt)(V1.i) >> C2.i; break;
-			case SHRU_VCV:	V0.i = (UInt)(C1.i) >> V2.i; break;
-		#if (SUPPORT_ABS)
+			case SHLI_VVV:	V0.i = ishl(V1.i, V2.i); break;
+			case SHLI_VVC:	V0.i = ishl(V1.i, C2.i); break;
+			case SHLI_VCV:	V0.i = ishl(C1.i, V2.i); break;
+			case SHRI_VVV:	V0.i = ashr(V1.i, V2.i); break;
+			case SHRI_VVC:	V0.i = ashr(V1.i, C2.i); break;
+			case SHRI_VCV:	V0.i = ashr(C1.i, V2.i); break;
+			case SHRU_VVV:	V0.i = lshr(V1.i, V2.i); break;
+			case SHRU_VVC:	V0.i = lshr(V1.i, C2.i); break;
+			case SHRU_VCV:	V0.i = lshr(C1.i, V2.i); break;
 			case ABSF_VV_:	V0.f = absolute(V1.f); break;
-		#endif
-		#if (SUPPORT_FLOOR)
 			case FLOF_VV_:	V0.f = floorf(V1.f); break;
-		#endif
-		#if (SUPPORT_CEIL)
-			case CEIF_VV_:	V0.f = ceilf(V1.f); break;
-		#endif
 			case ADDF_VVV:	V0.f = V1.f + V2.f; break;
 			case ADDF_VVC:	V0.f = V1.f + C2.f; break;
 			case SUBF_VVV:	V0.f = V1.f - V2.f; break;
 			case SUBF_VVC:	V0.f = V1.f - C2.f; break;
 			case SUBF_VCV:	V0.f = C1.f - V2.f; break;
-		#if (SUPPORT_MIN_MAX)
-			case MAXF_VVV:	V0.f = maximum(V1.f, V2.f); break;
-			case MAXF_VVC:	V0.f = maximum(V1.f, C2.f); break;
-			case MINF_VVV:	V0.f = minimum(V1.f, V2.f); break;
-			case MINF_VVC:	V0.f = minimum(V1.f, C2.f); break;
-		#endif
 			case MULF_VVV:	V0.f = V1.f * V2.f; break;
 			case MULF_VVC:	V0.f = V1.f * C2.f; break;
 			case DIVF_VVV:	CHECK_FLOAT_DIV_BY_ZERO(V2.f); V0.f = V1.f / V2.f; break;
 			case DIVF_VVC:	V0.f = V1.f / C2.f; break;
 			case DIVF_VCV:	CHECK_FLOAT_DIV_BY_ZERO(V2.f); V0.f = C1.f / V2.f; break;
-		#if (SUPPORT_FMOD)
-			case MODF_VVV:	CHECK_FLOAT_DIV_BY_ZERO(V2.f); V0.f = fmodf(V1.f, V2.f); break;
-			case MODF_VVC:	V0.f = fmodf(V1.f, C2.f); break;
-			case MODF_VCV:	CHECK_FLOAT_DIV_BY_ZERO(V2.f); V0.f = fmodf(C1.f, V2.f); break;
-		#endif
-			case FTOI_VVC:	V0.i = (Int)(V1.f * C2.f); break;
+			case FTOI_VVC:	V0.i = ftoi(V1.f * C2.f); break;
 			case ITOF_VVC:	V0.f = (Float)(V1.i) * C2.f; break;
-		#if (SUPPORT_COPY)
 			// FIX : all constant addresses here should be checked compile-time, but then we would need to parse operand 2 first and have an option for forward linking where the size is added to the check.
 			case COPY_VVC:	ui = V0.i - MEMORY_OFFSET; ui2 = V1.i - MEMORY_OFFSET; goto copy;
 			case COPY_VCC:	ui = V0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
 			case COPY_CVC:	ui = C0.i - MEMORY_OFFSET; ui2 = V1.i - MEMORY_OFFSET; goto copy;
 			case COPY_CCC:	ui = C0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
-			copy:			if (ui + C2.i < rwMemorySize && ui2 + C2.i < memorySize) {
+			copy:			if (ui + C2.i <= rwMemorySize && ui2 + C2.i <= memorySize) {
 								// std::copy(&mb[ui2 + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET] + C2.i, &mb[ui + MEMORY_OFFSET]);
 								// memcpy(&mb[ui + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET], sizeof (Value) * C2.i);
 								const Value* sp = &mb[ui2 + MEMORY_OFFSET];
@@ -1730,7 +1449,6 @@ Int Processor::run() {
 								err = ACCESS_VIOLATION;
 								goto ret;
 							}
-		#endif
 			case FORi_VVB:	if (++V0.i < V1.i) { ip += C2.i; continue; }; break;
 			case FORi_VCB:	if (++V0.i < C1.i) { ip += C2.i; continue; }; break;
 			case LSSI_VVB:	if (V0.i < V1.i) { ip += C2.i; continue; }; break;
@@ -1779,8 +1497,10 @@ ret:
 
 Status Processor::enterCall(Pointer functionPointer) {
 	assert(codeBase != 0);
-	UInt ui = functionPointer - IP_OFFSET;
-	if (ui >= codeSize || (codeBase + ui)->opcode != FUNC_CC_) return BAD_CALL;
+	UInt ui = functionPointer - FUNCTION_OFFSET;						// ui = function ordinal
+	if (ui >= functionCount) return BAD_CALL;
+	ui = functionTable[ui];										// ui = code offset
+	assert((codeBase + ui)->opcode == FUNC_CC_);
 	if (ipsp + 2 > ipStackEnd) return IP_STACK_OVERFLOW;
 	ipsp->ip = this->ip;
 	ipsp++->dsp = this->dsp;
@@ -1788,6 +1508,157 @@ Status Processor::enterCall(Pointer functionPointer) {
 	ipsp++->dsp = 0;			// Mark return to native caller.
 	this->ip = codeBase + ui;
 	return OK;
+}
+
+/*
+	pushCall() - see GAZL.h. The first push in a native call returns to the `^call`'s continuation and restores the
+	caller's frame base (undoing the window advance CALL_NVC performed for the native); every further push chains: its
+	frame resumes at the previously pushed target, so the calls run last-pushed-first, each RETU flowing into the next.
+	Frames store the resume point MINUS ONE because RETU restores and then the dispatch loop increments (`++ip`); for a
+	chain frame that minus-one address is never executed, only incremented over.
+*/
+Value* Processor::pushCall(Pointer functionPointer) {
+	assert(codeBase != 0);
+	UInt ui = functionPointer - FUNCTION_OFFSET;
+	if (ui >= functionCount) return 0;
+	const Instruction* func = codeBase + functionTable[ui];
+	assert(func->opcode == FUNC_CC_);
+	const bool atNativeCall = (ipsp != ipStackBase && this->ip->opcode == CALL_NVC);
+	const bool chainedPush = (ipsp != ipStackBase && this->ip->opcode == FUNC_CC_);	// a previous pushCall in this native call
+	if (!atNativeCall && !chainedPush) return 0;				// only valid from inside a native callback
+	if (ipsp >= ipStackEnd) return 0;
+	if (this->dsp + (UInt)(func->p0.i) + (UInt)(func->p1.i) > dataStackEnd) return 0;	// the callee's own FUNC check, done early
+	ipsp->ip = atNativeCall ? this->ip : this->ip - 1;
+	ipsp++->dsp = atNativeCall ? this->dsp - this->ip->p1.i : this->dsp;
+	this->ip = func;											// this->dsp stays: the ^call's window is the argument window
+	return this->dsp;
+}
+
+/*
+	--- Memory serialization ("freeze" / "thaw") ---
+
+	Persists the mutable global memory of a Processor so it can be reconstructed later. Only the writable, non-TEMP
+	globals are stored; source text and compile-time constants are the host's responsibility (thaw re-assembles them,
+	which deterministically rebuilds identical code, layout and function ordinals). The blob is engine-agnostic and
+	designed to survive compiler changes: function pointers stored in globals are stable ordinals (see FUNC), so they
+	resolve correctly through the re-assembled function table regardless of code layout.
+
+	The caller must freeze/thaw at a quiescent boundary (between `run()` calls, with no active GAZL call), so that the
+	data stack, call stack and instruction pointer hold nothing that needs saving.
+*/
+const UInt MEMORY_FORMAT_VERSION = 1;
+const UInt MEMORY_INT_CANARY = 0x01020304;						// Detects endianness / format bugs on thaw.
+const UInt MEMORY_HEADER_SIZE = 4 + 6 * 4;						// Magic + { format version, GAZL version, word size, int canary, float canary, global count }.
+static const char MEMORY_MAGIC[4] = { 'G', 'Z', 'M', 'M' };
+
+static unsigned char* putMemoryWord(unsigned char* p, UInt v) {	// Writes a 32-bit little-endian word.
+	p[0] = static_cast<unsigned char>(v);
+	p[1] = static_cast<unsigned char>(v >> 8);
+	p[2] = static_cast<unsigned char>(v >> 16);
+	p[3] = static_cast<unsigned char>(v >> 24);
+	return p + 4;
+}
+
+static const unsigned char* getMemoryWord(const unsigned char* p, const unsigned char* end, UInt& value, bool& ok) {
+	if (p + 4 > end) { ok = false; value = 0; return p; }		// Truncated: stop reading, leave `ok` false.
+	value = (UInt)p[0] | ((UInt)p[1] << 8) | ((UInt)p[2] << 16) | ((UInt)p[3] << 24);
+	return p + 4;
+}
+
+UInt freezeMemorySize(const Processor& processor, const Symbols& symbols) {
+	(void)processor;
+	UInt size = MEMORY_HEADER_SIZE;
+	Symbols::Iterator it;
+	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) {
+		bool isTemp;
+		Pointer address;
+		UInt globalSize;
+		const char* name = symbols.getGlobalInfo(it, isTemp, address, globalSize);
+		size += 4 + (UInt)strlen(name) + 4 + globalSize * 4;	// name length + name + size + words
+	}
+	return size;
+}
+
+UInt freezeMemory(const Processor& processor, const Symbols& symbols, void* buffer, UInt bufferSize) {
+	const UInt needed = freezeMemorySize(processor, symbols);
+	if (buffer == 0 || bufferSize < needed) return needed;	// Too small: write nothing, tell the caller the required size.
+
+	unsigned char* const start = static_cast<unsigned char*>(buffer);
+	unsigned char* p = start;
+	Symbols::Iterator it;
+	UInt globalCount = 0;
+	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) ++globalCount;
+
+	memcpy(p, MEMORY_MAGIC, 4);
+	p += 4;
+	Value floatCanary;
+	floatCanary.f = 1.0f;										// Detects a divergent float bit-layout on thaw.
+	p = putMemoryWord(p, MEMORY_FORMAT_VERSION);
+	p = putMemoryWord(p, (UInt)VERSION);
+	p = putMemoryWord(p, (UInt)WORD_SIZE);
+	p = putMemoryWord(p, MEMORY_INT_CANARY);
+	p = putMemoryWord(p, floatCanary.p);
+	p = putMemoryWord(p, globalCount);
+
+	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) {
+		bool isTemp;
+		Pointer address;
+		UInt size;
+		const char* name = symbols.getGlobalInfo(it, isTemp, address, size);
+		assert(!isTemp);
+		const UInt nameLength = (UInt)strlen(name);
+		p = putMemoryWord(p, nameLength);
+		memcpy(p, name, nameLength);
+		p += nameLength;
+		p = putMemoryWord(p, size);
+		const Value* source = processor.accessConstMemory(address, size);
+		assert(source != 0);
+		for (UInt i = 0; i < size; ++i) p = putMemoryWord(p, source[i].p);
+	}
+	assert((UInt)(p - start) == needed);					// Byte count must match freezeMemorySize exactly.
+	return needed;
+}
+
+MemoryLoad thawMemory(Processor& processor, const Symbols& symbols, const void* buffer, UInt bufferSize) {
+	const unsigned char* p = static_cast<const unsigned char*>(buffer);
+	const unsigned char* const end = p + bufferSize;
+	bool ok = true;
+
+	if (bufferSize < 4 || memcmp(p, MEMORY_MAGIC, 4) != 0) return MEMORY_BAD_MAGIC;
+	p += 4;
+	UInt formatVersion, gazlVersion, wordSize, intCanary, floatCanary, globalCount;
+	p = getMemoryWord(p, end, formatVersion, ok);
+	p = getMemoryWord(p, end, gazlVersion, ok);
+	p = getMemoryWord(p, end, wordSize, ok);
+	p = getMemoryWord(p, end, intCanary, ok);
+	p = getMemoryWord(p, end, floatCanary, ok);
+	p = getMemoryWord(p, end, globalCount, ok);
+	if (!ok) return MEMORY_TRUNCATED;
+	if (formatVersion != MEMORY_FORMAT_VERSION || gazlVersion != (UInt)VERSION) return MEMORY_BAD_VERSION;
+	if (wordSize != (UInt)WORD_SIZE) return MEMORY_BAD_WORDSIZE;
+	Value expectedFloat;
+	expectedFloat.f = 1.0f;
+	if (intCanary != MEMORY_INT_CANARY || floatCanary != expectedFloat.p) return MEMORY_BAD_CANARY;
+
+	for (UInt g = 0; g < globalCount && ok; ++g) {
+		UInt nameLength;
+		p = getMemoryWord(p, end, nameLength, ok);
+		if (!ok || p + nameLength > end) { ok = false; break; }
+		std::string name(reinterpret_cast<const char*>(p), nameLength);
+		p += nameLength;
+		UInt size;
+		p = getMemoryWord(p, end, size, ok);
+
+		UInt declaredSize = 0;
+		const Pointer address = symbols.findGlobal(name.c_str(), declaredSize);
+		Value* destination = (address != NULL_POINTER && declaredSize == size) ? processor.accessMemory(address, size) : 0;
+		for (UInt i = 0; i < size && ok; ++i) {
+			UInt word;
+			p = getMemoryWord(p, end, word, ok);
+			if (ok && destination != 0) destination[i].i = (Int)word;
+		}
+	}
+	return ok ? MEMORY_OK : MEMORY_TRUNCATED;
 }
 
 #if !defined(NDEBUG)
@@ -1834,6 +1705,10 @@ int testCallback(Processor* p) {
 	return 0;
 }
 
+// ONE list of the unit-test natives: measure()'s self-check compares two assemblies that must have been
+// seeded identically, so the seeding cannot be allowed to drift between sites.
+static void seedTestNatives(Symbols& g) { g.registerNative("assertFail", 0); g.registerNative("testMul", 1); g.registerNative("testCallback", 2); }
+
 bool unitTest() {
 	assert(sizeof (Int) == sizeof (Pointer));
 	assert(sizeof (UInt) == sizeof (Int));
@@ -1867,6 +1742,7 @@ bool unitTest() {
 	
 	Value* memory = 0;
 	Instruction* cody = 0;
+	UInt* functionTable = 0;
 	CallStackEntry* callStack = 0;
 
 	static const NativeFunc nativeTable[] = {
@@ -1875,12 +1751,14 @@ bool unitTest() {
 	
 	try {
 		const int MAX_CODE_SIZE = 1000;
+		const int MAX_FUNCTION_COUNT = MAX_CODE_SIZE;	// A function is at least one instruction, so this can never overflow.
 		const int MEMORY_SIZE = 2000;
 		const int CATCH_ZONE_SIZE = MEMORY_SIZE;
 		const int CALL_STACK_SIZE = 100;
-		
+
 		memory = new Value[MEMORY_SIZE + CATCH_ZONE_SIZE];
 		cody = new Instruction[MAX_CODE_SIZE];
+		functionTable = new UInt[MAX_FUNCTION_COUNT];
 		callStack = new CallStackEntry[CALL_STACK_SIZE];
 
 		Value v;
@@ -1888,27 +1766,40 @@ bool unitTest() {
 		std::fill_n(&memory[0], MEMORY_SIZE + CATCH_ZONE_SIZE, v);
 		
 		Symbols globals;
-		globals.registerNative("assertFail", 0);
-		globals.registerNative("testMul", 1);
-		globals.registerNative("testCallback", 2);
+		seedTestNatives(globals);
 
-		UInt codySize = 0;
-		UInt globalsSize = 0;
-		UInt constsSize;
+		ProgramSizes sizes = { 0, 0, 0, 0 };
 		{
-			Assembler assem(MAX_CODE_SIZE, cody, MEMORY_SIZE, memory, globals);
+			Assembler assem(MAX_CODE_SIZE, cody, MAX_FUNCTION_COUNT, functionTable, MEMORY_SIZE, memory, globals);
 			assem.newUnit("UnitTest");
 			const Char* cp = UNITTEST;
 			while (*cp != 0) {
 				try {
 					cp = assem.feed(cp);
-					if (*cp == 0) assem.finalize(codySize, globalsSize, constsSize);
+					if (*cp == 0) assem.finalize(sizes);
 				}
 				catch (const Exception& e) {
 					(void)e;
 					assert(0);
 				}
 			}
+		}
+
+		// measure() must agree with the real assembly above exactly - and the deliberately tiny
+		// starting arenas mean this very test exercises its retry-and-double path.
+		{
+			Symbols seed;
+			seedTestNatives(seed);
+			ProgramSizes measured = { 0, 0, 0, 0 };
+			try {
+				measured = Assembler::measure(UNITTEST, seed);
+			}
+			catch (const Exception& e) {
+				(void)e;
+				assert(0);
+			}
+			assert(measured.codeSize == sizes.codeSize && measured.globalsSize == sizes.globalsSize
+					&& measured.constsSize == sizes.constsSize && measured.functionCount == sizes.functionCount);
 		}
 			
 		TestCallbackData callbackData;
@@ -1918,10 +1809,11 @@ bool unitTest() {
 		assert(callbackData.globalPointer != 0);
 		callbackData.callBack = globals.findFunction("CallBack");
 		assert(callbackData.callBack != 0);
-		
+
+		std::vector<unsigned char> memoryBlob;
 		{
-			Processor pmachine(codySize, cody, MEMORY_SIZE, memory, globalsSize, constsSize, CALL_STACK_SIZE, callStack
-					, nativeTable, &callbackData);
+			Processor pmachine(sizes.codeSize, cody, sizes.functionCount, functionTable, MEMORY_SIZE, memory
+					, sizes.globalsSize, sizes.constsSize, CALL_STACK_SIZE, callStack, nativeTable, &callbackData);
 			Pointer funcy = globals.findFunction("test");
 			assert(funcy != 0);
 			Status status = pmachine.enterCall(funcy);
@@ -1934,16 +1826,72 @@ bool unitTest() {
 			memory = pmachine.accessConstMemory(memory->p, 4);
 			assert(memory != 0);
 			assert(memory[0].i == 'd' && memory[1].i == 'o' && memory[2].i == 'n' && memory[3].i == 'e');
+
+			// Store a function pointer into a global so the freeze must round-trip an ordinal, then freeze.
+			Value* globalPointer = pmachine.accessMemory(callbackData.globalPointer, 1);
+			assert(globalPointer != 0);
+			globalPointer->p = globals.findFunction("CallBack");
+			memoryBlob.resize(freezeMemorySize(pmachine, globals));
+			UInt written = freezeMemory(pmachine, globals, memoryBlob.empty() ? 0 : &memoryBlob[0], (UInt)memoryBlob.size());
+			assert(written == memoryBlob.size());
 		}
-		
+
+		// Thaw into a freshly re-assembled machine and verify every non-TEMP global round-trips -- including the
+		// function pointer, which must resolve to the same function through the fresh function table.
+		{
+			std::vector<Value> memory2(MEMORY_SIZE);
+			std::vector<Instruction> cody2(MAX_CODE_SIZE);
+			std::vector<UInt> functionTable2(MAX_FUNCTION_COUNT);
+			std::vector<CallStackEntry> callStack2(CALL_STACK_SIZE);
+			Symbols globals2;
+			seedTestNatives(globals2);
+
+			ProgramSizes sizes2 = { 0, 0, 0, 0 };
+			{
+				Assembler assem(MAX_CODE_SIZE, &cody2[0], MAX_FUNCTION_COUNT, &functionTable2[0], MEMORY_SIZE, &memory2[0]
+						, globals2);
+				assem.newUnit("UnitTest");
+				const Char* cp = UNITTEST;
+				while (*cp != 0) {
+					cp = assem.feed(cp);
+					if (*cp == 0) assem.finalize(sizes2);
+				}
+			}
+
+			Processor pmachine2(sizes2.codeSize, &cody2[0], sizes2.functionCount, &functionTable2[0], MEMORY_SIZE, &memory2[0]
+					, sizes2.globalsSize, sizes2.constsSize, CALL_STACK_SIZE, &callStack2[0], nativeTable, &callbackData);
+			MemoryLoad loaded = thawMemory(pmachine2, globals2, memoryBlob.empty() ? 0 : &memoryBlob[0], (UInt)memoryBlob.size());
+			assert(loaded == MEMORY_OK);
+
+			// Every non-TEMP global must match the frozen original (identical assemblies share global addresses).
+			Symbols::Iterator it;
+			for (bool ok = globals.findFirstGlobal(it, false); ok; ok = globals.findNextGlobal(it, false)) {
+				bool isTemp;
+				Pointer address;
+				UInt size;
+				globals.getGlobalInfo(it, isTemp, address, size);
+				const UInt index = address - MEMORY_OFFSET;
+				for (UInt i = 0; i < size; ++i) assert(memory2[index + i].i == memory[index + i].i);
+			}
+			// The restored function pointer resolves to CallBack in the fresh assembly (and equals the original ordinal).
+			UInt gpSize;
+			const Pointer gp = globals2.findGlobal("global.pointer", gpSize);
+			const Value* restored = pmachine2.accessConstMemory(gp, 1);
+			assert(restored != 0);
+			assert(restored->p == globals2.findFunction("CallBack"));
+			assert(restored->p == globals.findFunction("CallBack"));
+		}
+
 		for (int i = MEMORY_SIZE; i < MEMORY_SIZE + CATCH_ZONE_SIZE; ++i) assert(memory[i].i == static_cast<Int>(0xAACC5599));
 	}
 	catch (...) {
 		delete [] memory;
 		delete [] cody;
+		delete [] functionTable;
 		delete [] callStack;
 		memory = 0;
 		cody = 0;
+		functionTable = 0;
 		callStack = 0;
 
 		assert(0);
@@ -1951,6 +1899,7 @@ bool unitTest() {
 
 	delete [] memory;
 	delete [] cody;
+	delete [] functionTable;
 	delete [] callStack;
 
 	return true;

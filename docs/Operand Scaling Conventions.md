@@ -7,7 +7,7 @@ delay times, rates, amounts, or mode-specific values.
 The SDK does not require one scaling. These conventions recur in stock-style firmwares and
 the examples, so reusing them gives controls a familiar feel. The reusable exponential
 tables are collected in `examples/Firmwares/Impala Snippets.txt`; copy the table you need
-into your firmware source because Impala has no include system.
+into your firmware source, or put shared tables in their own unit and `import` it.
 
 | Convention | Mapping | Use for | Source |
 |---|---|---|---|

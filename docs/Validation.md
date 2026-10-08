@@ -26,22 +26,30 @@ references\permut8-firmwares-sdk\tools\bin\NuXJS.exe ^
 A successful compile proves the Impala source can be translated to the GAZL text that
 Permut8 loads and that `.p8bank` files embed.
 
-## Validate GAZL Signatures
+## Check Native Signatures
 
-Run the GAZL signature validator on the compiled `.gazl` to catch signature and
-argument-count mismatches across function definitions and call sites. Run it from the SDK
-root so it auto-loads the Permut8 native manifest at `docs/nativeCallbackSignatures.gazl`:
+Impala 2 checks native calls at compile time, so this is no longer a separate step. Import
+the Permut8 native prototypes and every call is checked against them, with a caret on the
+offending argument:
 
-```sh
-references/permut8-firmwares-sdk/tools/bin/NuXJS \
-  references/permut8-firmwares-sdk/tools/gazl-validate.js \
-  <path-to-compiled.gazl>
+```impala
+import "permut8natives.impala"
 ```
 
-It exits non-zero and prints each conflict (with definition and call-site origins) when it
-finds one; `--warn-only` downgrades failures to warnings. This complements the compile
-check — the compiler already rejects in-firmware mismatches, and the validator additionally
-guards against signature drift in the embedded GAZL.
+Copy [`impala/permut8natives.impala`](../impala/permut8natives.impala) next to your firmware
+source, or import it by relative path. A wrong argument type or count then fails the compile:
+
+```text
+mysynth.impala:42:19: error[E406]: Argument type mismatch for argument 1 when calling write (pointer vs expected int)
+```
+
+Importing is optional. The name-only `extern native abort` form still compiles and still
+asserts nothing, so declare prototypes where you want the check. Do not do both for the same
+name in one program — the top-level namespace is flat, so that is a duplicate declaration.
+
+This replaces the `gazl-validate` pass used through Impala 1.0. Upstream retired that tool
+along with its `docs/nativeCallbackSignatures.gazl` manifest: a prototype the compiler reads
+cannot drift out of the language it describes, the way a separately-compared manifest could.
 
 ## Optional: Compact GAZL
 
@@ -149,9 +157,51 @@ Also check the tape as a user-facing control surface:
 - Stacked vertical labels are used only for real per-switch column layouts.
 - The final tape is checked in Permut8 or against a screenshot when available.
 
+## Run The Firmware
+
+Compiling proves a firmware is well-formed; it does not prove it runs. The SDK can execute a compiled
+`.gazl` outside the plugin:
+
+```sh
+bash tools/runPermut8Firmware.sh examples/Firmwares/ringmod_code.gazl
+```
+
+```bat
+tools\runPermut8Firmware.cmd examples\Firmwares\ringmod_code.gazl
+```
+
+`tools/permut8Host.nuxjs.js` wraps the **unmodified** firmware in a pure-GAZL host - a delay line, a
+fixed-seed pseudo-audio generator, and implementations of `yield`/`read`/`write`/`trace` - and
+`tools/bin/GAZLCmd` runs it for 100,000 frames, printing one checksum of everything the firmware
+produced. The firmware is copied in verbatim; nothing is patched.
+
+This catches what a compile cannot: runaway loops, memory violations, and firmwares that produce
+silence. It also runs the entry points a compile never touches - `init()`, `update()`, `reset()` and
+the audio loop itself.
+
+The checksum is an **equality oracle**. It tells you whether output changed, not whether it is
+correct. That makes it the right tool for exactly one question - *did this change anything?* - which
+is the question you have after a refactor, a toolchain bump, a GAZL re-mirror, or a port to newer
+Impala idioms. It is the wrong tool for "does this sound good".
+
+To check every example at once against committed expectations:
+
+```sh
+bash tools/checkPermut8Firmwares.sh
+```
+
+Baselines live in `tools/permut8FirmwareChecksums.txt`. When you change DSP on purpose, refresh them
+with `bash tools/checkPermut8Firmwares.sh --update` and review the diff - each changed line is a
+firmware whose audio you altered, so an unexpected one is a bug you just caught.
+
+The harness drives the standard firmware API only. A firmware without `process()`, `operate1()` or
+`operate2()`, or a full patch that does not declare `signal`, is rejected rather than guessed at.
+
 ## Load In Permut8
 
-When plugin access is available, load the generated `.p8bank` in Permut8 and verify:
+Running the harness is not a substitute for this step. It exercises DSP behavior against a synthetic
+host; it says nothing about how Permut8 itself loads the bank, or about anything the harness stubs
+out. When plugin access is available, load the generated `.p8bank` in Permut8 and verify:
 
 - the bank loads without restoring the default firmware;
 - the expected firmware name appears;

@@ -4,6 +4,10 @@
 // Usage:
 //   node impala/impala.node.js compile [<input.impala>] [<output.gazl>|-] [<random id>]
 //   node impala/impala.node.js run [<input.impala>]
+//
+// `compile` always resolves the import closure of its input - a file that imports nothing is just a
+// closure of one, and compiles to exactly what it always did. Reading from stdin resolves imports
+// against the current directory, there being no source file to be relative to.
 
 const fs = require('fs');
 const os = require('os');
@@ -11,8 +15,10 @@ const path = require('path');
 const cp = require('child_process');
 
 const { compileWithJsImpala } = require('./impalaJsCompilerRunner');
+const { concatenateClosure, resolveImportClosure, scanImports, deadStrip } = require('./impalaImportClosure');
 
 const IMPALA_ENCODING = 'latin1';
+const STDIN_PATH = '<stdin>';   // a root name with no directory, so imports resolve from the cwd
 
 function readFileLatin1(filePath) {
 	return fs.readFileSync(filePath, IMPALA_ENCODING);
@@ -40,51 +46,78 @@ function readStdinLatin1Sync() {
 
 function usageAndExit() {
 	console.error('Usage:');
-	console.error('  node impala/impala.node.js compile [<input.impala>] [<output.gazl>|-] [<random id>]');
-	console.error('  node impala/impala.node.js run [<input.impala>]');
+	console.error('  node impala/impala.node.js compile [--legacy] [--dead-strip] [--range-checks] [<input.impala>] [<output.gazl>|-] [<random id>]');
+	console.error('  node impala/impala.node.js run [--legacy] [--range-checks] [<input.impala>]');
+	console.error('  --legacy downgrades Impala 2 strict-expression errors to warnings');
+	console.error('  --dead-strip drops everything unreachable from an `export`');
+	console.error('  --range-checks emits DEBUG-gated runtime bounds tests (off by default: they stay in the');
+	console.error('                 .gazl TEXT even when DEBUG is 0, and that text is what ships)');
 	process.exit(1);
 }
 
-function parseRandomId(arg) {
-	if (arg == null) return undefined;
-	if (/^0x[0-9a-fA-F]+$/.test(arg)) return parseInt(arg, 16);
-	const n = Number(arg);
-	return Number.isFinite(n) ? Math.trunc(n) : undefined;
+// --- Step 5: import-as-linking -------------------------------------------------
+// `import "path"` names a unit for the link closure (path relative to the importing file). The
+// closure walk, concatenation and `--dead-strip` all live in ./impalaImportClosure so the NuXJS
+// front end runs the same code; this supplies the two host primitives it asks for. `realpathSync`
+// as `canonical` is what folds symlinks and Windows case into one file identity.
+function makeIo(stdinSource) {
+	return {
+		read(filePath) {
+			return (stdinSource !== undefined && filePath === STDIN_PATH) ? stdinSource : readFileLatin1(filePath);
+		},
+		canonical(filePath) {
+			try { return fs.realpathSync(filePath); } catch (_) { return path.resolve(filePath); }
+		},
+	};
 }
 
-function compileCommand(args) {
-	let source;
-	let inputPath;
-	let outputPath;
-	let randomId;
+// Compile a root unit and its import closure into one linked .gazl program. Exposed for tests.
+function compileProgram(rootPath, options = {}) {
+	const { combined, units, spans } = concatenateClosure(rootPath, makeIo(options.stdinSource));
+	let output = compileWithJsImpala(combined, {
+		randomId: options.randomId,
+		retabulate: true,
+		trailingNewline: true,
+		// The BASENAME, matching how `units` names a closure's members (relative to the root's own
+		// directory). A full path would bake this machine's directory layout into every emitted row,
+		// and a .gazl is text that ships and is diffed.
+		sourceName: (rootPath === STDIN_PATH ? undefined : path.basename(rootPath)),
+		units: spans,
+		legacy: options.legacy,
+		rangeChecks: options.rangeChecks,
+	});
+	if (options.deadStrip) {
+		output = deadStrip(output);
+	}
+	return { output, unitCount: units.length };
+}
 
+function compileCommand(args, opts) {
+	let stdinSource;
+	let rootPath;
 	if (args.length === 0) {
-		// stdin -> stdout
-		source = readStdinLatin1Sync();
-		if (!source) {
+		stdinSource = readStdinLatin1Sync();
+		if (!stdinSource) {
 			console.error('No input provided on stdin');
 			process.exit(1);
 		}
-		outputPath = '-';
+		rootPath = STDIN_PATH;
 	} else {
-		inputPath = args[0];
-		try {
-			source = readFileLatin1(inputPath);
-		} catch (err) {
-			console.error(`Error reading ${inputPath}: ${err && err.message ? err.message : String(err)}`);
-			process.exit(1);
-		}
-		outputPath = args[1] || '-';
-		randomId = parseRandomId(args[2]);
+		rootPath = args[0];
 	}
+	const outputPath = args[1] || '-';
+	const randomId = parseRandomId(args[2]);
 
 	let output;
+	let unitCount;
 	try {
-		output = compileWithJsImpala(source, { randomId, retabulate: true, trailingNewline: true, sourceName: inputPath || '<stdin>' });
+		const built = compileProgram(rootPath, Object.assign({ randomId, stdinSource }, opts));
+		output = built.output;
+		unitCount = built.unitCount;
 	} catch (err) {
 		const message = (err && err.message) ? err.message : String(err);
-		if (inputPath) console.error(`Error compiling ${inputPath}: ${message}`);
-		else console.error(`Error: ${message}`);
+		console.error(message.includes(': error[') || message.includes(': error:') ? message : `Error compiling ${rootPath}: ${message}`);
+		// Overwrite any stale output so a failed compile cannot leave a previously-good .gazl behind.
 		if (outputPath && outputPath !== '-') {
 			try { writeFileLatin1(outputPath, 'Error: ' + message); } catch (_) {}
 		}
@@ -95,39 +128,39 @@ function compileCommand(args) {
 		process.stdout.write(output);
 		return;
 	}
-
 	try {
 		writeFileLatin1(outputPath, output);
-		if (inputPath) console.error(`Successfully compiled ${inputPath}`);
-		else console.error('Successful');
+		console.error(`Successfully compiled ${rootPath}${unitCount > 1 ? ` (${unitCount} units)` : ''}`);
 	} catch (err) {
 		console.error(`Error writing ${outputPath}: ${err && err.message ? err.message : String(err)}`);
 		process.exit(1);
 	}
 }
 
-function runCommand(args) {
-	let source;
-	let inputPath;
+function parseRandomId(arg) {
+	if (arg == null) return undefined;
+	if (/^0x[0-9a-fA-F]+$/.test(arg)) return parseInt(arg, 16);
+	const n = Number(arg);
+	return Number.isFinite(n) ? Math.trunc(n) : undefined;
+}
+
+function runCommand(args, opts) {
+	let stdinSource;
+	let rootPath;
 	if (args.length === 0) {
-		source = readStdinLatin1Sync();
-		if (!source) {
+		stdinSource = readStdinLatin1Sync();
+		if (!stdinSource) {
 			console.error('No input provided on stdin');
 			process.exit(1);
 		}
+		rootPath = STDIN_PATH;
 	} else {
-		inputPath = args[0];
-		try {
-			source = readFileLatin1(inputPath);
-		} catch (err) {
-			console.error(`Error reading ${inputPath}: ${err && err.message ? err.message : String(err)}`);
-			process.exit(1);
-		}
+		rootPath = args[0];
 	}
 
 	let gazl;
 	try {
-		gazl = compileWithJsImpala(source, { retabulate: true, trailingNewline: true, sourceName: inputPath || '<stdin>' });
+		gazl = compileProgram(rootPath, Object.assign({ stdinSource }, opts)).output;
 	} catch (err) {
 		console.error((err && err.message) ? err.message : String(err));
 		process.exit(1);
@@ -155,16 +188,42 @@ function runCommand(args) {
 }
 
 function main() {
-	const [cmd, ...rest] = process.argv.slice(2);
+	const argv = process.argv.slice(2);
+	// One list for PARSING, so the argv loop never grows. A flag still has to be passed on below and
+	// listed in impalaJsCompilerRunner's, plus usage above. An UNKNOWN `--flag` is rejected
+	// rather than taken for a filename: `--range-cheks` used to be silently dropped and compile anyway.
+	const FLAGS = { '--legacy': 'legacy', '--dead-strip': 'deadStrip', '--range-checks': 'rangeChecks' };
+	const opts = {};
+	const rest = [];
+	for (const arg of argv) {
+		if (arg.slice(0, 2) === '--') {
+			if (!FLAGS[arg]) { console.error(`Unknown option: ${arg}`); return usageAndExit(); }
+			opts[FLAGS[arg]] = true;
+		} else {
+			rest.push(arg);
+		}
+	}
+	const cmd = rest.shift();
 	if (!cmd) return usageAndExit();
 	switch (cmd) {
 		case 'compile':
-			return compileCommand(rest);
+			return compileCommand(rest, opts);
 		case 'run':
-			return runCommand(rest);
+			return runCommand(rest, opts);
 		default:
 			return usageAndExit();
 	}
 }
 
-main();
+// Re-exported for tests, with the Node io already bound so callers need not know about it.
+module.exports = {
+	compileProgram,
+	concatenateClosure: (rootPath) => concatenateClosure(rootPath, makeIo()),
+	resolveImportClosure: (rootPath) => resolveImportClosure(rootPath, makeIo()),
+	scanImports,
+	deadStrip,
+};
+
+if (require.main === module) {
+	main();
+}

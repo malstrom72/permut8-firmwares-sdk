@@ -21,14 +21,13 @@ IF "%simd%"=="simd" (
 
 SET src_impala=GAZL\impala
 SET src_nuxjs=GAZL\externals\NuXJS
-SET src_validator=GAZL\tools\gazl-validate.js
 SET dst=examples\Firmwares
 SET bin=tools\bin
 
 FOR %%f IN (^
 	"%src_impala%\impala.nuxjs.js" ^
 	"%src_impala%\impalaCompiler.js" ^
-	"%src_validator%" ^
+	"%src_impala%\impalaImportClosure.js" ^
 	"%src_nuxjs%\tools\NuXJSREPL.cpp" ^
 	"%src_nuxjs%\src\NuXJS.cpp" ^
 	"%src_nuxjs%\src\stdlibJS.cpp") DO (
@@ -53,18 +52,26 @@ COPY /Y "%bin%\NuXJS.exe" "%dst%\NuXJS.exe" >NUL
 REM Copy NuXJS (prebuilt for macOS/Linux) if present, so the bundle stays cross-platform.
 IF EXIST "%bin%\NuXJS" COPY /Y "%bin%\NuXJS" "%dst%\NuXJS" >NUL
 
-REM Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
-REM rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js from
-REM its own directory, so both files must sit side by side wherever NuXJS runs.
-COPY /Y "%src_impala%\impala.nuxjs.js"   "%dst%\impala.nuxjs.js"   >NUL
-COPY /Y "%src_impala%\impalaCompiler.js" "%dst%\impalaCompiler.js" >NUL
-COPY /Y "%src_impala%\impala.nuxjs.js"   "%bin%\impala.nuxjs.js"   >NUL
-COPY /Y "%src_impala%\impalaCompiler.js" "%bin%\impalaCompiler.js" >NUL
+REM Build GAZLCmd, the VM driver that runs a firmware under the Permut8 host harness
+REM (tools\permut8Host.nuxjs.js + tools\runPermut8Firmware.cmd). It is a maintenance tool, not part of
+REM the authoring path, so it is NOT staged into "%dst%" - firmware folders only need the compiler.
+CALL GAZL\tools\BuildCpp.cmd %target% %model% "%bin%\GAZLCmd.exe" -IGAZL ^
+	GAZL\tools\GAZLCmd.cpp ^
+	GAZL\src\GAZL.cpp
+IF ERRORLEVEL 1 EXIT /B 1
 
-REM Stage the GAZL signature validator next to the other SDK tools. Run it from the
-REM SDK root so it auto-loads the Permut8 native manifest at docs\nativeCallbackSignatures.gazl:
-REM   tools\bin\NuXJS tools\gazl-validate.js <compiled>.gazl
-COPY /Y "%src_validator%" "tools\gazl-validate.js" >NUL
+REM Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
+REM rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js and
+REM impalaImportClosure.js (which resolves `import` into a single translation unit)
+REM from its own directory, so all three must sit side by side wherever NuXJS runs.
+FOR %%n IN (impala.nuxjs.js impalaCompiler.js impalaImportClosure.js) DO (
+	COPY /Y "%src_impala%\%%n" "%dst%\%%n" >NUL
+	COPY /Y "%src_impala%\%%n" "%bin%\%%n" >NUL
+)
+
+REM impala\permut8natives.impala is deliberately NOT staged into "%dst%": the compile loop there
+REM builds every *.impala in the folder, and a prototype-only unit would just yield a stray .gazl.
+REM Authors copy it next to their firmware, or import it by relative path.
 
 REM Build IVG2PNG.exe
 SET CPP_OPTIONS=/DNUXPIXELS_SIMD=%simd_flag%
