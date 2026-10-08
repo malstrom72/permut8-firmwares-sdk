@@ -157,9 +157,51 @@ Also check the tape as a user-facing control surface:
 - Stacked vertical labels are used only for real per-switch column layouts.
 - The final tape is checked in Permut8 or against a screenshot when available.
 
+## Run The Firmware
+
+Compiling proves a firmware is well-formed; it does not prove it runs. The SDK can execute a compiled
+`.gazl` outside the plugin:
+
+```sh
+bash tools/runPermut8Firmware.sh examples/Firmwares/ringmod_code.gazl
+```
+
+```bat
+tools\runPermut8Firmware.cmd examples\Firmwares\ringmod_code.gazl
+```
+
+`tools/permut8Host.nuxjs.js` wraps the **unmodified** firmware in a pure-GAZL host - a delay line, a
+fixed-seed pseudo-audio generator, and implementations of `yield`/`read`/`write`/`trace` - and
+`tools/bin/GAZLCmd` runs it for 100,000 frames, printing one checksum of everything the firmware
+produced. The firmware is copied in verbatim; nothing is patched.
+
+This catches what a compile cannot: runaway loops, memory violations, and firmwares that produce
+silence. It also runs the entry points a compile never touches - `init()`, `update()`, `reset()` and
+the audio loop itself.
+
+The checksum is an **equality oracle**. It tells you whether output changed, not whether it is
+correct. That makes it the right tool for exactly one question - *did this change anything?* - which
+is the question you have after a refactor, a toolchain bump, a GAZL re-mirror, or a port to newer
+Impala idioms. It is the wrong tool for "does this sound good".
+
+To check every example at once against committed expectations:
+
+```sh
+bash tools/checkPermut8Firmwares.sh
+```
+
+Baselines live in `tools/permut8FirmwareChecksums.txt`. When you change DSP on purpose, refresh them
+with `bash tools/checkPermut8Firmwares.sh --update` and review the diff - each changed line is a
+firmware whose audio you altered, so an unexpected one is a bug you just caught.
+
+The harness drives the standard firmware API only. A firmware without `process()`, `operate1()` or
+`operate2()`, or a full patch that does not declare `signal`, is rejected rather than guessed at.
+
 ## Load In Permut8
 
-When plugin access is available, load the generated `.p8bank` in Permut8 and verify:
+Running the harness is not a substitute for this step. It exercises DSP behavior against a synthetic
+host; it says nothing about how Permut8 itself loads the bank, or about anything the harness stubs
+out. When plugin access is available, load the generated `.p8bank` in Permut8 and verify:
 
 - the bank loads without restoring the default firmware;
 - the expected firmware name appears;

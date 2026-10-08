@@ -51,6 +51,14 @@ if [ -f "$bin/NuXJS.exe" ]; then
 	cp "$bin/NuXJS.exe" "$dst/NuXJS.exe"
 fi
 
+# Build GAZLCmd, the VM driver that runs a firmware under the Permut8 host harness
+# (tools/permut8Host.nuxjs.js + tools/runPermut8Firmware.sh). It is a maintenance tool, not part of
+# the authoring path, so it is NOT staged into "$dst" - firmware folders only need the compiler.
+GAZL/tools/BuildCpp.sh "$target" "$model" "$bin/GAZLCmd" -IGAZL \
+	GAZL/tools/GAZLCmd.cpp \
+	GAZL/src/GAZL.cpp
+chmod +x "$bin/GAZLCmd"
+
 # Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
 # rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js and
 # impalaImportClosure.js (which resolves `import` into a single translation unit)

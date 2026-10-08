@@ -52,6 +52,14 @@ COPY /Y "%bin%\NuXJS.exe" "%dst%\NuXJS.exe" >NUL
 REM Copy NuXJS (prebuilt for macOS/Linux) if present, so the bundle stays cross-platform.
 IF EXIST "%bin%\NuXJS" COPY /Y "%bin%\NuXJS" "%dst%\NuXJS" >NUL
 
+REM Build GAZLCmd, the VM driver that runs a firmware under the Permut8 host harness
+REM (tools\permut8Host.nuxjs.js + tools\runPermut8Firmware.cmd). It is a maintenance tool, not part of
+REM the authoring path, so it is NOT staged into "%dst%" - firmware folders only need the compiler.
+CALL GAZL\tools\BuildCpp.cmd %target% %model% "%bin%\GAZLCmd.exe" -IGAZL ^
+	GAZL\tools\GAZLCmd.cpp ^
+	GAZL\src\GAZL.cpp
+IF ERRORLEVEL 1 EXIT /B 1
+
 REM Stage the JSPEG-generated Impala compiler. It is pre-generated upstream, so no
 REM rebuild step is needed here; impala.nuxjs.js auto-loads impalaCompiler.js and
 REM impalaImportClosure.js (which resolves `import` into a single translation unit)

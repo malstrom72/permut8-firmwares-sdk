@@ -133,11 +133,18 @@ The generated `.gazl` file is the code format loaded by the Permut8 virtual mach
 
 ## Reusable Impala Snippets
 
-Impala does not support source `include` directives or linking separate compilation units.
-For shared utility code, use
-[`examples/Firmwares/Impala Snippets.txt`](../examples/Firmwares/Impala%20Snippets.txt) as
-a copy-paste reference. It contains reusable lookup tables and helper routines, including
-the exponential tables used by Permut8 v1 operators and string/numeric conversion helpers.
+Impala 2 has `import`, which resolves relative to the importing file's directory and concatenates
+the units into a single translation unit. There is still no separate compilation or linking - the
+result is one program - so a shared unit is a source-sharing mechanism, not a library.
+
+For small reusable pieces,
+[`examples/Firmwares/Impala Snippets.txt`](../examples/Firmwares/Impala%20Snippets.txt) remains a
+copy-paste reference. It contains reusable lookup tables and helper routines, including the
+exponential tables used by Permut8 v1 operators and string/numeric conversion helpers.
+
+The example firmwares stay deliberately self-contained: each `.impala` is a complete firmware you
+can drop into a `Permut8 Firmware Code` folder and compile on its own. Copying a snippet suits that
+better than an `import` would.
 
 Copy only the snippets a firmware actually needs into the `.impala` source. Once copied,
 that code is part of the firmware and contributes to compile time, GAZL size, and bank size.
