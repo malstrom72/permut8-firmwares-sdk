@@ -159,7 +159,7 @@ static Int stringToInt(const Char* &p, const Char* e) {
 					} /* else continue */
 		default:	for (; p < e && *p >= '0' && *p <= '9'; ++p) i = i * 10 + (*p - '0'); break;
 	}
-	return (Int)(i) * sign;
+	return (Int)(sign < 0 ? 0u - i : i);									// negate in UNSIGNED: `(Int)i * -1` is signed-overflow UB at i == 2^31, the literal -2147483648
 }
 
 template<class F> F pow10(F x) { return pow(10, x); }
@@ -903,40 +903,6 @@ void Assembler::finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize, UI
 	functionCount = sizes.functionCount;
 }
 
-/*
-	Dry assembly. Assembles into internally-owned scratch that starts small and doubles on the three arena overflows,
-	so the caller neither sizes nor owns a guess and the answer is exact by construction - it IS a real assembly,
-	just thrown away. The cost is a transient allocation and at	most log2 of the largest final arena in restarts;
-	every other outcome, program errors included, is exactly feed()'s. Each attempt works on a COPY of the seed symbols,
-	so the caller's table never learns the program's names and a retry never sees a half-defined one.
-
-	In the future, we may replace this with a true dry-run that does not require any memory allocations.
-*/
-ProgramSizes Assembler::measure(const Char* source, const Symbols& globals) {
-	UInt codeMax = 256, memoryMax = 256, functionMax = 64;
-	while (true) {
-		std::vector<Instruction> code(codeMax);
-		std::vector<UInt> functions(functionMax);
-		std::vector<Value> memory(memoryMax);
-		Symbols scratch(globals);
-		Assembler assem(codeMax, &code[0], functionMax, &functions[0], memoryMax, &memory[0], scratch);
-		assem.newUnit(0);
-		try {
-			for (const Char* p = source; *p != 0; ) p = assem.feed(p);
-			ProgramSizes sizes;
-			assem.finalize(sizes);
-			return sizes;
-		}
-		catch (const Exception& x) {
-			if (x.error != NOT_ENOUGH_CODE_SPACE && x.error != NOT_ENOUGH_MEMORY_SPACE
-					&& x.error != NOT_ENOUGH_FUNCTION_SPACE) throw;
-			codeMax *= 2;								// ALL three, whichever tripped: every retry re-assembles the whole
-			memoryMax *= 2;								// source, so the retry count should be the MAX of the three logs,
-			functionMax *= 2;							// not their sum - transient over-allocation costs nothing here.
-		}
-	}
-}
-
 void Assembler::newUnit(const Char* unitName) { // FIX : use unitName (or not?)
 	(void)unitName;
 	if (!skipUntilLabel.empty()) throw Exception(MISSING_COMPILE_TIME_LABEL, skipUntilLabel);
@@ -1190,7 +1156,9 @@ const Char* Assembler::feed(const Char* line) {
 							functionStart = ip++;
 							break;
 				
-			case LOCA____:	if (ip != (functionStart + 1)) throw Exception(MUST_DEFINE_LOCALS_FIRST);					// LOCA, PARA, LOCi, LOCf, LOCp, INPi, INPf, INPp, OUTi, OUTf, OUTp
+			case LOCA____:	if (functionStart == 0 || ip != functionStart + 1) {										// LOCA, PARA, LOCi, LOCf, LOCp, INPi, INPf, INPp, OUTi, OUTf, OUTp
+								throw Exception(MUST_DEFINE_LOCALS_FIRST);
+							}
 							v.i = 1;
 							parseOperand(op0Begin, op0End, op->accepts[0], &v);
 							size = v.i;
@@ -1379,12 +1347,12 @@ Int Processor::run() {
 			case PEEK_VC_:	V0 = mb[C1.p]; break; // FIX : remove memory_offset from constant indexes and move back mb -> memoryBase +/- 0
 			case POKE_CV_:	mb[C0.p] = V1; break;
 			case POKE_CC_:	mb[C0.p] = C1; break;
-			case PEEK_VVV:	if ((ui = V1.i + V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
-			case PEEK_VCV:	if ((ui = C1.i + V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
-			case POKE_VVV:	if ((ui = V0.i + V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_CVV:	if ((ui = C0.i + V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_VVC:	if ((ui = V0.i + V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_CVC:	if ((ui = C0.i + V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
+			case PEEK_VVV:	if ((ui = (UInt)V1.i + (UInt)V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
+			case PEEK_VCV:	if ((ui = (UInt)C1.i + (UInt)V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
+			case POKE_VVV:	if ((ui = (UInt)V0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_CVV:	if ((ui = (UInt)C0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_VVC:	if ((ui = (UInt)V0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_CVC:	if ((ui = (UInt)C0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
 			case GETL_VVV:	if ((ui = V2.i) < (UInt)(dataStackEnd - dsp - C1.i)) { V0 = (dsp + C1.i)[ui]; break; } else { err = BAD_PEEK; goto ret; };
 			case SETL_VVV:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = V2; break; } else { err = BAD_POKE; goto ret; };
 			case SETL_VVC:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = C2; break; } else { err = BAD_POKE; goto ret; };
@@ -1437,7 +1405,8 @@ Int Processor::run() {
 			case COPY_VCC:	ui = V0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
 			case COPY_CVC:	ui = C0.i - MEMORY_OFFSET; ui2 = V1.i - MEMORY_OFFSET; goto copy;
 			case COPY_CCC:	ui = C0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
-			copy:			if (ui + C2.i <= rwMemorySize && ui2 + C2.i <= memorySize) {
+			copy:			if ((UInt)C2.i <= rwMemorySize && ui <= rwMemorySize - (UInt)C2.i
+									&& (UInt)C2.i <= memorySize && ui2 <= memorySize - (UInt)C2.i) {
 								// std::copy(&mb[ui2 + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET] + C2.i, &mb[ui + MEMORY_OFFSET]);
 								// memcpy(&mb[ui + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET], sizeof (Value) * C2.i);
 								const Value* sp = &mb[ui2 + MEMORY_OFFSET];
@@ -1449,8 +1418,8 @@ Int Processor::run() {
 								err = ACCESS_VIOLATION;
 								goto ret;
 							}
-			case FORi_VVB:	if (++V0.i < V1.i) { ip += C2.i; continue; }; break;
-			case FORi_VCB:	if (++V0.i < C1.i) { ip += C2.i; continue; }; break;
+			case FORi_VVB:	V0.i = iadd(V0.i, 1); if (V0.i < V1.i) { ip += C2.i; continue; }; break;		// iadd, not ++: a counter already at INT_MAX made `++` signed-overflow UB. Wrap is unchanged, and FORp maps here too
+			case FORi_VCB:	V0.i = iadd(V0.i, 1); if (V0.i < C1.i) { ip += C2.i; continue; }; break;
 			case LSSI_VVB:	if (V0.i < V1.i) { ip += C2.i; continue; }; break;
 			case LSSI_VCB:	if (V0.i < C1.i) { ip += C2.i; continue; }; break;
 			case LSSI_CVB:	if (C0.i < V1.i) { ip += C2.i; continue; }; break;
@@ -1705,8 +1674,8 @@ int testCallback(Processor* p) {
 	return 0;
 }
 
-// ONE list of the unit-test natives: measure()'s self-check compares two assemblies that must have been
-// seeded identically, so the seeding cannot be allowed to drift between sites.
+// ONE list of the unit-test natives: the freeze/thaw round-trip below compares two assemblies that must
+// have been seeded identically, so the seeding cannot be allowed to drift between sites.
 static void seedTestNatives(Symbols& g) { g.registerNative("assertFail", 0); g.registerNative("testMul", 1); g.registerNative("testCallback", 2); }
 
 bool unitTest() {
@@ -1785,23 +1754,6 @@ bool unitTest() {
 			}
 		}
 
-		// measure() must agree with the real assembly above exactly - and the deliberately tiny
-		// starting arenas mean this very test exercises its retry-and-double path.
-		{
-			Symbols seed;
-			seedTestNatives(seed);
-			ProgramSizes measured = { 0, 0, 0, 0 };
-			try {
-				measured = Assembler::measure(UNITTEST, seed);
-			}
-			catch (const Exception& e) {
-				(void)e;
-				assert(0);
-			}
-			assert(measured.codeSize == sizes.codeSize && measured.globalsSize == sizes.globalsSize
-					&& measured.constsSize == sizes.constsSize && measured.functionCount == sizes.functionCount);
-		}
-			
 		TestCallbackData callbackData;
 		
 		UInt size;

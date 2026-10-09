@@ -204,7 +204,7 @@ class Symbols {
 struct Operator;
 
 /*
-	The four sizes an assembly computes: what a program actually used (from `finalize`) or will need (from `measure`).
+	The four sizes an assembly computes: what a program actually used, from `finalize`.
 */
 struct ProgramSizes {
 	UInt codeSize;
@@ -225,7 +225,6 @@ class Assembler {
 	public:		const Char* feed(const Char* line); // Assemble a single line and return pointer to the next.
 	public:		void finalize(ProgramSizes& sizes); // Finish assembly and report memory usage. `sizes.functionCount` is the number of entries filled in `functionTable`.
 	public:		void finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize, UInt& functionCount); // Positional form of `finalize`; prefer the `ProgramSizes` overload.
-	public:		static ProgramSizes measure(const Char* source, const Symbols& globals); // Dry assembly: report what a real assembly of `source` (whole NUL-terminated text) will need, without the caller sizing or owning any buffer. Seed `globals` exactly as for a real assembly (natives, host defines); it is copied, never touched. Program errors throw exactly as feed() does.
 
 	protected:	struct CompileTimeVar {
 					int types;

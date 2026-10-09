@@ -113,7 +113,10 @@ if (canonicalizeTrimmed(impalaSelfExpected) !== canonicalizeTrimmed(impalaExisti
 }
 console.log("impala.jspeg compiles identically under self-hosted compiler");
 
-assert(!impalaExisting.includes("Object.defineProperty"), "impalaCompiler.js must stay inside the NuXJS subset, which has no property descriptors");
+assert(
+	!impalaExisting.includes("Object.defineProperty"),
+	"impalaCompiler.js must stay inside the NuXJS subset, which has no property descriptors",
+);
 
 const compilerContext = loadImpalaCompilerForTests();
 const makeMetaHelper = compilerContext.makeMeta;
@@ -2125,7 +2128,7 @@ console.log("impala.jspeg compiler never bounds-checks ADDRESS formation");
 		+ "global F gf\nfunction sum(int pointer p) returns int r { r = p[0]; }\n";
 	for (const [label, body, expected] of [
 		["a LOCAL struct's array field", "locals F f { printInt(sum(f.state)); }", /ADRL %\d \$f:\.o\.F\.state \*0/],
-		["a GLOBAL struct's", "{ printInt(sum(global gf.state)); }", /ADDp %\d &gf #\.o\.F\.state/],
+		["a GLOBAL struct's", "{ printInt(sum(global gf.state)); }", /MOVp %\d &gf:\.o\.F\.state/],
 		["a NESTED field's", "locals Outer o { printInt(sum(o.inner.state)); }", /ADRL %\d \$o:<[A-Za-z]> \*0/],
 		["one reached through a pointer", "locals F pointer fp { printInt(sum(fp->state)); }", /ADDp %\d \$fp #\.o\.F\.state/],
 	]) {
@@ -2152,7 +2155,7 @@ console.log("impala.jspeg compiler never bounds-checks ADDRESS formation");
 		+ "\ti = 2; vp = &loc[i];\n}\n", { randomId: 42 });
 	for (const [label, expected] of [
 		["a pointer base", /ADDp \$p \$p #\.z\.V/],
-		["a global base with a folded offset", /ADDp \$q &bank #<[A-Za-z]>/],
+		["a global base, offset folded into the operand", /MOVp \$q &bank:<[A-Za-z]>/],
 		["a local base with a field offset", /ADRL \$ip \$v:\.o\.V\.n \*0/],
 		["a local base with a runtime index", /ADDp \$vp %\d+ %\d+/],
 	]) {
@@ -2161,6 +2164,54 @@ console.log("impala.jspeg compiler never bounds-checks ADDRESS formation");
 	assert(!/MOVp \$(p|q|ip|vp) %/.test(out),
 		"place address: copied through a temp instead of landing in the target\n" + out);
 	console.log("impala.jspeg compiler emits a place's address straight into its assignment target");
+}
+
+// `readonly` describes the LOCATION, so it has to survive address formation. A CONSTANT index folds and
+// never materializes an address; a RUNTIME one goes through placeAddress, which runs makeMeta and clears
+// the flag - so these three wrote into the const region with no diagnostic, and GAZL could not catch it
+// either, because the assemble-time check that catches the constant spelling needs a constant base. Every
+// shape that reaches placeAddress, plus the constant twin of each to show the fold path still refuses.
+{
+	const RO = "struct W { int a }\nstruct V { W array sub[4]; int array vals[4] }\n"
+		+ "readonly V gv = { sub: { { a: 1 } }, vals: { 1, 2, 3, 4 } }\n"
+		+ "readonly W array bank[4] = { { a: 1 } }\n";
+	for (const [label, locals, body] of [
+		["a struct-array field, runtime index", "int i", "i = 2; global gv.sub[i].a = 1;"],
+		["a struct-array field, constant index", "", "global gv.sub[1].a = 1;"],
+		["a scalar array field, runtime index", "int i", "i = 2; global gv.vals[i] = 5;"],
+		["a scalar array field, constant index", "", "global gv.vals[1] = 5;"],
+		["a readonly struct array, runtime index", "int i", "i = 2; global bank[i].a = 9;"],
+		["a readonly struct array, constant index", "", "global bank[1].a = 9;"],
+	]) {
+		expectCompileOutcome("readonly through an index", label,
+			RO + "export function main()" + (locals ? " locals " + locals : "") + " { " + body + " }\n",
+			"E404");
+	}
+	console.log("impala.jspeg compiler keeps `readonly` across a runtime index, not just a constant one");
+}
+
+// A by-value struct argument is rejected at the CLOSE of the call, so the callee's signature can sharpen
+// the message - which means nothing the argument emitted is ever kept. Emitting the window COPY first
+// handed claimSlot a slot the argument's own transients were sitting in, and the assertion fired before
+// the diagnostic existed: a compiler abort, with no code, position or caret, on a program whose only
+// fault is one E426 already knows how to explain. The callee here must NOT declare a struct parameter,
+// or it is rejected at its own declaration and the argument path is never reached.
+{
+	const decls = "struct W { int a; int b }\nstruct V { W head; W array sub[4] }\n"
+		+ "global V array bank[4]\nglobal V gv\nextern native eat\n";
+	for (const [label, locals, body] of [
+		["a local struct", "V v", "eat(v);"],
+		["a global struct", "", "eat(global gv);"],
+		["a runtime-indexed struct", "int i", "i = 1; eat(global bank[i]);"],
+		["a runtime-indexed struct field", "int i", "i = 1; eat(global bank[i].head);"],
+		["the value of a whole-struct assignment", "V v, V w", "eat(v = w);"],
+		["two struct arguments", "V v, V w", "eat(v, w);"],
+	]) {
+		expectCompileOutcome("by-value struct argument", label,
+			decls + "export function main()" + (locals ? " locals " + locals : "") + " { " + body + " }\n",
+			"E426");
+	}
+	console.log("impala.jspeg compiler reports E426 for every by-value struct argument, never an assertion");
 }
 
 // THE INVARIANT, stated directly rather than through the shapes that violate it. Impala 1 allocates a
