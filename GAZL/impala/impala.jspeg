@@ -1155,16 +1155,46 @@
         rec.oobIndex  = undefined;
         rec.struct    = undefined;
         rec.dynIndex  = undefined;
-        rec.baseMeta  = undefined;
+        $$parser.dropBaseMeta(rec);   /* a pending base still attached here is ABANDONED, so its registers
+                                         go back; a caller that means to TRANSFER them detaches first */
         rec.readonly  = false;        /* pooled slots: never inherit a previous symbol's writability */
         return rec;
     };
 
-    /* release all three operands contained in a meta-record */
+    /* A PENDING base owns the two operands its computation reads, so dropping the field without this
+       strands them. Every site that stops pointing at one calls this, which is what makes "cleared" and
+       "released" the same act - `returnBack` de-dups within a bucket, so a double free would not assert,
+       it would hand a live register out twice. */
+    $$parser.dropBaseMeta = function (rec) {
+        if (rec.baseMeta !== undefined) {
+            $$parser.releaseMeta(rec.baseMeta);
+            rec.baseMeta = undefined;
+        }
+    };
+
+    /* Everything a place owns, in the one function that knows the list. `makeMeta` and `setPlace` clear
+       these fields for pooled-slot hygiene; a place that is DISCARDED has to give the registers back. */
+    $$parser.releasePlace = function (rec) {
+        $$parser.returnBack(rec.base);
+        $$parser.returnBack(rec.dynIndex);
+        for (var p = 0; rec.offParts !== undefined && p < rec.offParts.length; ++p) {
+            $$parser.returnBack(rec.offParts[p]);                 /* a folded index parks a `<X>` here, and only
+                                                                     foldOffset frees it - a place nobody reads
+                                                                     never reaches a fold */
+        }
+        $$parser.dropBaseMeta(rec);
+    };
+
+    /* Release everything a meta-record owns: its three operands, and - for a PLACE - the base, index and
+       offset parts it holds instead of them. A discarded statement is the only thing that frees a
+       whole-struct assignment's value, whose base is the address the COPY was emitted against. */
     $$parser.releaseMeta = function (meta) {
         meta = metaSlot(meta);
         for (var i = 2; i >= 0; --i) {
             $$parser.returnBack(meta.operands[i]);
+        }
+        if (meta.place) {
+            $$parser.releasePlace(meta);
         }
     };
 
@@ -1441,19 +1471,45 @@
         $$parser.declare('!', 'globals', ok, undefined, true, undefined, sourceCode, sourceOffset);
     };
 
+    /* An out-of-bounds finding dies the moment the place becomes an ADDRESS - address formation is never
+       bounds-checked, at any index (see checkConstIndex). The guard's OWNED copy goes back to the pool and
+       the `! MOVi` that made it is cancelled; leaving them costs a `<X>` per address and ships an
+       assemble-time line nothing reads (flushMetaCode skips a null operator). */
+    $$parser.dropIndexFinding = function (expr) {
+        for (var oi = 0; expr.oobIndex !== undefined && oi < expr.oobIndex.length; ++oi) {
+            var oob = expr.oobIndex[oi];
+            if (!oob.own) continue;
+            $$parser.returnBack(oob.k);
+            $$parser.metacode[oob.copyAt].operator = null;
+        }
+        expr.oobIndex = undefined;
+    };
+
+    /* A place's address as ONE deferred instruction, keeping the element type the place already carries -
+       `makeMeta` clears `elem` along with the rest of the place state, so it is put back. */
+    $$parser.addressMeta = function (place) {
+        var elem = place.elem;
+        $$parser.dropIndexFinding(place);                         /* `makeMeta` below only CLEARS the finding */
+        $$parser.placeAddressMeta(place);
+        $$parser.setElem(place, elem);
+    };
+
+    /* Every reader wants the same thing first: this record as ONE deferred instruction, with no destination
+       yet. A place is not an instruction, so an array place used without a subscript decays here - once,
+       rather than in each reader. Asking it separately is how the readers came to disagree: an argument
+       adopted the address while an assignment asked for a finished operand and then copied it. */
+    $$parser.asValueMeta = function (expr) {
+        if (expr.place && expr.arrayOf !== undefined) {           /* -> a pointer to its element */
+            $$parser.addressMeta(expr);
+        }
+    };
+
     $$parser.makeRValue = function (expr, classes) {
         classes = classes || '#<&^$%';
 
         expr = metaSlot(expr);
         $$parser.checkIndexUse(expr);                              /* reading it - reference() would have cleared the flag */
-
-        if (expr.place && expr.arrayOf) {                         /* array place used without a subscript -> decay to a pointer */
-            var delem = expr.arrayOf;
-            var dt = $$parser.placeAddress(expr);
-            $$parser.makeMeta(expr, ':=', 'p', undefined, dt, undefined);
-            $$parser.setElem(expr, delem);
-            return dt;
-        }
+        $$parser.asValueMeta(expr);
 
         var op   = expr.operator;
         var op1  = expr.operands[1];
@@ -1496,16 +1552,10 @@
 
         /* An ARGUMENT is a reading context like any other, and a place is not an instruction: `g(f.state)`
            handed the writer a raw `@place` record, whose operator is in no opcode table, and the compiler
-           died on `Cannot read properties of undefined` with no code, position or caret. Only this door
-           was missing - `p = f.state` and `&f.state[0]` both decay - because the arg path skips
-           makeRValue on purpose (it emits straight into the call window instead of a temp). Ask it about
-           the place and nothing else: it returns the moment it has decayed one, and it owns what every
-           other reader means by a place, so a new place shape cannot be right for readers and fatal here.
-           checkIndexUse is idempotent (it clears oobIndex on entry), so Argument having already run it is
-           not a double guard. */
-        if (expr.place) {
-            $$parser.makeRValue(expr);
-        }
+           died on `Cannot read properties of undefined` with no code, position or caret. This path skips
+           makeRValue on purpose - it emits into the call window rather than a temp - so it takes the
+           shared step and nothing else. A struct place cannot reach here: by-value arguments are E426. */
+        $$parser.asValueMeta(expr);
 
         var op   = expr.operator;
         var tgt  = '%' + number;
@@ -2158,6 +2208,9 @@
     $$parser.foldOffset = function (parts) {
         if (!parts || parts.length === 0) return null;
         if (parts.length === 1) return parts[0];      /* a lone part (symbol or scratch) is returned as-is; its owner frees it */
+        /* Free every part AFTER the folding, never before: a parts array may be folded more than once
+           (a place read twice), and an accumulator that reused a part's slot makes the second fold add
+           the same field offset twice - silently. Freeing early buys one scratch and costs that. */
         var o = $$parser.borrow('<');
         $$parser.emit('<> +', 'i', o, '#' + parts[0], '#' + parts[1]);
         for (var k = 2; k < parts.length; ++k) {
@@ -2954,15 +3007,25 @@
         slot.type     = arrayOf ? 'p' : 'S';
         slot.elem     = arrayOf || (structName !== undefined ? $$parser.structDesc(structName) : undefined);
         slot.dynIndex = dynIndex;                                 /* frame place + one runtime word-index -> terminal emits GETL/SETL */
-        slot.baseMeta = (base === undefined ? slot.baseMeta : undefined);
-                                                                  /* a PENDING base (see baseOperand) survives a re-place
-                                                                     that supplies no base: `.field` and a constant `[k]`
-                                                                     only grow offParts. `baseMeta` set always implies
-                                                                     `base` undefined, so there is no stale one to keep. */
+        /* a PENDING base (see baseOperand) survives a re-place that supplies no base of its own:
+           `.field` and a constant `[k]` only grow offParts. A re-place that DOES name a base abandons it */
+        if (base !== undefined) {
+            $$parser.dropBaseMeta(slot);
+        }
         slot.extent   = undefined;                                /* pooled slot: never inherit another array's extent or
                                                                      another subscript's finding. The two callers that DO
                                                                      have an extent assign it after the call. */
         slot.oobIndex = undefined;
+    };
+
+    /* `base:offset` is how a local frame slot and a global address carry a compile-time offset. A base is
+       ONE deep - the assembler reads `&g:off` and `$v:off`, never `&g:off:more` - so a base that already
+       carries one has to be flattened into a register by whoever indexes it, not extended here. No offset
+       spells the bare base: `$v:null` was reachable only because every caller happens to push a part
+       first, which nothing stated. */
+    $$parser.offsetOperand = function (base, off) {
+        assert(('' + base).indexOf(':') < 0, 'a base already carrying an offset cannot take another');
+        return (off ? base + ':' + off : base);
     };
 
     /* A place's base as a REGISTER, materializing a pending computation the first time one is actually
@@ -2974,7 +3037,8 @@
     $$parser.baseOperand = function (place) {
         if (place.baseMeta !== undefined) {
             place.base = $$parser.makeRValue(place.baseMeta);
-            place.baseMeta = undefined;
+            place.baseMeta = undefined;                           /* DETACHED, not released: makeRValue consumed
+                                                                     the operands - it frees them before it borrows */
         }
         return place.base;
     };
@@ -2989,11 +3053,12 @@
            POKE was emitted and only the CNST region caught it, at load. */
         var ro = (x.readonly === true);
         if (bk === 'local' && dynIndex !== undefined) {           /* (dsp + base:off)[dynIndex] */
-            $$parser.makeMeta(x, '=[]$', type, null, base + (offOp ? ':' + offOp : ''), dynIndex);
+            $$parser.makeMeta(x, '=[]$', type, null, $$parser.offsetOperand(base, offOp), dynIndex);
         } else if (bk === 'local') {
-            $$parser.makeMeta(x, '=', type, undefined, base + ':' + offOp, undefined);
+            $$parser.makeMeta(x, '=', type, undefined, $$parser.offsetOperand(base, offOp), undefined);
         } else if (bk === 'globalAddr') {                         /* &name:off in global memory */
-            $$parser.makeMeta(x, (ro ? ':=*' : '=*'), type, undefined, base + ':' + offOp, undefined);
+            $$parser.makeMeta(x, (ro ? ':=*' : '=*'), type, undefined,
+                    $$parser.offsetOperand(base, offOp), undefined);
         } else {                                                  /* pointer base: PEEK/POKE base <runtime index | #offset> */
             $$parser.makeMeta(x, '=[]', type, null, base, dynIndex !== undefined ? dynIndex : '#' + offOp);
         }
@@ -3142,6 +3207,17 @@
         var extent = x.extent;
         if (!x.arrayOf) {                                         /* a raw struct pointer: wrap it as an array place */
             var p = $$parser.makeRValue(x);
+            /* A base is ONE offset deep: the assembler reads `&g:off` and `$v:off`, never a second `:`.
+               `&global s.field` now folds to `&s:.o.S.field`, so wrapping that operand as a base and
+               letting the offsets below append to it would spell `&s:.o.S.field:.z.W` - which this
+               compiler accepts and GAZL refuses ("Invalid identifier"). Materialize instead: a register
+               carries no offset, so everything downstream can fold freely. */
+            if (p.indexOf(':') >= 0) {
+                var flat = $$parser.borrow('%');
+                $$parser.emit(':=', 'p', flat, p, undefined);
+                $$parser.returnBack(p);
+                p = flat;
+            }
             $$parser.setPlace(x, (p[0] === '&' ? 'globalAddr' : 'pointer'), p, [], undefined, x.elem);
         }
         var elem = x.arrayOf;
@@ -3167,8 +3243,9 @@
                 var part = k;                                    /* scalar stride is 1 word -> the offset is just k */
                 if (elemStruct) {                                /* `&p[1]` is the canonical walk, so the fold
                                                                     inside scaleByStride is the common case here */
+                    if (scratch) { $$parser.returnBack(k); }     /* dead at the multiply: free it BEFORE the scale
+                                                                    borrows, so the scaled result reuses its slot */
                     part = $$parser.scaleByStride(k, $$parser.extentSymbol(elemName));
-                    if (scratch) { $$parser.returnBack(k); }     /* a folded k is a literal, never a scratch */
                 }
                 /* A folded `<X>` cannot key a deferred assertion, so the guard takes its OWN copy while the
                    value is still live - the pushed one is freed by foldOffset long before the use decides
@@ -3183,9 +3260,12 @@
                 }
                 x.offParts.push(part);
             }
-            if (elemStruct) $$parser.setPlace(x, x.baseKind, x.base, x.offParts, elemName, undefined, x.dynIndex);
-            else            $$parser.emitPlaceValue(x, x.baseKind, $$parser.baseOperand(x), x.offParts,
-                                    x.dynIndex, eType, eTail);
+            if (elemStruct) {
+                $$parser.setPlace(x, x.baseKind, x.base, x.offParts, elemName, undefined, x.dynIndex);
+            } else {
+                $$parser.emitPlaceValue(x, x.baseKind, $$parser.baseOperand(x), x.offParts,
+                        x.dynIndex, eType, eTail);
+            }
 
         } else if (x.baseKind === 'local' && x.dynIndex === undefined) {
             /* a frame place with a single runtime index: keep it frame-relative so it emits one
@@ -3207,6 +3287,11 @@
             }
 
         } else {
+            var ro = (x.readonly === true);                       /* placeAddress runs makeMeta, which clears the flag -
+                                                                     but readonly describes the LOCATION, and an element
+                                                                     of a readonly array is readonly too. Without this a
+                                                                     RUNTIME index writes into the const region with no
+                                                                     E404; a constant one folds and never comes here. */
             var arrPtr = $$parser.placeAddress(x);                /* pointer base or a second runtime index: materialize */
             if (elemStruct) {
                 /* Scale the index, then leave `base + scaled` PENDING rather than minting a register for
@@ -3220,8 +3305,10 @@
                 $$parser.emitRangeCheck(scaled, extent, sourceCode, sourceOffset);
                 $$parser.setPlace(x, 'pointer', undefined, [], elemName);
                 x.baseMeta = $$parser.makeMeta(undefined, '+', 'p', undefined, arrPtr, scaled);
+                x.readonly = ro;
             } else {                                              /* scalar stride 1 -> PEEK/POKE arrPtr idx directly */
                 $$parser.emitRangeCheck(idxRV, extent, sourceCode, sourceOffset);
+                x.readonly = ro;                                  /* emitPlaceValue reads the FLAG */
                 $$parser.emitPlaceValue(x, 'pointer', arrPtr, [], idxRV, eType, eTail);
             }
         }
@@ -3248,7 +3335,7 @@
        pointer/global base carrying an offset, a plain move of the base without one. An offset scratch
        rides inside the operand (`#<D>`, `$v:<D>`), so whoever consumes the meta frees it on the same
        path it frees every other operand. A local frame place holding a runtime index is the one address
-       that takes two instructions: it materializes, and the deferred meta is a move of the result. */
+       that takes two instructions; only the second is deferred. */
     $$parser.placeAddressMeta = function (place) {
         place = metaSlot(place);
         if (place.baseKind === 'local' && place.dynIndex !== undefined) {
@@ -3264,16 +3351,21 @@
         var pending = place.baseMeta;
         if (pending !== undefined && !off) {                       /* the pending base IS the address: adopt it whole, so
                                                                       the assignment emits that ADDp into its target */
+            place.baseMeta = undefined;                            /* TRANSFER, not abandon: the operands move to the
+                                                                      meta below, which frees them when consumed. Detach
+                                                                      first or makeMeta releases them out from under it */
             return $$parser.makeMeta(place, pending.operator, pending.type, undefined,
                     pending.operands[1], pending.operands[2]);
         }
         var base = $$parser.baseOperand(place);
         if (place.baseKind === 'local') {                          /* `*0` ALWAYS - see the note on ADRL spans below */
-            $$parser.makeMeta(place, '=&', 'p', undefined, base + (off ? ':' + off : ''), '*0');
-        } else if (off) {
-            $$parser.makeMeta(place, '+', 'p', undefined, base, '#' + off);
-        } else {
-            $$parser.makeMeta(place, ':=', 'p', undefined, base, undefined);
+            $$parser.makeMeta(place, '=&', 'p', undefined, $$parser.offsetOperand(base, off), '*0');
+        } else if (off && place.baseKind === 'globalAddr') {       /* `&name:off` resolves at ASSEMBLY time, so a global
+                                                                      base folds its offset instead of adding it - the
+                                                                      same operand emitPlaceValue reads a field through */
+            $$parser.makeMeta(place, ':=', 'p', undefined, $$parser.offsetOperand(base, off), undefined);
+        } else {                                                   /* pointer base: add the offset, or just move it */
+            $$parser.makeMeta(place, (off ? '+' : ':='), 'p', undefined, base, (off ? '#' + off : undefined));
         }
     };
 
@@ -3536,7 +3628,18 @@ var _sn = $$parser.strideStruct(field.elem);
                 var op2 = $$parser.makeRValue(rightx);
                 xOob = $$parser.checkSubscript(xt, op2, sourceCode, sourceOffset);
             
-                if (op2[0] === '#' || op2[0] === '<') {          /* assemble-time: fold into `base:offset` */
+                /* A global base is ONE offset deep. `&global s.field` now folds to `&s:.o.S.field`, and
+                   neither form below can take that: the fold would spell `&s:.o.S.field:1` and a PEEK
+                   wants a bare pointer, so GAZL rejects both. Flatten it into a register once, and the
+                   index goes through the ordinary run-time path. */
+                var flattened = (!direct && op1.indexOf(':') >= 0);
+                if (flattened) {
+                    var flatBase = $$parser.borrow('%');
+                    $$parser.emit(':=', 'p', flatBase, op1, undefined);
+                    $$parser.returnBack(op1);
+                    op1 = flatBase;
+                }
+                if (!flattened && (op2[0] === '#' || op2[0] === '<')) {   /* assemble-time: fold into `base:offset` */
                     $$parser.makeMeta(leftx, (direct ? '=' : '=*'), tp, null,
                                       op1 + ':' + (op2[0] === '#' ? op2.substr(1) : op2), null);
                 } else {
@@ -3711,21 +3814,24 @@ var _sn = $$parser.strideStruct(field.elem);
                 $$parser.fail('Cannot assign to a readonly value', sourceCode, sourceOffset, 'E404',
                         'declare it `global` instead of `readonly` if it has to be written');
             }
-            /* placeAddress leaves a value meta behind, so snapshot the place first - and resolve a pending
-               base while snapshotting, or the statement's own place is rebuilt around a computation that
-               has already been consumed. */
-            $$parser.baseOperand(leftx);
-            var savedBK = leftx.baseKind, savedBase = leftx.base,
-                savedParts = leftx.offParts, savedStruct = leftx.struct;
+            /* The statement's value is the struct just written, and `dst` is its address - a finished
+               operand. Impala 1 does the same for a chained `a[i] = b[j] = c`: each address is computed
+               ONCE and the register held, so using the value again is a read. Rebuilding this place from
+               the destination's offset PARTS instead would re-run a fold whose `<X>` inputs foldOffset has
+               already returned to the pool; a later fold reissues one and the second read computes a
+               different address - that is how a chained struct assignment came to emit `<B> = <B> + <B>`.
+               So `dst` stays borrowed: it is the place's base, and whoever reads the place releases it as
+               it would any other operand. */
+            var structName = leftx.struct;                        /* placeAddress consumes the place */
             var dst = $$parser.placeAddress(leftx);
             var src = $$parser.placeAddress(rightx);
-            $$parser.makeMeta(x, 'copy', '?', dst, src, $$parser.structAllocSize(savedStruct));
-            $$parser.emitMeta(x);
+            $$parser.emit('copy', '?', dst, src, $$parser.structAllocSize(structName));
             $$parser.returnBack(src);
-            $$parser.returnBack(dst);
-            $$parser.setPlace(x, savedBK, savedBase, savedParts, savedStruct);
+            $$parser.setPlace(x, 'pointer', dst, [], structName);
             return;
         }
+
+        $$parser.asValueMeta(rightx);                             /* the same first step every reader takes */
 
         if (!leftx || leftx.operator === undefined) {
             throw new Error('JSPEG meta missing for assignment: ' + JSON.stringify(leftx));
@@ -3865,17 +3971,7 @@ var _sn = $$parser.strideStruct(field.elem);
     $$parser.reference = function (operator, expr, sourceCode, sourceOffset) {
 
         expr = metaSlot(expr);
-        for (var oi = 0; expr.oobIndex !== undefined && oi < expr.oobIndex.length; ++oi) {
-            var oob = expr.oobIndex[oi];
-            if (!oob.own) continue;
-            $$parser.returnBack(oob.k);              /* the guard's copy dies with the finding - and so does
-                                                        the `! MOVi` that made it, or an address would ship
-                                                        a line nothing reads (flushMetaCode skips a null) */
-            $$parser.metacode[oob.copyAt].operator = null;
-        }
-        expr.oobIndex = undefined;                   /* address formation is never bounds-checked, at any
-                                                        index - see checkConstIndex. Cleared before the
-                                                        `=[]$` branch below calls makeRValue. */
+        $$parser.dropIndexFinding(expr);             /* cleared before the `=[]$` branch below calls makeRValue */
 
         if (expr.operator === '=') {                 // variable
             assert(expr.operands[2] === undefined,
@@ -4016,17 +4112,9 @@ var _sn = $$parser.strideStruct(field.elem);
         }
 
         /* &structValue -> a typed struct pointer (the place's address); &arrayPlace -> a pointer to its
-           ELEMENT. setPlace leaves `struct` undefined for an array place (it fills `arrayOf` instead), so
-           taking the struct branch unconditionally minted the descriptor `Sundefined` - which
-           `isStructAtom` accepts and renderDesc unwraps to the word "undefined", so `p = &global b.tags`
-           on `struct Body { int array tags[4] }` failed with "expected int elements, got undefined
-           elements". `arrayOf` is already the element descriptor, which is what makeRValue uses for the
-           same decay. */
+           ELEMENT. Both descriptors are already on the record as `elem`, which setPlace computed. */
         if (operator === '&' && expr.place) {
-            var structName = expr.struct, arrayElem = expr.arrayOf;   /* both read BEFORE makeMeta clears the place */
-            $$parser.placeAddressMeta(expr);                  /* deferred, so `p = &p[1]` is one ADDp into $p */
-            $$parser.setElem(expr, (arrayElem !== undefined ? arrayElem
-                    : (structName !== undefined ? $$parser.structDesc(structName) : undefined)));
+            $$parser.addressMeta(expr);                       /* deferred, so `p = &p[1]` is one ADDp into $p */
             return;
         }
 
@@ -5988,9 +6076,13 @@ Argument    <-  { $argAt = $$i;   /* the argument itself; end-of-rule has skippe
                                                                    name: (typeof meta.base === 'string'
                                                                                    && meta.base.charAt(0) === '$'
                                                                                ? meta.base.substr(1) : undefined) });
-                                                           var w = $$parser.structWords(meta.struct);
-                                                           $$parser.copyStructArg($a, winSlot, w);
-                                                           $$.words += w;
+                                                           /* NOT copied into the window: the close of this call
+                                                              always rejects a struct argument (E426), so the COPY
+                                                              would be discarded - and emitting it first hands
+                                                              copyStructArg's claimSlot a window slot the argument's
+                                                              own transients are sitting in, which ABORTS on an
+                                                              assertion before the diagnostic can be reported. */
+                                                           $$.words += $$parser.structWords(meta.struct);
                                                        } else {
                                                            $$parser.makeArgValue($a, winSlot);
                                                            $$.words += 1;
