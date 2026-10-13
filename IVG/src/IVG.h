@@ -72,13 +72,21 @@ void checkBounds(const NuXPixels::IntRect& bounds);
 void checkBoundsBeforeScaling(double left, double top, double width, double height);									// Scaled bounds, in double so they cannot overflow.
 void checkTextureTransformation(const NuXPixels::AffineTransformation& xf, const char* what);
 
+const double DEFAULT_PATH_SEGMENTS_LIMIT = 1e7;																			// Default for IVGBudget. Real documents use at most about 100 thousand.
+const double DEFAULT_PIXELS_LIMIT = 5e8;																				// Default for IVGBudget. Real documents use at most a few hundred million.
+
 /*
-	Limits the work a document can cause, counted in path segments and pixels rather than time. Work is charged before
-	it is done; going over throws "Path segment budget exceeded" or "Pixel budget exceeded". The defaults are far beyond
-	what real documents use.
+	Limits the work one render can cause: path segments and pixels here, and the characters and statements of
+	IMPD::IMPDBudget. Work is charged before it is done where possible; going over throws "Path segment budget exceeded"
+	or "Pixel budget exceeded". The counts are cumulative over the render. The host creates one per render and passes it
+	to both the IVGExecutor and the root IMPD::Interpreter, which keep a reference to it, so it must outlive both. The
+	defaults are far beyond what real documents use. See docs/Resource Budgets.md for what the counts capture, what they
+	do not, and how they can go wrong.
 */
-class ResourceBudget {
-	public:		ResourceBudget(double pathSegments = 1e8, double pixels = 1e10);
+class IVGBudget : public IMPD::IMPDBudget {
+	public:		IVGBudget(double characters = IMPD::DEFAULT_CHARACTERS_LIMIT
+						, double statements = IMPD::DEFAULT_STATEMENTS_LIMIT
+						, double pathSegments = DEFAULT_PATH_SEGMENTS_LIMIT, double pixels = DEFAULT_PIXELS_LIMIT);
 	public:		void chargePathSegments(double count);
 	public:		void chargePixels(double count);
 	public:		NuXPixels::Path::size_type calcPathSegmentLimit() const;												// The largest path that can still be charged.
@@ -303,7 +311,7 @@ class Context {
 	friend class PatternBase;
 	
 	public:		Context(Canvas& canvas, const NuXPixels::AffineTransformation& initialTransform
-						, ResourceBudget& budget);
+						, IVGBudget& budget);
 	public:		Context(Canvas& canvas, Context& parentContext);														// Shares the parent's budget.
 	public:		void resetState();
 	public:		double calcCurveQuality() const;
@@ -314,10 +322,10 @@ class Context {
 	public:		void stroke(const NuXPixels::Path& path, Stroke& stroke, const Rect<double>& paintSourceBounds, double widthMultiplier);
 	public:		void fill(const NuXPixels::Path& path, Paint& fill, bool evenOddFillRule, const Rect<double>& paintSourceBounds);
 	public:		void draw(const NuXPixels::Path& path);
-	public:		ResourceBudget& accessBudget() const { return budget; }
+	public:		IVGBudget& accessBudget() const { return budget; }
 
 	protected:	Canvas& canvas;
-	protected:	ResourceBudget& budget;
+	protected:	IVGBudget& budget;
 	protected:	State initState;
 	protected:	State state;
 };
@@ -336,9 +344,9 @@ struct Image {
 	   Executes IVG drawing instructions within a rendering context.
 **/
 class IVGExecutor : public IMPD::Executor {
-	public:		IVGExecutor(Canvas& canvas, const NuXPixels::AffineTransformation& initialTransform
-						= NuXPixels::AffineTransformation(), const ResourceBudget& budget = ResourceBudget());
-	public:		const ResourceBudget& getBudget() const { return budget; }												// What is left after running.
+	public:		IVGExecutor(Canvas& canvas, IVGBudget& budget
+						, const NuXPixels::AffineTransformation& initialTransform = NuXPixels::AffineTransformation());	// Keeps a reference: the budget must outlive the executor. Pass the same one to the root Interpreter.
+	public:		IVGBudget& accessBudget() const { return budget; }
 	public:		virtual bool format(IMPD::Interpreter& interpreter, const IMPD::FormatInfo& formatInfo);
 	public:		virtual bool execute(IMPD::Interpreter& interpreter, const IMPD::String& instruction
 						, const IMPD::String& arguments);
@@ -382,7 +390,7 @@ class IVGExecutor : public IMPD::Executor {
 	protected:	void parseStroke(IMPD::Interpreter& impd, IMPD::ArgumentsContainer& args, Stroke& stroke);
 	protected:	std::vector<const Font*> lookupExternalOrInternalFonts(IMPD::Interpreter& impd
 						, const IMPD::WideString& name, const IMPD::UniString& forString);
-	protected:	ResourceBudget budget;																					// Declared before rootContext, which refers to it.
+	protected:	IVGBudget& budget;
 	protected:	Context rootContext;
 	protected:	Context* currentContext;
 	protected:	typedef std::map<IMPD::WideString, Font> FontMap;
