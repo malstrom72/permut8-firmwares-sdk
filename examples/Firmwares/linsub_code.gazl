@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ linsub_code.impala:19:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ linsub_code.impala:27:1
- 					DATA &.s__2053958f &.s_SUB16B_20539590
- 					DATA &.s_SUB16B_20539590:53 &.s_SUB16B_20539590:53
- 					DATA &.s_SUB16B_20539590:53 &.s_SUB16B_20539590:53
- 					DATA &.s_SUB16B_20539590:53 &.s_SUB16B_20539590:53
+ 					DATA &.s__6bca580f &.s_SUB16B_6bca5810
+ 					DATA &.s_SUB16B_6bca5810:53 &.s_SUB16B_6bca5810:53
+ 					DATA &.s_SUB16B_6bca5810:53 &.s_SUB16B_6bca5810:53
+ 					DATA &.s_SUB16B_6bca5810:53 &.s_SUB16B_6bca5810:53
  ; signature extern native abort() -> unknown @ linsub_code.impala:38:1
  ; signature extern native trace() -> unknown @ linsub_code.impala:39:1
  ; signature extern native yield() -> unknown @ linsub_code.impala:40:1
@@ -106,8 +106,8 @@
  								MOVi $r #1 						; r = 1
  					.f0:		RETU   							; }
 
- .s__2053958f:		CNST *1
+ .s__6bca580f:		CNST *1
  					DATi #0
- .s_SUB16B_20539590: CNST *54
+ .s_SUB16B_6bca5810: CNST *54
  					DATs SUB |-------- 16-BIT LINEAR SUBTRACT AMOUNT --------|
  					DATi #0

@@ -64,7 +64,6 @@
 
 namespace GAZL {
 
-// TODO : support unicode source
 typedef char Char;
 typedef int Int;
 typedef unsigned int UInt;
@@ -75,7 +74,7 @@ typedef Int Status;																										// Run-time status code
 const int VERSION = 1;
 const int WORD_SIZE = 32;
 const Pointer MEMORY_OFFSET = 0x12345678;																				// All memory pointers in GAZL are offsetted by this amount (thus the address of the first memory word is not zero). This makes it easier to detect invalid memory operations (such as writing to a null-pointer).
-const Pointer FUNCTION_OFFSET = 0x56789ABC;																				// All function pointers in GAZL are offsetted by this amount (thus the ordinal of the first function is not zero). This makes it easier to detect an invalid indirect call - through a null pointer, or through a small integer that was never a function pointer at all. A function pointer is an ORDINAL indexing `functionTable`, NOT a code address, which is why this is not an instruction-pointer offset; it was named IP_OFFSET until 2026-08-05.
+const Pointer FUNCTION_OFFSET = 0x56789ABC;																				// All function pointers in GAZL are offsetted by this amount (thus the ordinal of the first function is not zero). This makes it easier to detect an invalid indirect call, through a null pointer or through a small integer that was never a function pointer at all. A function pointer is an ORDINAL indexing `functionTable`, NOT a code address, which is why this is not an instruction-pointer offset.
 const Pointer NULL_POINTER = 0;
 
 union Value {
@@ -126,7 +125,8 @@ enum AssemblerError {
 	, EXPECTED_CONSTANT = 31
 	, NOT_ENOUGH_FUNCTION_SPACE = 32
 	, LABEL_ON_FUNCTION = 33
-	, ASSEMBLER_ERROR_COUNT = 34
+	, FRAME_TOO_LARGE = 34
+	, ASSEMBLER_ERROR_COUNT = 35
 };
 
 extern const char* ASSEMBLER_ERROR_TEXTS[];
@@ -184,21 +184,20 @@ class Symbols {
 	public:		Pointer findFunction(const Char* name) const;															/// Returns `NULL_POINTER` if not found.
 	public:		Pointer findGlobal(const Char* name, UInt& size) const;													/// Returns `NULL_POINTER` if not found (in which case, `size` is left untouched).
 	public:		void defineConstant(const Char* name, bool asFloat, const Value& value);
-	public:		bool lookupConstant(const Char* name, bool* isFloat, Value* value) const;	// FIX : why * isFloat here, when we use & at other places
+	public:		bool lookupConstant(const Char* name, bool* isFloat, Value* value) const;
 	public:		bool findFirstGlobal(Iterator& iterator, bool includeTemps) const;
 	public:		bool findNextGlobal(Iterator& iterator, bool includeTemps) const;
 	public:		const char* getGlobalInfo(const Iterator& iterator, bool& isTemp, Pointer& address, UInt& size) const;
 
-	// TODO : all these below could take std::string&, would be more consistent
 	protected:	bool lookup(const Char* nameBegin, const Char* nameEnd, int acceptedTypes, int& types, Value& value, UInt& size) const;
 	protected:	void define(const std::string& name, int types, Value value, UInt size = 1);
-	protected:	void link(const Char* labelBegin, const Char* labelEnd, Value* storage, int accepts, Int offset = 0); // FIX : name?
+	protected:	void link(const Char* labelBegin, const Char* labelEnd, Value* storage, int accepts, Int offset = 0);
 	protected:	void registerSwitch(const Char* labelBegin, const Char* labelEnd, UInt switchSize, Value* storage, Int offset = 0);
 	protected:	void resolveForwardRefs();
 	protected:	void clear() { symbols.clear(); forwardRefs.clear(); }
 	protected:	void resolve(const Reference& ref, const Symbol& symbol);
-	protected:	SymbolMap symbols;						// TODO : try a C variation with a sorted array (fixed size strings) and bsearch or alternatively a hash table (nick the one from NuXScript)
-	protected:	std::vector<Reference> forwardRefs;		// TODO : move this to a Linker class (or some better name)? in assembler, the methods herein that needs forwardRefs only lookup things in Symbols so they can use lookup()
+	protected:	SymbolMap symbols;
+	protected:	std::vector<Reference> forwardRefs;
 };
 
 struct Operator;
@@ -354,9 +353,8 @@ class Processor {
 	public:		const Value* accessConstMemory(Pointer pointer, UInt count) const; 										// If returning null pointer you should normally return `ACCESS_VIOLATION`
 	public:		Value* accessMemory(Pointer pointer, UInt count) const; 												// If returning null pointer you should normally return `ACCESS_VIOLATION`
 	public:		Value* accessParams(UInt count) const; 																	// If returning null pointer you should normally return `DATA_STACK_OVERFLOW`
-	// FIX : stack alloc function
 	public:		Status enterCall(Pointer functionPointer); 																// After `enterCall()`, call `run()` (and on time out, repeatedly call `run()` until it returns OK). It is ok to call `enterCall()` at any time, current instruction pointer and stack is pushed and popped as expected which makes `enterCall()` double as a mean to issue interrupts.
-	public:		Value* pushCall(Pointer functionPointer);																/// Push a call onto the current GAZL continuation, from INSIDE a native callback only: return OK from the native (do not run()) and execution flows into the pushed function; its RETU returns into the GAZL caller, so the `^native` call behaves exactly like a `&function` call. The returned pointer is the argument window ([0] = return value, [1..] = arguments) - for a transparent forward the `^call`'s arguments are already in place. Pushing several calls forms a LIFO chain: the last pushed runs first and each RETU flows into the next. All links share the ONE window - each receives the same arguments, each overwrites [0] with its result (so [0] ends as the FIRST-pushed link's result); the typical chain is several argument-less handlers delivered at one safe point. Returns 0 on error (not inside a native call, bad function, ipStack or data-stack overflow).
+	public:		Value* pushCall(Pointer functionPointer);																/// Push a call onto the current GAZL continuation, from INSIDE a native callback only: return OK from the native (do not run()) and execution flows into the pushed function; its RETU returns into the GAZL caller, so the `^native` call behaves exactly like a `&function` call. The returned pointer is the argument window ([0] = return value, [1..] = arguments); for a transparent forward the `^call`'s arguments are already in place. Pushing several calls forms a LIFO chain: the last pushed runs first and each RETU flows into the next. All links share the ONE window: each receives the same arguments, each overwrites [0] with its result (so [0] ends as the FIRST-pushed link's result); the typical chain is several argument-less handlers delivered at one safe point. Returns 0 on error (not inside a native call, bad function, ipStack or data-stack overflow).
 	public:		Status run();
 	public:		void* getUserData() const;
 	public:		int getClockCyclesLeft() const;
@@ -365,7 +363,7 @@ class Processor {
 	protected:	const Instruction* codeBase;
 	protected:	UInt functionCount;
 	protected:	const UInt* functionTable;																				// Maps function ordinal -> code offset; a function pointer is `FUNCTION_OFFSET + ordinal`.
-	protected:	UInt memorySize;
+	protected:	UInt memorySize;																						// One less than the memory given: the last word is the assembler's zero guard, so no checked read reaches it.
 	protected:	Value* memoryBase;
 	protected:	UInt rwMemorySize;
 	protected:	Value* dataStackBase;
@@ -385,20 +383,20 @@ inline int Processor::getClockCyclesLeft() const { return clockCyclesLeft; }
 
 inline const Value* Processor::accessConstMemory(Pointer pointer, UInt count) const {
 	assert(memoryBase != 0);
-	return (count < memorySize && pointer - MEMORY_OFFSET <= memorySize - count)
+	return (count <= memorySize && pointer - MEMORY_OFFSET <= memorySize - count)
 			? pointer - MEMORY_OFFSET + memoryBase : 0;
 }
 
 inline Value* Processor::accessMemory(Pointer pointer, UInt count) const {
 	assert(memoryBase != 0);
-	return (count < rwMemorySize && pointer - MEMORY_OFFSET <= rwMemorySize - count)
+	return (count <= rwMemorySize && pointer - MEMORY_OFFSET <= rwMemorySize - count)
 			? pointer - MEMORY_OFFSET + memoryBase : 0;
 }
 
 inline Value* Processor::accessParams(UInt count) const {
 	assert(dsp != 0);
 	assert(dsp >= dataStackBase);
-	return (dsp + count <= dataStackEnd ? dsp : 0);
+	return (count <= (UInt)(dataStackEnd - dsp) ? dsp : 0);
 }
 
 inline void* Processor::getUserData() const { return userData; }

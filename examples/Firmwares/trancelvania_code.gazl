@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ trancelvania_code.impala:19:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ trancelvania_code.impala:27:1
- 					DATA &.s_116ste_643958f &.s_132ste_6439590
- 					DATA &.s_Level6_6439591 &.s_Leftst_6439592
- 					DATA &.s_Gate_6439593 &.s_LPF_6439594 &.s_BPF_6439595
- 					DATA &.s_HPFAtt_6439596
+ 					DATA &.s_116ste_fa385427 &.s_132ste_fa385428
+ 					DATA &.s_Level6_fa385429 &.s_Leftst_fa38542a
+ 					DATA &.s_Gate_fa38542b &.s_LPF_fa38542c &.s_BPF_fa38542d
+ 					DATA &.s_HPFAtt_fa38542e
  ; signature extern native abort() -> unknown @ trancelvania_code.impala:38:1
  ; signature extern native trace() -> unknown @ trancelvania_code.impala:39:1
  ; signature extern native yield() -> unknown @ trancelvania_code.impala:40:1
@@ -95,7 +95,7 @@
  					$y:			INPf
  ;-----------------------------------------------------------------------------
  								NEQf $y #0.0 @.f0				; if (y == 0.0) error("Division by zero")
- 								MOVp %1 &.s_Divisi_6439597 		; error("Division by zero")
+ 								MOVp %1 &.s_Divisi_fa38542f 	; error("Division by zero")
  								CALL &error %0 *2				; expects error(ptr) -> void @ trancelvania_code.impala:119:41
  								RETU   
  					.f0:		DIVf %1 $x $y					; z = x - (float)trunc(x / y) * y
@@ -197,7 +197,7 @@
  					$i:			LOCi
  					$x:			LOCf
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_init_6439598 		; trace("init")
+ 								MOVp %1 &.s_init_fa385430 		; trace("init")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ trancelvania_code.impala:227:15
  								MOVi $i #0 						; for (i = 0 to FILTER_PARAM_TABLE_SIZE) 
  								GEQi #0 #FILTER_PARAM_TABLE_SIZE @.e0
@@ -245,7 +245,7 @@
  reset:				FUNC		; signature func reset() -> void @ trancelvania_code.impala:246:1
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_reset_6439599 		; trace("reset")
+ 								MOVp %1 &.s_reset_fa385431 		; trace("reset")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ trancelvania_code.impala:248:16
  								POKE &doReset #TRUE 			; global doReset = TRUE
  								RETU   							; }
@@ -506,38 +506,38 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_116ste_643958f:	CNST *54
+ .s_116ste_fa385427: CNST *54
  					DATs --- [ 1/16 steps                                    ]
  					DATi #0
- .s_132ste_6439590:	CNST *54
+ .s_132ste_fa385428: CNST *54
  					DATs --- [ 1/32 steps                                    ]
  					DATi #0
- .s_Level6_6439591:	CNST *54
+ .s_Level6_fa385429: CNST *54
  					DATs --- [ Level: 67%           ]+[ Level: 33%           ]
  					DATi #0
- .s_Leftst_6439592:	CNST *54
+ .s_Leftst_fa38542a: CNST *54
  					DATs --- [ Left steps           ] [ Right steps          ]
  					DATi #0
- .s_Gate_6439593:	CNST *5
+ .s_Gate_fa38542b:	CNST *5
  					DATs Gate
  					DATi #0
- .s_LPF_6439594:	CNST *4
+ .s_LPF_fa38542c:	CNST *4
  					DATs LPF
  					DATi #0
- .s_BPF_6439595:	CNST *53
+ .s_BPF_fa38542d:	CNST *53
  					DATs BPF
  					DATi #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #213 #212 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_HPFAtt_6439596:	CNST *54
+ .s_HPFAtt_fa38542e: CNST *54
  					DATs HPF
  					DATi #32 #209 #32 #32 #32 #32 #32 #32 #32 #32
  					DATs Attack        ||        Release
  					DATi #32 #32 #32 #32 #32 #32 #32 #32 #210 #0
- .s_Divisi_6439597:	CNST *17
+ .s_Divisi_fa38542f: CNST *17
  					DATs Division by zero
  					DATi #0
- .s_init_6439598:	CNST *5
+ .s_init_fa385430:	CNST *5
  					DATs init
  					DATi #0
- .s_reset_6439599:	CNST *6
+ .s_reset_fa385431:	CNST *6
  					DATs reset
  					DATi #0

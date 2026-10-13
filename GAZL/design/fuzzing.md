@@ -1,6 +1,6 @@
 # Fuzzing
 
-Version: 2026-10-07c
+Version: 2026-10-08
 
 How these projects fuzz with libFuzzer. Every copy of this file is identical apart from the "Local additions" section
 at the end, which holds a project's targets, scripts and exceptions.
@@ -60,6 +60,11 @@ enough when the same function can still be reached another way.
 A differential target, which compares implementations of the same thing, cannot find a bug they all share, such as a
 range check that overflows the same way in each. It complements reading the bounds checks; it does not replace it.
 
+Random inputs say little about correctness where only rare inputs fail. Number conversion is the clearest case: billions
+of random decimals passed a parser that rounded constructed near-midpoint inputs wrong. Test such code with inputs
+constructed to sit on the hard cases, checked against an exact oracle, and treat "random fuzzing found nothing" there
+as uninformative.
+
 Turn off CRT dialogs in `LLVMFuzzerInitialize`, or a failed assert hangs the worker on a message box:
 
 ```cpp
@@ -103,10 +108,14 @@ Turn off CRT dialogs in `LLVMFuzzerInitialize`, or a failed assert hangs the wor
   ```
   GNU tar and bsdtar do not produce identical archives, so refresh with GNU tar. Use `xz -9` only where it saves a
   lot: the `tar.exe` that ships with Windows cannot read xz and hangs instead of failing.
-- The normal build replays the corpus, the seeds and every past crash input through a plain `main()` that reads files
-  and calls `LLVMFuzzerTestOneInput`. It is built without fuzzer instrumentation, with every compiler the project uses,
-  and never with clang-cl's sanitizers, which would bring back the exception handling bugs above. Unpack each archive
-  into an empty folder, or inputs left from the previous archive are replayed too.
+- Inputs are replayed through a plain `main()` that reads files in binary mode and passes the number of bytes actually
+  read to `LLVMFuzzerTestOneInput`; text mode on Windows folds CRLF and feeds the target the wrong bytes. It is built
+  without fuzzer instrumentation, with every compiler the project uses, and never with clang-cl's sanitizers, which
+  would bring back the exception handling bugs above. Unpack each archive into an empty folder, or inputs left from
+  the previous archive are replayed too.
+- The normal build replays every past crash input, always. It also replays the corpus and the seeds as long as that
+  takes no more than about 30 seconds per build configuration. A corpus over that budget is replayed by a separate
+  script, run in CI and before every release or freeze, so the normal build stays fast and nothing ships unreplayed.
 - Commit the input of each fixed crash as a plain file in `tests/fuzz/<target>Crashes/`, outside the archives:
   `-merge=1` drops any input whose features others already cover, fixed crashes included. Mark these files `binary`
   in `.gitattributes`, so line-ending conversion cannot rewrite them.
@@ -118,6 +127,28 @@ Turn off CRT dialogs in `LLVMFuzzerInitialize`, or a failed assert hangs the wor
 ## Local additions
 
 GAZL's lanes, and the one place it departs from the shared rules.
+
+### Lanes
+
+What is fuzzed or replayed, with which toolchain, and when. Branch is the first branch in the cascade
+(`design/README.md`) that has the lane; every branch below it has it too.
+
+| Lane | Built by | Toolchain and sanitizers | Branch | Runs |
+|---|---|---|---|---|
+| Text: assembler + interpreter | `buildGazlFuzz.sh` | clang, libFuzzer + ASan (UBSan on request) | `main` | Mac campaigns |
+| Text, Windows | `buildGazlFuzz.cmd` | MSVC, libFuzzer + ASan | `main` | Windows campaigns |
+| Corpus + crash replay | `test-fuzz.sh` / `.cmd` | the build's compiler (MSVC, Apple clang, g++), `beta`, no sanitizers | `main` | Every build, all three CI jobs |
+| The same replay under UBSan | `test-ubsan.sh` | clang++, UBSan | `main` | Linux CI job |
+| Impala generator | `impala/fuzzImpala.js` | Node, no C++ | `Impala2` | JS gate; `fuzz48h` for long rounds |
+| JIT differential, `--gen` | `buildGazlFuzz.sh standalone` | clang, no sanitizers | `jit-compiler` | 2000 programs in `test-jit`; `fuzzSoak.ps1` and `runFuzzMac.sh` for soaks |
+| Text through both engines | `buildGazlFuzz.sh text` | clang, libFuzzer + ASan | `jit-compiler` | `runFuzzMac.sh` lanes 6 and 7 |
+| Crash replay through both engines | `buildGazlFuzz.sh standalone text` | clang, no sanitizers | `jit-compiler` | Every build (`test-jit`) |
+
+On `jit-compiler`, `buildGazlFuzz.cmd` builds the `--gen` differential instead of the text lane (see below).
+
+**The replay budget.** `test-fuzz` passes `--budget=30` to the replay driver, which prints the replay's wall time
+and warns when it is over 30 seconds. The warning does not fail the build; it is the signal to move the corpus replay
+to its own script, as the shared rules above require.
 
 - **Three targets, not one.** The JIT-vs-interpreter differential (`tools/GAZLCmd.cpp` under `-DJITDIFF`), the
   text-assembler crash lane (the same file under `-DLIBFUZZ` without `JITDIFF`), and the Impala compiler fuzzer
@@ -136,17 +167,20 @@ GAZL's lanes, and the one place it departs from the shared rules.
   most mutations are invalid and rejected cheaply, against **about 1/s** on a corpus of a single valid program that
   executes every time. So a throughput figure means nothing without the corpus it was measured on, and a campaign
   slowing down as its corpus grows is expected, not a fault.
-- **UBSan is Mac-only for now.** clang-cl's instrumentation breaks MSVC C++ exception handling, and this assembler
+- **No UBSan on Windows.** clang-cl's instrumentation breaks MSVC C++ exception handling, and this assembler
   throws to reject a malformed program as its normal path, so a Windows clang-cl build can silently run the wrong
   code. The Windows lane uses MSVC `/fsanitize=fuzzer /fsanitize=address` (separate flags; the comma form is clang
-  syntax and MSVC drops it with only a warning), which is ASan-only.
+  syntax and MSVC drops it with only a warning), which is ASan-only. UBSan comes from the Mac campaigns and from
+  `test-ubsan.sh` in the Linux CI job.
 - **The CRT dialog fix lives in `quietAsserts()`**, called from both `main()`s in `tools/GAZLCmd.cpp`, rather than in
   `LLVMFuzzerInitialize`. Same effect: an unattended run fails instead of blocking on a message box.
 - **`buildGazlFuzz.cmd` and `buildGazlFuzz.sh` are deliberately NOT behaviour-identical**, the one documented
   exception to this repo's rule that a `.sh` and its `.cmd` twin behave the same. The `.sh` uses clang with
   `-fsanitize=fuzzer,address` (and `undefined` on request); the `.cmd` uses MSVC's libFuzzer and ASan, because
   clang-cl is unusable for this target and MSVC has no UBSan. Both build the same fuzz target from the same sources;
-  only the engine and the available sanitizers differ. `seedTextCorpus.cmd` IS a true twin, down to matching
+  only the engine and the available sanitizers differ. In both, `CPP_OPTIONS` ADDS to the defaults, so the strict
+  lane is `CPP_OPTIONS="-fsanitize=undefined -fno-sanitize-recover=all" bash tools/buildGazlFuzz.sh`.
+  `seedTextCorpus.cmd` IS a true twin, down to matching
   `find -size -8k`'s rounding to whole KiB, which excludes a file the obvious `< 8192` test would include.
 - **The MSVC build needs `clang_rt.asan_dynamic-x86_64.dll` beside the exe**, or it exits `0xC0000135` anywhere but a
   developer prompt. `buildGazlFuzz.cmd` copies it from the Visual Studio tree; that is why it searches for it.

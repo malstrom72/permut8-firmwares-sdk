@@ -30,6 +30,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <stdint.h>
+#include <stdio.h>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -55,7 +56,6 @@ Status print(Processor* vpu) {
 	if (vp == 0) return ACCESS_VIOLATION;
 	do {
 		if (vp->i != 0) {
-			// FIX : unicode support
 			std::cout << static_cast<Char>(vp->i);
 			++vp;
 			++p;
@@ -160,7 +160,7 @@ Status gazlExit(Processor*) {
 /*
 	--forward=native:function[,native:function...]: satisfy `^native` call sites with GAZL functions. Each listed native
 	name is registered as one of these stubs; after assembly the paired GAZL function is looked up by name and every call
-	to the native pushCall()s it - the `^native` call then behaves exactly like a `&function` call (args and return value
+	to the native pushCall()s it, so the `^native` call behaves exactly like a `&function` call (args and return value
 	in the same window). This is how the Permut8 firmware harness supplies yield/read/write/trace as concatenated GAZL
 	(see tools/permut8Host.js).
 */
@@ -216,12 +216,31 @@ int testCallback(Processor* p) {
 	return 0;
 }
 
+/*
+	`input` without the console: what `input` does when the line read is empty. A fuzz target must not read stdin,
+	or a replay depends on how the build was started and can block waiting for a line. Unlike `input` it leaves the
+	fuel alone: refilling it let a program that calls `input` in a loop run forever, past the target's step limit.
+*/
+static Status fuzzInput(Processor* vpu) {
+	Value* params = vpu->accessParams(3);
+	if (params == 0) return DATA_STACK_OVERFLOW;
+	Value* bp = vpu->accessMemory(params[2].p, params[1].i + 1);
+	if (bp == 0) return ACCESS_VIOLATION;
+	bp[0].i = 0;
+	params[0].i = 0;
+	return OK;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+	memset(memory, 0, sizeof memory);																					// zeroed as in a fresh process, so no crash depends on the previous input
+	memset(code, 0, sizeof code);
+	memset(functionTable, 0, sizeof functionTable);
+	memset(callStack, 0, sizeof callStack);
     try {
 		Symbols globals;
 
 		static const NativeFunc NATIVE_TABLE[] = {
-			abort, abort, input, gazlAtan2, gazlSqrt, gazlLog, testMul, testCallback
+			abort, abort, fuzzInput, gazlAtan2, gazlSqrt, gazlLog, testMul, testCallback
 		};
 
 		static const char* NATIVE_NAMES[] = {
@@ -274,12 +293,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 #include <dirent.h>							// POSIX directory replay only; MSVC has no dirent, so Windows passes `@listfile`
 #endif
 
+static int replayCount = 0;
+
 void doOne(const char* fn) {
+	++replayCount;
 	printf ("%s\n", fn);
 	fprintf(stderr, "Running: %s\n", fn);
-	FILE *f = fopen(fn, "rb");					// BINARY: in text mode Windows folds CRLF to LF, so fread returns fewer
-	assert(f);									// bytes than ftell promised - the tail of buf stayed uninitialised and
-	fseek(f, 0, SEEK_END);						// was handed to the target anyway once asserts were compiled out
+	FILE *f = fopen(fn, "rb");																							// binary: on Windows text mode folds CRLF and fread comes up short
+	assert(f);
+	fseek(f, 0, SEEK_END);
 	size_t len = ftell(f);
 	fseek(f, 0, SEEK_SET);
 	unsigned char *buf = (unsigned char*)malloc(len);
@@ -296,18 +318,29 @@ void doOne(const char* fn) {
 	(POSIX only), or `@listfile` naming a file that holds one path per line. The list form exists because a corpus
 	replay cannot be expressed any other way on Windows: there is no dirent, and a thousand-odd paths do not fit in
 	a command line. Both tools/test-fuzz.sh and its .cmd twin use it, so the two behave identically.
-	A crash is the signal; surviving every input is the pass.
+	A crash is the signal; surviving every input is the pass. The total wall time goes to stderr at the end, and
+	`--budget=S` adds a warning when it is over S seconds (the normal build's budget, design/fuzzing.md).
 */
 int main(int argc, const char* argv[]) {
+	const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
+	double budget = 0.0;
 	for (int i = 1; i < argc; ++i) {
+		if (strncmp(argv[i], "--budget=", 9) == 0) {
+			budget = atof(argv[i] + 9);
+			continue;
+		}
 		if (argv[i][0] == '@') {
 			FILE* listFile = fopen(argv[i] + 1, "r");
 			if (listFile == 0) { perror(argv[i] + 1); return EXIT_FAILURE; }
-			char line[1024];
-			while (fgets(line, sizeof line, listFile) != 0) {
-				size_t n = strlen(line);
-				while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r')) line[--n] = 0;	// tolerate either line ending
-				if (n > 0) doOne(line);
+			std::string line;					// any length: a fixed buffer split a long path into two wrong ones
+			for (int c = fgetc(listFile); ; c = fgetc(listFile)) {
+				if (c != EOF && c != '\n') {
+					if (c != '\r') line += static_cast<char>(c);		// tolerate either line ending
+					continue;
+				}
+				if (!line.empty()) doOne(line.c_str());
+				line.clear();
+				if (c == EOF) break;
 			}
 			fclose(listFile);
 			continue;
@@ -321,8 +354,13 @@ int main(int argc, const char* argv[]) {
 			while ((ent = readdir (dir)) != NULL) {
 				if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
 					char fn[1024];
-					strcpy(fn, argv[i]);
-					strcat(fn, ent->d_name);
+					const size_t dirLength = strlen(argv[i]);
+					// the directory argument need not end with a separator
+					const char* separator = (dirLength > 0 && argv[i][dirLength - 1] != '/') ? "/" : "";
+					if (snprintf(fn, sizeof fn, "%s%s%s", argv[i], separator, ent->d_name) >= (int)(sizeof fn)) {
+						fprintf(stderr, "Path too long, skipped: %s%s%s\n", argv[i], separator, ent->d_name);
+						continue;						// a truncated path would replay the WRONG file, or none
+					}
 					doOne(fn);
 				}
 			}
@@ -337,12 +375,66 @@ int main(int argc, const char* argv[]) {
 		}
 	#endif
 	}
+	const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
+	fprintf(stderr, "Replayed %d inputs in %.1f s\n", replayCount, seconds);
+	if (budget > 0.0 && seconds > budget) {
+		fprintf(stderr, "WARNING: replay took %.1f s, over the %.0f s budget; move the corpus replay to its own script"
+				" (design/fuzzing.md)\n", seconds, budget);
+	}
 	return 0;
 }
 #endif
 
 #ifndef LIBFUZZ
 #ifndef LIBFUZZ_STANDALONE
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#else
+#include <time.h>
+#ifdef __linux__
+#include <sched.h>
+#endif
+#endif
+
+/*
+	CPU time of the calling thread, counted only while it runs. Windows counts constant-rate cycles, elsewhere it
+	is nanoseconds, so `CPU_TICKS_M_UNIT` names what a million ticks are.
+*/
+static uint64_t threadCpuTicks() {
+#ifdef _WIN32
+	ULONG64 cycles = 0;
+	QueryThreadCycleTime(GetCurrentThread(), &cycles);
+	return cycles;
+#else
+	timespec ts;
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+	return static_cast<uint64_t>(ts.tv_sec) * 1000000000u + static_cast<uint64_t>(ts.tv_nsec);
+#endif
+}
+#ifdef _WIN32
+static const char* const CPU_TICKS_M_UNIT = "Mcyc";
+#else
+static const char* const CPU_TICKS_M_UNIT = "ms";
+#endif
+
+static void pinToCore(int core) {	/// restrict the calling thread to logical processor `core`
+	if (core < 0 || core >= 64) throw CmdException("--pin: core must be 0 to 63");
+#if defined(_WIN32)
+	if (SetThreadAffinityMask(GetCurrentThread(), static_cast<DWORD_PTR>(1) << core) == 0)
+		throw CmdException("--pin: cannot pin to that core");
+#elif defined(__linux__)
+	cpu_set_t set;
+	CPU_ZERO(&set);
+	CPU_SET(core, &set);
+	if (sched_setaffinity(0, sizeof (set), &set) != 0) throw CmdException("--pin: cannot pin to that core");
+#else
+	throw CmdException("--pin: this platform has no hard thread affinity");
+#endif
+}
+
 int main(int argc, const char* argv[]) {
 	try {
 	#if !defined(NDEBUG)
@@ -354,6 +446,7 @@ int main(int argc, const char* argv[]) {
 		std::vector<const char*> pos;
 		int benchRepeat = 0;	// 0 = normal single run; >0 = benchmark mode with this many measured iterations
 		int benchWarmup = 3;	// iterations run and discarded before measuring
+		int pinCore = -1;		// --pin=N: run on logical processor N only (-1 = anywhere)
 		bool noLibm = false;	// --no-libm: don't register the atan2/sqrt/log natives (for programs that define their own)
 		const char* noNativeSpec = 0;	// --no-native=name,...: don't register the listed built-in natives (for programs defining same-named functions)
 		const char* forwardSpec = 0;	// --forward=native:function,...: satisfy ^native calls with GAZL functions (see forwardNative)
@@ -364,6 +457,13 @@ int main(int argc, const char* argv[]) {
 					benchRepeat = (a[7] == '=') ? atoi(a + 8) : 10;
 				} else if (strncmp(a, "--warmup", 8) == 0) {
 					benchWarmup = (a[8] == '=') ? atoi(a + 9) : benchWarmup;
+				} else if (strncmp(a, "--pin=", 6) == 0) {
+					char* end = 0;
+					const long core = strtol(a + 6, &end, 10);
+					if (end == a + 6 || *end != 0 || core < 0 || core > 63) {
+						throw CmdException("--pin: core must be a number from 0 to 63");
+					}
+					pinCore = static_cast<int>(core);
 				} else if (strcmp(a, "--no-libm") == 0) {
 					noLibm = true;
 				} else if (strncmp(a, "--forward=", 10) == 0) {
@@ -382,6 +482,8 @@ int main(int argc, const char* argv[]) {
 			std::cerr << "GAZLCmd <filename> [<function> = 'main'] [<define symbol> <define value> ...]" << std::endl;
 			std::cerr << "        [--bench[=N]] [--warmup=W]   run N timed iterations (default 10), W warmups (default 3)"
 					<< std::endl;
+			std::cerr << "        [--pin=N]                    run on logical processor N only (Windows, Linux)"
+					<< std::endl;
 			std::cerr << "        [--no-libm]                  skip the atan2/sqrt/log natives (for self-contained libm)"
 					<< std::endl;
 			std::cerr << "        [--no-native=name,...]       skip the named built-in natives (the program defines its own)"
@@ -390,6 +492,7 @@ int main(int argc, const char* argv[]) {
 					<< std::endl;
 			return 0;
 		}
+		if (pinCore >= 0) pinToCore(pinCore);
 
 		Symbols globals;
 
@@ -497,14 +600,20 @@ int main(int argc, const char* argv[]) {
 
 			if (benchRepeat > 0) {
 				std::vector<double> samples;			// milliseconds, measured iterations only
+				std::vector<double> cpuSamples;			// millions of `threadCpuTicks`, measured iterations only
 				for (int iter = 0; iter < benchWarmup + benchRepeat; ++iter) {
+					const uint64_t c0 = threadCpuTicks();
 					auto t0 = std::chrono::steady_clock::now();
 					runToCompletion();
 					auto t1 = std::chrono::steady_clock::now();
-					if (iter >= benchWarmup)
+					const uint64_t c1 = threadCpuTicks();
+					if (iter >= benchWarmup) {
 						samples.push_back(std::chrono::duration<double, std::milli>(t1 - t0).count());
+						cpuSamples.push_back((c1 - c0) / 1e6);
+					}
 				}
 				std::sort(samples.begin(), samples.end());
+				std::sort(cpuSamples.begin(), cpuSamples.end());
 				const double mn = samples.front();
 				const double median = samples[samples.size() / 2];
 				double sum = 0.0;
@@ -522,7 +631,9 @@ int main(int argc, const char* argv[]) {
 						<< "\tmin_ms=" << mn
 						<< "\tmedian_ms=" << median
 						<< "\tmean_ms=" << mean
-						<< "\tstddev_ms=" << stddev << std::endl;
+						<< "\tstddev_ms=" << stddev
+						<< "\tcpu_min_" << CPU_TICKS_M_UNIT << "=" << cpuSamples.front()
+						<< "\tcpu_median_" << CPU_TICKS_M_UNIT << "=" << cpuSamples[cpuSamples.size() / 2] << std::endl;
 			} else {
 				clock_t c0 = clock();
 				runToCompletion();

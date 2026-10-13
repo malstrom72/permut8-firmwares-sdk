@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ bender_code.impala:11:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ bender_code.impala:13:1
- 					DATA &.s_BITSCL_52d19d5f &.s_SINSAM_52d19d60
- 					DATA &.s_ROTSRA_52d19d61 &.s_DLYLEF_52d19d62
- 					DATA &.s_SHARPS_52d19d63 &.s_SHARPF_52d19d64
- 					DATA &.s_SMOOTH_52d19d65 &.s_SMOOTH_52d19d66
+ 					DATA &.s_BITSCL_f42a63c7 &.s_SINSAM_f42a63c8
+ 					DATA &.s_ROTSRA_f42a63c9 &.s_DLYLEF_f42a63ca
+ 					DATA &.s_SHARPS_f42a63cb &.s_SHARPF_f42a63cc
+ 					DATA &.s_SMOOTH_f42a63cd &.s_SMOOTH_f42a63ce
  ; signature extern native abort() -> unknown @ bender_code.impala:24:1
  ; signature extern native trace() -> unknown @ bender_code.impala:25:1
  ; signature extern native yield() -> unknown @ bender_code.impala:26:1
@@ -131,7 +131,7 @@
  					$y:			INPf
  ;-----------------------------------------------------------------------------
  								NEQf $y #0.0 @.f0				; if (y == 0.0) error("Division by zero")
- 								MOVp %1 &.s_Divisi_52d19d67 	; error("Division by zero")
+ 								MOVp %1 &.s_Divisi_f42a63cf 	; error("Division by zero")
  								CALL &error %0 *2				; expects error(ptr) -> void @ bender_code.impala:104:41
  								RETU   
  					.f0:		DIVf %1 $x $y					; z = x - (float)trunc(x / y) * y
@@ -659,38 +659,38 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_BITSCL_52d19d5f: CNST *54
+ .s_BITSCL_f42a63c7: CNST *54
  					DATs BIT (S)|--- CLEAR BITS ----| |-------- DELAY -------|
  					DATi #0
- .s_SINSAM_52d19d60: CNST *54
+ .s_SINSAM_f42a63c8: CNST *54
  					DATs SIN (S)|----- AMOUNT ------| |-------- DELAY -------|
  					DATi #0
- .s_ROTSRA_52d19d61: CNST *54
+ .s_ROTSRA_f42a63c9: CNST *54
  					DATs ROT (S)|------ RATE -------| |-------- DELAY -------|
  					DATi #0
- .s_DLYLEF_52d19d62: CNST *54
+ .s_DLYLEF_f42a63ca: CNST *54
  					DATs DLY |----- LEFT DELAY -----| |----- RIGHT DELAY ----|
  					DATi #0
- .s_SHARPS_52d19d63: CNST *24
+ .s_SHARPS_f42a63cb: CNST *24
  					DATs SHARP SHELF  _
  					DATi #209 #32 #32
  					DATs ON = _
  					DATi #0
- .s_SHARPF_52d19d64: CNST *24
+ .s_SHARPF_f42a63cc: CNST *24
  					DATs SHARP FOLD
  					DATi #32 #32 #32 #210 #209 #32 #32
  					DATs ON =
  					DATi #32 #210 #0
- .s_SMOOTH_52d19d65: CNST *24
+ .s_SMOOTH_f42a63cd: CNST *24
  					DATs SMOOTH SHELF _
  					DATi #209 #32 #32
  					DATs ON = _
  					DATi #0
- .s_SMOOTH_52d19d66: CNST *24
+ .s_SMOOTH_f42a63ce: CNST *24
  					DATs SMOOTH FOLD
  					DATi #32 #32 #210 #209 #32 #32
  					DATs ON =
  					DATi #32 #210 #0
- .s_Divisi_52d19d67: CNST *17
+ .s_Divisi_f42a63cf: CNST *17
  					DATs Division by zero
  					DATi #0
