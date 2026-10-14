@@ -70,9 +70,10 @@ git clone https://github.com/malstrom72/IVG.git /tmp/ivg
 git -C /tmp/ivg log --oneline 873181f..origin/main
 ```
 
-Refresh **only the files already vendored** (every `git ls-files IVG` path except the two SDK-local
-files) from the new revision; do not blind-copy the upstream tree, and check for upstream deletions
-and for new files in the complete subtrees listed above. Then:
+Refresh **only the files already vendored** (every `git ls-files IVG` path except this `VENDOR.md`
+and the SDK-local `tests/font-rendering.ivg`) from the new revision; do not blind-copy the upstream
+tree, and check for upstream deletions and for new files in the complete subtrees listed above.
+Then:
 
 1. update the pin in this file;
 2. rebuild `tools/bin/IVG2PNG` (macOS) and `tools/bin/IVG2PNG.exe` (Windows) via
