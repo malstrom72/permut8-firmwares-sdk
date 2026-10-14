@@ -131,7 +131,7 @@ Rows 0-3 describe instruction 1 effect modes and the related switches. Rows 4-7 
 
 **Single label spanning both operand groups**
 
-Used by linsub. When both operand bytes form a single 16-bit value, you can span the whole row with one label.
+Used by linSubMod. When both operand bytes form a single 16-bit value, you can span the whole row with one label.
 
 ```impala
 readonly array panelTextRows[8] = {
@@ -146,7 +146,7 @@ readonly array panelTextRows[8] = {
 }
 ```
 
-The `|---|` section here spans all 16 switches as one continuous range. Row 1 rather than row 3 is used because linsub is a mod patch (operate1 only) and the label position is chosen to align with the actual switch area.
+The `|---|` section here spans all 16 switches as one continuous range. Row 1 rather than row 3 is used because linSubMod is a mod patch (operate1 only) and the label position is chosen to align with the actual switch area.
 
 ---
 
