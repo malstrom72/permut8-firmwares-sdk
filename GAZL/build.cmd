@@ -23,6 +23,10 @@ REM engine it exercises, so a regression surfaces before the slower node suite r
 CALL tools\test-fuzz.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
+REM Every memory instruction form at every edge of the memory arena, against an oracle (tools\GAZLBoundsSweep.cpp).
+CALL tools\test-bounds.cmd
+IF ERRORLEVEL 1 EXIT /B 1
+
 REM Every node-only gate, shared with build.sh so the two cannot run different subsets.
 CALL tools\test-js.cmd
 IF ERRORLEVEL 1 EXIT /B 1
@@ -36,6 +40,11 @@ output\NuXJS.exe output\impala.nuxjs.js ^
 	impala\ImpalaDemo.impala output\ImpalaDemo.gazl 0x4d2 impala\ImpalaDemo.impala
 IF ERRORLEVEL 1 EXIT /B 1
 output\GAZLCmd.exe output\ImpalaDemo.gazl main
+IF ERRORLEVEL 1 EXIT /B 1
+
+REM The staging above only proves the compiler fits TODAY's nesting limit. This fails while there is still headroom,
+REM because the limit is NuXJS's to change: when it dropped to 48, GAZL stopped building with no prior warning.
+CALL tools\checkImpalaNesting.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
 REM ImpalaDemo imports nothing, so it cannot tell whether the closure walk survived staging.

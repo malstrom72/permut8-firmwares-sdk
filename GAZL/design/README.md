@@ -24,6 +24,30 @@ written. PLAN / BACKLOG = not done.
 | [fuzzing](fuzzing.md) | **NORMATIVE** | How fuzzing is built and run, plus GAZL's own lanes |
 | [ParkedFeatures](ParkedFeatures.md) | **INDEX** | What was built then deliberately removed, which tag holds it, and why. **Start here when you wonder "didn't we already build that?"** |
 
+## Branches
+
+Four long-lived branches, all built by CI (`.github/workflows/ci.yml`), in one straight cascade:
+
+    main -> Impala2 -> GAZL2 -> jit-compiler
+
+| Branch | What it is |
+|---|---|
+| `main` | GAZL 1 and Impala 1 |
+| `Impala2` | Impala 2 |
+| `GAZL2` | GAZL 2 (`SCOP` / `ENDS`, the `GAZL #n` directive) |
+| `jit-compiler` | The native JIT. `GAZL_LOCAL_SCOPES=0` still builds a GAZL 1 compatible engine |
+
+A change lands on the highest branch it belongs to, through a pull request, and is then merged one step at
+a time down the chain: `main` into `Impala2`, `Impala2` into `GAZL2`, `GAZL2` into `jit-compiler`. Each
+branch contains everything above it, and a conflict is resolved once, at the step where it appears.
+`tools/cascade.sh` (or `.cmd`) reports which steps are behind; with `--merge` it carries them out, each
+through a pull request and CI. `--to <branch>` ends the chain early: while GAZL2 and jit-compiler are on hold
+(since 2026-10-12), use `--to Impala2`.
+
+**Shared files.** `CodingStyle.md`, `fuzzing.md` (both above their "Local additions") and
+`tools/BuildCpp.sh` / `.cmd` are shared with other repositories and must match on every branch.
+`tools/sharedDocs.sh` checks that, and `--apply <file>` installs a new release on the current branch.
+
 ## Known problems and backlog
 
 | Doc | Kind | What it is |
@@ -32,6 +56,9 @@ written. PLAN / BACKLOG = not done.
 | [CompileTimeHardening](impala/CompileTimeHardening.md) | DESIGN NOTE | "The compiler should have caught that" items, plus the 2026-08-01 scan for guess/refuse/skip sites. Overlaps C6 above - attributions mark which copy is authoritative |
 | [SyntaxConsistency](impala/SyntaxConsistency.md) | AUDIT | Every place Impala's C-looking surface does not behave like C, each reproduced against this tree and graded FORCED / ARBITRARY / BUG. The bugs section is FIXED and kept as the record |
 | [PortabilityAudit](gazl/PortabilityAudit.md) | NOTE | C++ portability findings |
+| [Backlog](gazl/Backlog.md) | BACKLOG | Assembler and VM improvements not done yet |
+| [DispatchLayoutSearch](gazl/DispatchLayoutSearch.md) | NOTE | 200 random case orders vs the hand-tuned one; tools on tag `layout-search-2026-10` |
+| [Measurements](gazl/Measurements.md) | NOTE | Dated timings, each with its commit, machine and command |
 
 ## Symbols, layout and types
 
