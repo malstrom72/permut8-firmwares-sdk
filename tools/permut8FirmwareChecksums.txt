@@ -8,7 +8,6 @@ bender_code            -1317883337
 bitbox_code            800370555
 fooBar_code            339184424
 linSubMod_code         -132833425
-linsub_code            -132833425
 pong_code              -62812757
 ringmod_code           -772670427
 trancelvania_code      -1333479389
