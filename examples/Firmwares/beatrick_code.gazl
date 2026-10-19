@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ beatrick_code.impala:21:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ beatrick_code.impala:29:1
- 					DATA &.s_MUTEst_d0d9d5f &.s_REPEAT_d0d9d60
- 					DATA &.s_SKIPst_d0d9d61 &.s_HOLDst_d0d9d62
- 					DATA &.s_ACCENT_d0d9d63 &.s_STUTTE_d0d9d64
- 					DATA &.s_REVERS_d0d9d65 &.s_TAPEST_d0d9d66
+ 					DATA &.s_MUTEst_7a5663c7 &.s_REPEAT_7a5663c8
+ 					DATA &.s_SKIPst_7a5663c9 &.s_HOLDst_7a5663ca
+ 					DATA &.s_ACCENT_7a5663cb &.s_STUTTE_7a5663cc
+ 					DATA &.s_REVERS_7a5663cd &.s_TAPEST_7a5663ce
  ; signature extern native abort() -> unknown @ beatrick_code.impala:40:1
  ; signature extern native trace() -> unknown @ beatrick_code.impala:41:1
  ; signature extern native yield() -> unknown @ beatrick_code.impala:42:1
@@ -306,27 +306,27 @@
  								COPY &signal %0 *2
  								RETU   							; }
 
- .s_MUTEst_d0d9d5f:	CNST *24
+ .s_MUTEst_7a5663c7: CNST *24
  					DATs MUTE steps that are off
  					DATi #0
- .s_REPEAT_d0d9d60:	CNST *36
+ .s_REPEAT_7a5663c8: CNST *36
  					DATs REPEAT steps that are on before off
  					DATi #0
- .s_SKIPst_d0d9d61:	CNST *24
+ .s_SKIPst_7a5663c9: CNST *24
  					DATs SKIP steps that are off
  					DATi #0
- .s_HOLDst_d0d9d62:	CNST *53
+ .s_HOLDst_7a5663ca: CNST *53
  					DATs HOLD steps that are on, turn on WRITE PROT when done
  					DATi #0
- .s_ACCENT_d0d9d63:	CNST *14
+ .s_ACCENT_7a5663cb: CNST *14
  					DATs ACCENT effect
  					DATi #0
- .s_STUTTE_d0d9d64:	CNST *15
+ .s_STUTTE_7a5663cc: CNST *15
  					DATs STUTTER effect
  					DATi #0
- .s_REVERS_d0d9d65:	CNST *15
+ .s_REVERS_7a5663cd: CNST *15
  					DATs REVERSE effect
  					DATi #0
- .s_TAPEST_d0d9d66:	CNST *17
+ .s_TAPEST_7a5663ce: CNST *17
  					DATs TAPE STOP effect
  					DATi #0

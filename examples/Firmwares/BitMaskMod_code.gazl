@@ -6,9 +6,9 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ BitMaskMod_code.impala:19:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ BitMaskMod_code.impala:27:1
- 					DATA &.s__a719d5f &.s__a719d5f &.s__a719d5f &.s__a719d5f
- 					DATA &.s_BMSKHI_a719d60 &.s_BMSKHI_a719d60:53
- 					DATA &.s_BMSKHI_a719d60:53 &.s_BMSKHI_a719d60:53
+ 					DATA &.s__2d463c7 &.s__2d463c7 &.s__2d463c7 &.s__2d463c7
+ 					DATA &.s_BMSKHI_2d463c8 &.s_BMSKHI_2d463c8:53
+ 					DATA &.s_BMSKHI_2d463c8:53 &.s_BMSKHI_2d463c8:53
  ; signature extern native abort() -> unknown @ BitMaskMod_code.impala:38:1
  ; signature extern native trace() -> unknown @ BitMaskMod_code.impala:39:1
  ; signature extern native yield() -> unknown @ BitMaskMod_code.impala:40:1
@@ -71,15 +71,17 @@
  ;-----------------------------------------------------------------------------
  								PEEK %0 &params:OPERATOR_2_PARAM_INDEX 	; switch ((int) global params[OPERATOR_2_PARAM_INDEX] == 0 to OPERATOR_2_COUNT) 
  								SWCH %0 *OPERATOR_2_COUNT @.s0
- 					.s0#OPERATOR_2_OR: PEEK %0 &params:OPERAND_2_HIGH_PARAM_INDEX  ; x = ((int) global params[OPERAND_2_HIGH_PARAM_INDEX] << 8) | (int) global params[OPERAND_2_LOW_PARAM_INDEX]
+ 								! LSSi #OPERATOR_2_OR #0 @.g2	; case OPERATOR_2_OR
+ 					.s0#OPERATOR_2_OR: NOOP
+ 					.g2:		PEEK %0 &params:OPERAND_2_HIGH_PARAM_INDEX 	; x = ((int) global params[OPERAND_2_HIGH_PARAM_INDEX] << 8) | (int) global params[OPERAND_2_LOW_PARAM_INDEX]
  								SHLi %0 %0 #8
  								PEEK %1 &params:OPERAND_2_LOW_PARAM_INDEX 
  								IORi $x %0 %1
  								SHLi $x $x #POSITION_FRACT_BITS	; x = x << POSITION_FRACT_BITS
  								ANDi %0 $x #0x10				; if ((x & 0x10) != 0) x = x | 0xF
- 								EQUi %0 #0 @.f2
+ 								EQUi %0 #0 @.f3
  								IORi $x $x #0xF					; x = x | 0xF
- 					.f2:		POKE &mask $x 					; global mask = x
+ 					.f3:		POKE &mask $x 					; global mask = x
  					.s0:		NOOP
  					.e1:		RETU   							; }
 
@@ -95,7 +97,9 @@
  								SWCH %0 *OPERATOR_2_COUNT @.s0
  					.s0:		MOVi $r #0 						; r = 0
  								RETU   
- 					.s0#OPERATOR_2_OR: PEEK $x &mask 			; x = global mask
+ 								! LSSi #OPERATOR_2_OR #0 @.g2	; case OPERATOR_2_OR
+ 					.s0#OPERATOR_2_OR: NOOP
+ 					.g2:		PEEK $x &mask 					; x = global mask
  								PEEK %0 &clock 					; y = ((int) global clock << POSITION_FRACT_BITS) & ~x
  								SHLi %0 %0 #POSITION_FRACT_BITS
  								XORi %1 $x #-1
@@ -116,8 +120,8 @@
  								MOVi $r #1 						; r = 1
  					.e1:		RETU   							; }
 
- .s__a719d5f:		CNST *1
+ .s__2d463c7:		CNST *1
  					DATi #0
- .s_BMSKHI_a719d60:	CNST *54
+ .s_BMSKHI_2d463c8:	CNST *54
  					DATs BMSK|----- HIGH BITS ------| |------ LOW BITS ------|
  					DATi #0

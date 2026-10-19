@@ -6,9 +6,9 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ bitbox_code.impala:11:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ bitbox_code.impala:13:1
- 					DATA &.s_A_d86f9977 &.s_BBASSD_d86f9978 &.s_C_d86f9979
- 					DATA &.s_D_d86f997a &.s_A_d86f9977 &.s_BHIHAT_d86f997b
- 					DATA &.s_CSNARE_d86f997c &.s_D_d86f997a
+ 					DATA &.s_A_79ec5fdf &.s_BBASSD_79ec5fe0 &.s_C_79ec5fe1
+ 					DATA &.s_D_79ec5fe2 &.s_A_79ec5fdf &.s_BHIHAT_79ec5fe3
+ 					DATA &.s_CSNARE_79ec5fe4 &.s_D_79ec5fe2
  ; signature extern native abort() -> unknown @ bitbox_code.impala:24:1
  ; signature extern native trace() -> unknown @ bitbox_code.impala:25:1
  ; signature extern native yield() -> unknown @ bitbox_code.impala:26:1
@@ -271,21 +271,21 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_A_d86f9977:		CNST *2
+ .s_A_79ec5fdf:		CNST *2
  					DATs A
  					DATi #0
- .s_BBASSD_d86f9978: CNST *17
+ .s_BBASSD_79ec5fe0: CNST *17
  					DATs B      BASS DRUM
  					DATi #0
- .s_C_d86f9979:		CNST *2
+ .s_C_79ec5fe1:		CNST *2
  					DATs C
  					DATi #0
- .s_D_d86f997a:		CNST *2
+ .s_D_79ec5fe2:		CNST *2
  					DATs D
  					DATi #0
- .s_BHIHAT_d86f997b: CNST *47
+ .s_BHIHAT_79ec5fe3: CNST *47
  					DATs B      HI-HAT                      + BASS DRUM
  					DATi #0
- .s_CSNARE_d86f997c: CNST *48
+ .s_CSNARE_79ec5fe4: CNST *48
  					DATs C                                  = SNARE DRUM
  					DATi #0

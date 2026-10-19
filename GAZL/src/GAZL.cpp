@@ -21,8 +21,6 @@
 	OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// TODO : persistant data storage by creating a new source by feeding the assembler code and replacing all globals with the current data, alternatively just outputting the globals and make it possible to merge them with code... need to think about this....
-
 #include "GAZL.h"
 #include <math.h>
 #include <string.h>
@@ -86,6 +84,8 @@ const char* ASSEMBLER_ERROR_TEXTS[] = {
 	/* , EXPECTED_CONSTANT							*/	, "Expected constant"
 	/* , NOT_ENOUGH_FUNCTION_SPACE					*/	, "Not enough space for function table"
 	/* , LABEL_ON_FUNCTION							*/	, "Branch target lands on a FUNC"
+	/* , FRAME_TOO_LARGE								*/	, "Frame too large"
+	/* , NON_ASCII_TEXT								*/	, "Non-ASCII character in text"
 };
 
 // --- defined integer / FTOI semantics, shared by Processor::run() and calcConstant() so the
@@ -150,8 +150,16 @@ static Int stringToInt(const Char* &p, const Char* e) {
 		case '-': ++p; sign = -1; break;
 	}
 	switch (p < e ? *p : 0) {
-		case '\'':	while (++p < e && *p != '\'') i = (i << 8) | (*p & 0xFFU); if (p < e) ++p; break;
-		case '\"':	while (++p < e && *p != '\"') i = (i << 8) | (*p & 0xFFU); if (p < e) ++p; break;
+		case '\'':
+		case '\"':	{
+						const Char quote = *p;
+						while (++p < e && *p != quote) {
+							if ((*p & 0x80) != 0) throw Exception(NON_ASCII_TEXT);
+							i = (i << 8) | (*p & 0xFFU);
+						}
+						if (p < e) ++p;
+						break;
+					}
 		case '0':	if (*++p == 'x') {
 						while (++p < e && ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'F') || (*p >= 'a' && *p <= 'f')))
 							i = (i << 4) + (*p <= '9' ? *p - '0' : (*p & ~0x20) - ('A' - 10));
@@ -163,7 +171,6 @@ static Int stringToInt(const Char* &p, const Char* e) {
 }
 
 template<class F> F pow10(F x) { return pow(10, x); }
-static float pow10(float x) { return powf(10.0f, x); }
 
 static Float stringToFloat(const Char* &p, const Char* e) {
 	/*
@@ -243,7 +250,8 @@ enum Opcode {
 
 	, NOOP____, GLOB____, CNST____, DATA____, LOCA____, OUTP____
 	
-	, MOVE_CC_
+	, FIRST_COMPILE_TIME_OPCODE						// the assembler evaluates the opcodes from here on, never `run()`
+	, MOVE_CC_ = FIRST_COMPILE_TIME_OPCODE
 	, ABSI_CC_
 	, ADDI_CCC, SUBI_CCC, MULI_CCC, DIVI_CCC, MODI_CCC, ANDI_CCC, IORI_CCC, XORI_CCC, SHLI_CCC, SHRI_CCC, SHRU_CCC
 	, ABSF_CC_
@@ -255,10 +263,8 @@ enum Opcode {
 	, SKIP_B__, IFDF_CB_, IFND_CB_
 	, DEFI____
 };
-const int FIRST_COMPILE_TIME_OPCODE = MOVE_CC_;
 
-// FIX : sort in some meaningful order?
-const int TRANSIENT			= 0x00001;					// FIX : name ?
+const int TRANSIENT			= 0x00001;
 const int VAR_INT_R			= 0x00002 | TRANSIENT;		// Readable int variable.
 const int VAR_INT_W			= 0x00004 | TRANSIENT;		// Writable int variable.
 const int VAR_FLOAT_R		= 0x00008 | TRANSIENT;		// Readable float variable.
@@ -283,6 +289,7 @@ const int NATIVE			= 0x10000;
 const int COMPILE_TIME		= 0x20000;
 const int FORWARD			= 0x40000;
 const int UNCHECKED_ADDRESS	= 0x80000;					// Do *not* verify that the offset is < size of the symbol. (Some instructions shouldn't do this, like ADDp for example.)
+const int INTERIOR			= 0x100000;					// Data label inside a named section: an address, not a global of its own (the section is).
 const int FWD_ADDRESS_W		= ADDRESS_W | FORWARD;
 const int FWD_ADDRESS_R		= ADDRESS_R | FORWARD;
 const int FWD_BRANCH		= BRANCH | FORWARD;
@@ -300,7 +307,7 @@ const int ANY_FWD_FREE		= ANY_FREE | FORWARD;
 const int ANY_VAR_FREE_W	= ANY_VAR_W | UNCHECKED_ADDRESS;
 const int ANY_VAR_FREE_R	= ANY_VAR_R | UNCHECKED_ADDRESS;
 const int ANY_VAR_FREE		= ANY_VAR | UNCHECKED_ADDRESS;
-const int KONST				= CONST_INT | CONST_FLOAT | ANY_FWD_FREE; // FIX : called KONST because windows defines a CONST macro, which messes up CONST if you force include windows.h
+const int KONST				= CONST_INT | CONST_FLOAT | ANY_FWD_FREE; // called KONST because windows.h defines a CONST macro
 
 const int SWAP_0_AND_1		= 0x01; // Used for commutative operations where operand 0 and operand 1 can be swapped in order to minimize the effective instruction set when operands have different addressing modes.
 const int SWAP_1_AND_2		= 0x02; // Used for commutative operations where operand 1 and operand 2 can be swapped in order to minimize the effective instruction set when operands have different addressing modes.
@@ -424,7 +431,7 @@ static const Operator OPERATORS[] = {
 	, { " IORi_vcv", IORI_VVC,	{ VAR_INT_W		, CONST_INT		, VAR_INT_R		}		, SWAP_1_AND_2	, 0				}
 	, { " IORi_vvc", IORI_VVC,	{ VAR_INT_W		, VAR_INT_R		, CONST_INT		}		, 0				, 0				}
 	, { " IORi_vvv", IORI_VVV,	{ VAR_INT_W		, VAR_INT_R		, VAR_INT_R		}		, 0				, 0				}
-	, { " LEQf_ccb", NLSI_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
+	, { " LEQf_ccb", NLSF_CCB,	{ CONST_FLOAT	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1 | YIELDS_GOTO, 0	}
 	, { " LEQf_cvb", NLSF_VCB,	{ CONST_FLOAT	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQf_vcb", NLSF_CVB,	{ VAR_FLOAT_R	, CONST_FLOAT	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
 	, { " LEQf_vvb", NLSF_VVB,	{ VAR_FLOAT_R	, VAR_FLOAT_R	, FWD_BRANCH	}		, SWAP_0_AND_1	, 0				}
@@ -657,7 +664,6 @@ void Symbols::link(const Char* labelBegin, const Char* labelEnd, Value* storage,
 	}	
 }
 
-// TODO : sort the two containers instead and do line by line lookup (a bit tricky with the switch though, but it should be doable)
 void Symbols::resolveForwardRefs() {
 	for (std::vector<Reference>::const_iterator refIt = forwardRefs.begin(); refIt != forwardRefs.end(); ++refIt) {
 		SymbolMap::const_iterator symbolIt = symbols.find(refIt->label);
@@ -718,24 +724,31 @@ bool Symbols::lookupConstant(const Char* name, bool* isFloat, Value* value) cons
 	return true;
 }
 
-bool Symbols::findFirstGlobal(Iterator& iterator, bool includeTemps) const {
-	int mask = (includeTemps ? ADDRESS : ADDRESS | TEMPORARY);
+static int globalMask(bool includeTemps, bool includeInteriors) {	// a global matches when `types & mask` is exactly `ADDRESS`
+	return ADDRESS | (includeTemps ? 0 : TEMPORARY) | (includeInteriors ? 0 : INTERIOR);
+}
+
+bool Symbols::findFirstGlobal(Iterator& iterator, bool includeTemps, bool includeInteriors) const {
+	const int mask = globalMask(includeTemps, includeInteriors);
 	for (iterator = symbols.begin(); iterator != symbols.end() && (iterator->second.types & mask) != ADDRESS; ++iterator);
 	return (iterator != symbols.end());
 }
 
-bool Symbols::findNextGlobal(Iterator& iterator, bool includeTemps) const {
-	int mask = (includeTemps ? ADDRESS : ADDRESS | TEMPORARY);
+bool Symbols::findNextGlobal(Iterator& iterator, bool includeTemps, bool includeInteriors) const {
+	const int mask = globalMask(includeTemps, includeInteriors);
 	for (++iterator; iterator != symbols.end() && (iterator->second.types & mask) != ADDRESS; ++iterator);
 	return (iterator != symbols.end());
 }
 
-const char* Symbols::getGlobalInfo(const Iterator& iterator, bool& isTemp, Pointer& address, UInt& size) const {
+GlobalInfo Symbols::getGlobalInfo(const Iterator& iterator) const {
 	assert((iterator->second.types & ADDRESS) == ADDRESS);
-	isTemp = ((iterator->second.types & TEMPORARY) != 0);
-	address = iterator->second.value.p;
-	size = iterator->second.size;
-	return iterator->first.c_str();
+	GlobalInfo info;
+	info.name = iterator->first.c_str();
+	info.address = iterator->second.value.p;
+	info.size = iterator->second.size;
+	info.isTemp = ((iterator->second.types & TEMPORARY) != 0);
+	info.isInterior = ((iterator->second.types & INTERIOR) != 0);
+	return info;
 }
 
 Assembler::Assembler(UInt maxCodeSize, Instruction* codeBase, UInt maxFunctionCount, UInt* functionTable
@@ -743,7 +756,8 @@ Assembler::Assembler(UInt maxCodeSize, Instruction* codeBase, UInt maxFunctionCo
 		: codeBase(codeBase), codeEnd(codeBase + maxCodeSize), maxFunctionCount(maxFunctionCount)
 		, functionTable(functionTable), memoryBase(memoryBase), memoryEnd(memoryBase + maxMemorySize)
 		, ip(codeBase), functionStart(0), functionCount(0), localsSize(0), paramsSize(0), globalsPointer(memoryBase)
-		, constantsPointer(memoryEnd), dataLabelType(0), dataPointer(0), dataEnd(0), globals(globals) {
+		, constantsPointer(memoryEnd), dataLabelType(0), dataPointer(0), dataEnd(0), dataIsConstant(false)
+		, globals(globals) {
 	for (Int i = 0; i < 128; ++i) compileTimeVars[i].types = 0;
 	Value v;
 	v.i = 0;
@@ -802,7 +816,6 @@ void Assembler::linkWithOffset(Symbols& defs, const char* b, const char* e, int 
 
 void Assembler::parseConstant(const Char* b, const Char* e, int accepts, Value* v) {
 	if ((accepts & KONST) == 0) throw Exception(DID_NOT_EXPECT_CONSTANT, b, e);
-// FIX : why?	assert((accepts & FORWARD) == 0);
 	switch (b < e ? *b : 0) {
 		case '\'': case '+': case '-': case '0': case '1': case '2': case '3':
 		case '4': case '5': case '6': case '7': case '8': case '9':
@@ -824,7 +837,7 @@ void Assembler::parseConstant(const Char* b, const Char* e, int accepts, Value* 
 		case '<':	{
 						if (b + 3 != e || b[2] != '>' || !isValidIdentifierChar(b[1]))
 							throw Exception(INVALID_COMPILE_TIME_VARIABLE, b, e);
-						const CompileTimeVar& cv = compileTimeVars[b[1]];
+						const CompileTimeVar& cv = compileTimeVars[(unsigned char)b[1]];
 						if ((accepts & cv.types) == 0) throw Exception(INCOMPATIBLE_COMPILE_TIME_VARIABLE_TYPE, b, e);
 						*v = cv.value;
 						break;
@@ -844,6 +857,7 @@ void Assembler::parseOperand(const Char* b, const Char* e, int accepts, Value* v
 
 		case '%':	assert((accepts & TRANSIENT) != 0);
 					parseConstant(++b, e, CONST_INT_P, v);
+					if (v->i == 0x7FFFFFFF) throw Exception(FRAME_TOO_LARGE);
 					paramsSize = maximum(paramsSize, (UInt)(v->i + 1));
 					break;		
 
@@ -862,11 +876,22 @@ void Assembler::parseOperand(const Char* b, const Char* e, int accepts, Value* v
 	}
 }
 
+Pointer Assembler::makeGAZLPointer(const Value* data, bool constant) const {
+	if (constant) {
+		assert(data >= constantsPointer && data <= memoryEnd - 1);
+		return MEMORY_OFFSET - (Pointer)(memoryEnd - 1 - data);						// counted down from the zero guard
+	} else {
+		assert(data >= memoryBase && data <= globalsPointer);
+		return MEMORY_OFFSET + (Pointer)(data - memoryBase);
+	}
+}
+
 void Assembler::finalizeFunction() {
 	assert(functionStart != 0);
 	assert(functionStart->opcode == FUNC_CC_);
-	if (ip == codeBase || (ip[-1].opcode != RETU_C__ && ip[-1].opcode != GOTO_B__))
+	if (ip == codeBase || (ip[-1].opcode != RETU_C__ && ip[-1].opcode != GOTO_B__)) {
 		throw Exception(MISSING_RETURN_INSTRUCTION);
+	}
 	/*
 		A jump or switch may never reach a `FUNC` (`FUNC` is `CALL`-only). Branch targets resolve to local `BRANCH`
 		labels; a label left at the function boundary `ip` (a trailing elided `NOOP`) is where the next `FUNC` lands.
@@ -888,22 +913,21 @@ void Assembler::finalize(ProgramSizes& sizes) {
 	newUnit(0);
 	if (dataPointer != 0) memset(dataPointer, 0, (dataEnd - dataPointer) * sizeof (*dataPointer));
 	globals.resolveForwardRefs();
+	// Constants were placed downward from the top during assembly, with addresses counted down from the base.
+	// Moving them to just below the globals puts every word at its address; nothing needs patching.
+	const UInt constantsSize = (UInt)(memoryEnd - 1 - constantsPointer);		// the top word is the zero guard
+	if (constantsSize != 0) {
+		const std::vector<Value> constants(constantsPointer, memoryEnd - 1);
+		memmove(memoryBase + constantsSize, memoryBase, (globalsPointer - memoryBase) * sizeof (Value));
+		memcpy(memoryBase, &constants[0], constantsSize * sizeof (Value));
+	}
 	sizes.codeSize = (UInt)(ip - codeBase);
 	sizes.functionCount = this->functionCount;
 	sizes.globalsSize = (UInt)(globalsPointer - memoryBase);
 	sizes.constsSize = (UInt)(memoryEnd - constantsPointer);
 }
 
-void Assembler::finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize, UInt& functionCount) {
-	ProgramSizes sizes;
-	finalize(sizes);
-	codeSize = sizes.codeSize;
-	globalsSize = sizes.globalsSize;
-	constsSize = sizes.constsSize;
-	functionCount = sizes.functionCount;
-}
-
-void Assembler::newUnit(const Char* unitName) { // FIX : use unitName (or not?)
+void Assembler::newUnit(const Char* unitName) {
 	(void)unitName;
 	if (!skipUntilLabel.empty()) throw Exception(MISSING_COMPILE_TIME_LABEL, skipUntilLabel);
 	if (functionStart != 0) finalizeFunction();
@@ -1003,9 +1027,12 @@ const Char* Assembler::feed(const Char* line) {
 							e = p + strcspn(p, STR("\r\n"));
 							while (e > p && (*(e - 1) == ' ' || *(e - 1) == '\t')) --e;
 							if ((e - p) == 0) throw Exception(MISSING_OPERAND);
-							if (dataPointer + (e - p) > dataEnd) throw Exception(DATA_SECTION_FULL, dataLabel);
+							if ((e - p) > dataEnd - dataPointer) throw Exception(DATA_SECTION_FULL, dataLabel);
+							for (const Char* c = p; c < e; ++c) {
+								if ((*c & 0x80) != 0) throw Exception(NON_ASCII_TEXT, p, e);
+							}
 							Value v;
-							v.p = (Int)(dataPointer - memoryBase + MEMORY_OFFSET);
+							v.p = makeGAZLPointer(dataPointer, dataIsConstant);
 							declare(globals, labelBegin, labelEnd, dataLabelType, v, static_cast<Int>(e - p));
 							while (p < e) (dataPointer++)->i = *p++;
 							return eatEOL(eatSpace(e));
@@ -1016,9 +1043,7 @@ const Char* Assembler::feed(const Char* line) {
 			case 'p':
 			case 'A':	{																								// DATi, DATf, DATp and DATA
 							if (dataPointer == 0) throw Exception(DATA_SECTION_MISSING);
-							Value v;
-							v.p = (Int)(dataPointer - memoryBase + MEMORY_OFFSET);
-							declare(globals, labelBegin, labelEnd, dataLabelType, v);
+							Value* const first = dataPointer;
 							int accepts = KONST;
 							switch (mnemonicBegin[3]) {
 								case 'i': accepts = CONST_INT; break;
@@ -1035,6 +1060,10 @@ const Char* Assembler::feed(const Char* line) {
 								parseOperand(b, e, accepts, dataPointer);
 								++dataPointer;
 							}
+							// Declared after the values, so the label covers exactly them: none for a line without values.
+							Value v;
+							v.p = makeGAZLPointer(first, dataIsConstant);
+							declare(globals, labelBegin, labelEnd, dataLabelType, v, (UInt)(dataPointer - first));
 							return eatEOL(p);
 						}
 			
@@ -1079,13 +1108,12 @@ const Char* Assembler::feed(const Char* line) {
 		if ((op->accepts[0] & COMPILE_TIME) != 0) {																		// Compile-time calculation
 			if (op0End != op0Begin + 3 || *op0Begin != '<' || op0Begin[2] != '>' || !isValidIdentifierChar(op0Begin[1]))
 				throw Exception(INVALID_COMPILE_TIME_VARIABLE, op0Begin, op0End);
-			CompileTimeVar& cv = compileTimeVars[op0Begin[1]];
+			CompileTimeVar& cv = compileTimeVars[(unsigned char)op0Begin[1]];
 			cv.value = calcConstant(op, op1Begin, op1End, op2Begin, op2End);
 			cv.types = op->declareTypes;
 			if ((cv.types & CONST_INT_P) != 0 && cv.value.i < 0) cv.types &= ~CONST_INT_P;
 		} else if ((op->accepts[2] & BRANCH) != 0) {																	// Compile-time conditional
 			assert(*op2Begin == '@');
-			// FIX : sub
 			if (!isValidIdentifier(op2Begin + 1, op2End))
 				throw Exception(INVALID_IDENTIFIER, op2Begin + 1, op2End);
 			if (doConstantBranch(op, op0Begin, op0End, op1Begin, op1End))
@@ -1127,7 +1155,7 @@ const Char* Assembler::feed(const Char* line) {
 							parseOperand(op0Begin, op0End, op->accepts[0], &v);
 							size = v.i;
 							dataLabel = std::string(labelBegin, labelEnd);
-							dataLabelType = op->declareTypes;
+							dataLabelType = op->declareTypes | (labelBegin != labelEnd ? INTERIOR : 0);					// labels inside a named section are interior
 							if (dataPointer != 0)
 								memset(dataPointer, 0, (dataEnd - dataPointer) * sizeof (*dataPointer));
 							if (constantsPointer - globalsPointer < size) throw Exception(NOT_ENOUGH_MEMORY_SPACE);
@@ -1140,12 +1168,13 @@ const Char* Assembler::feed(const Char* line) {
 							}
 							assert(globalsPointer <= constantsPointer);
 							dataEnd = dataPointer + size;
-							v.p = (Int)(dataPointer - memoryBase + MEMORY_OFFSET);
+							dataIsConstant = (op->opcode != GLOB____);
+							v.p = makeGAZLPointer(dataPointer, dataIsConstant);
 							declare(globals, labelBegin, labelEnd, op->declareTypes, v, size);
 							break;
 					
 			case FUNC_CC_:	if (functionCount >= maxFunctionCount) throw Exception(NOT_ENOUGH_FUNCTION_SPACE);			// FUNC
-							v.p = (Int)(FUNCTION_OFFSET + functionCount);		// A function pointer is its stable declaration-order ordinal (not a code offset), resolved through `functionTable` at call time.
+							v.p = (Int)(FUNCTION_OFFSET + functionCount);
 							functionTable[functionCount] = (UInt)(ip - codeBase);
 							++functionCount;
 							declare(globals, labelBegin, labelEnd, op->declareTypes, v);
@@ -1162,6 +1191,7 @@ const Char* Assembler::feed(const Char* line) {
 							v.i = 1;
 							parseOperand(op0Begin, op0End, op->accepts[0], &v);
 							size = v.i;
+							if (size > 0x7FFFFFFFu - localsSize) throw Exception(FRAME_TOO_LARGE);						// slot offsets must fit an Int
 							v.i = localsSize;
 							declare(locals, labelBegin, labelEnd, op->declareTypes, v, size);
 							localsSize += size;
@@ -1208,13 +1238,13 @@ const Char* Assembler::feed(const Char* line) {
 								if (op->opcode == SWCH_VCC) {															// SWCH
 									assert(*op2Begin == '@');
 									assert(op->accepts[2] == FWD_BRANCH);
-									size = (p1->i + 1);
+									size = static_cast<UInt>(p1->i) + 1u;
 									if (size > constantsPointer - globalsPointer) {
 										throw Exception(NOT_ENOUGH_MEMORY_SPACE);
 									}
 									Value v;
 									constantsPointer -= size;
-									v.p = (Int)(constantsPointer - memoryBase + MEMORY_OFFSET);
+									v.p = makeGAZLPointer(constantsPointer, true);
 									p2->i = v.i;
 									locals.registerSwitch(op2Begin + 1, op2End, p1->i, constantsPointer
 											, -(Int)(ip - codeBase));
@@ -1225,8 +1255,10 @@ const Char* Assembler::feed(const Char* line) {
 											|| ((op->accepts[2] & CONST_INT) != 0 && p2->i == 0)))
 										throw Exception(CONSTANT_DIVISION_BY_ZERO);
 								}
-								if ((op->otherFlags & LOCAL_BOUNDS) != 0)
+								if ((op->otherFlags & LOCAL_BOUNDS) != 0) {
+									if ((UInt)p2->i > 0x7FFFFFFFu - (UInt)p1->i) throw Exception(FRAME_TOO_LARGE);
 									paramsSize = maximum((Int)(paramsSize), p1->i + p2->i);
+								}
 								++ip;
 							}
 							break;
@@ -1240,19 +1272,21 @@ const Char* Assembler::feed(const Char* line) {
 }
 
 Processor::Processor() : codeSize(0), codeBase(0), functionCount(0), functionTable(0), memorySize(0), memoryBase(0)
-		, rwMemorySize(0), dataStackBase(0), dataStackEnd(0), ipStackBase(0), ipStackEnd(0), natives(0), ip(0), dsp(0)
-		, ipsp(0), userData(0), clockCyclesLeft(0) {
+		, constantsSize(0), readOffset(0), rwMemorySize(0), dataStackBase(0), dataStackEnd(0), ipStackBase(0)
+		, ipStackEnd(0), natives(0), clockCyclesLeft(0), ip(0), dsp(0), ipsp(0), userData(0) {
 }
 
 Processor::Processor(UInt codeSize, const Instruction* code, UInt functionCount, const UInt* functionTable
-		, UInt memorySize, Value* memory, UInt rwMemorySize, UInt dataStackOffset, UInt dataStackSize, UInt ipStackSize
-		, CallStackEntry* ipStack, NativeFunc const* natives, void* userData)
+		, UInt memorySize, Value* memory, UInt constsSize, UInt rwMemorySize, UInt dataStackOffset, UInt dataStackSize
+		, UInt ipStackSize, CallStackEntry* ipStack, NativeFunc const* natives, void* userData)
 		: codeSize(codeSize), codeBase(code), functionCount(functionCount), functionTable(functionTable)
-		, memorySize(memorySize - 1), memoryBase(memory), rwMemorySize(rwMemorySize)
-		, dataStackBase(memory + dataStackOffset), dataStackEnd(memory + dataStackOffset + dataStackSize)
-		, ipStackBase(ipStack), ipStackEnd(ipStack + ipStackSize), natives(natives), ip(codeBase), dsp(dataStackBase)
-		, ipsp(ipStackBase), userData(userData), clockCyclesLeft(0x7FFFFFFFU) {
-	assert(rwMemorySize <= memorySize);
+		, memorySize(memorySize - 1), memoryBase(memory), constantsSize(constsSize - 1)
+		, readOffset(constantsSize - MEMORY_OFFSET), rwMemorySize(rwMemorySize)
+		, dataStackBase(memory + constantsSize + dataStackOffset)
+		, dataStackEnd(memory + constantsSize + dataStackOffset + dataStackSize)
+		, ipStackBase(ipStack), ipStackEnd(ipStack + ipStackSize), natives(natives), clockCyclesLeft(0x7FFFFFFFU)
+		, ip(codeBase), dsp(dataStackBase), ipsp(ipStackBase), userData(userData) {
+	assert(constsSize >= 1 && constsSize - 1 + rwMemorySize <= memorySize - 1);
 	assert(dataStackOffset + dataStackSize <= rwMemorySize);
 	assert(code != 0);
 	assert(memory != 0);
@@ -1263,11 +1297,13 @@ Processor::Processor(UInt codeSize, const Instruction* code, UInt functionCount,
 		, UInt memorySize, Value* memory, UInt globalsSize, UInt constsSize, UInt ipStackSize, CallStackEntry* ipStack
 		, NativeFunc const* natives, void* userData)
 		: codeSize(codeSize), codeBase(code), functionCount(functionCount), functionTable(functionTable)
-		, memorySize(memorySize - 1), memoryBase(memory), rwMemorySize(memorySize - constsSize)
-		, dataStackBase(memory + globalsSize), dataStackEnd(memory + memorySize - constsSize), ipStackBase(ipStack)
-		, ipStackEnd(ipStack + ipStackSize), natives(natives), ip(codeBase), dsp(dataStackBase), ipsp(ipStackBase)
-		, userData(userData), clockCyclesLeft(0x7FFFFFFFU) {
-	assert(globalsSize + constsSize <= memorySize);
+		, memorySize(memorySize - 1), memoryBase(memory), constantsSize(constsSize - 1)
+		, readOffset(constantsSize - MEMORY_OFFSET), rwMemorySize(memorySize - constsSize)
+		, dataStackBase(memory + constantsSize + globalsSize)
+		, dataStackEnd(memory + memorySize - 1), ipStackBase(ipStack), ipStackEnd(ipStack + ipStackSize)
+		, natives(natives), clockCyclesLeft(0x7FFFFFFFU), ip(codeBase), dsp(dataStackBase), ipsp(ipStackBase)
+		, userData(userData) {
+	assert(constsSize >= 1 && globalsSize + constsSize <= memorySize);			// `constsSize` includes the zero guard
 	assert(code != 0);
 	assert(memory != 0);
 	assert(ipStack != 0);
@@ -1279,8 +1315,8 @@ Processor::Processor(UInt codeSize, const Instruction* code, UInt functionCount,
 #define C0 (ip->p0)
 #define C1 (ip->p1)
 #define C2 (ip->p2)
-	#define CHECK_INT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
-	#define CHECK_FLOAT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
+#define CHECK_INT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
+#define CHECK_FLOAT_DIV_BY_ZERO(v) if (v == 0) { err = DIVISION_BY_ZERO; goto ret; }
 
 Int Processor::run() {
 	assert(codeBase != 0);
@@ -1289,33 +1325,33 @@ Int Processor::run() {
 	const Instruction* ip = this->ip;
 	Value* dsp = this->dsp;
 	CallStackEntry* ipsp = this->ipsp;
-	Value* const mb = memoryBase - MEMORY_OFFSET;
+	Value* const mb = memoryBase + constantsSize - MEMORY_OFFSET;														// mb[pointer] is the word at `pointer`
 	UInt ui, ui2;
 	Int nativeError;
 	Int err = TIME_OUT;
 
 	assert(ip != 0);
 	assert(dsp != 0);
-	assert(ipsp > ipStackBase && ipsp <= ipStackEnd); // If this blows it probably means you are trying to continue GAZL after it has returned to your native caller. You need to setup a new call with enterCall().
+	assert(ipsp > ipStackBase && ipsp <= ipStackEnd); 	// If this blows it probably means you are trying to continue GAZL after it has returned to your native caller. You need to setup a new call with enterCall().
 	
 	while (--clockCyclesLeft >= 0) {
 		switch (ip->opcode) {
-			case FUNC_CC_:	if ((dsp += (UInt)(C0.i)) + C1.i > dataStackEnd) { err = DATA_STACK_OVERFLOW; goto ret; } break;
-			case CALL_VVC:	ui = V0.p - FUNCTION_OFFSET;						// ui = function ordinal
+			case FUNC_CC_:	if ((UInt)C0.i + (UInt)C1.i > (UInt)(dataStackEnd - dsp)) { err = DATA_STACK_OVERFLOW; goto ret; } dsp += (UInt)(C0.i); break;
+		case CALL_VVC:	ui = V0.p - FUNCTION_OFFSET;																	// ui = function ordinal
 							if (ui >= functionCount) { err = BAD_CALL; goto ret; }
-							ui = functionTable[ui];						// ui = code offset
+						ui = functionTable[ui];																			// ui = code offset
 							assert((codeBase + ui)->opcode == FUNC_CC_);
 							goto call;
-			case CALL_CVC:	ui = C0.p - FUNCTION_OFFSET;						// ui = function ordinal (constant, validated at assembly)
+			case CALL_CVC:	ui = C0.p - FUNCTION_OFFSET;																// ui = function ordinal (constant, validated at assembly)
 							assert(ui < functionCount);
-							ui = functionTable[ui];						// ui = code offset
+							ui = functionTable[ui];																		// ui = code offset
 							assert((codeBase + ui)->opcode == FUNC_CC_);
 							goto call;
 			call:			if (ipsp >= ipStackEnd) { err = IP_STACK_OVERFLOW; goto ret; }
 							ipsp->ip = ip;
 							ipsp++->dsp = dsp;
 							dsp += (UInt)(C1.i);
-							ip = codeBase + ui; // FIX : same thing here as with memory_offset, precalc the constant
+							ip = codeBase + ui;
 							continue;
 			case CALL_NVC:	this->clockCyclesLeft = clockCyclesLeft;
 							this->ip = ip;
@@ -1323,15 +1359,8 @@ Int Processor::run() {
 							this->ipsp = ipsp;
 							if ((nativeError = (*natives[C0.i])(this)) != 0) { err = nativeError; goto ret; }
 							clockCyclesLeft = this->clockCyclesLeft;
-							if (this->ip != ip) {
-								/*
-									The native pushed one or more calls (pushCall()): adopt the redirected state and
-									flow into the last-pushed callee. Its RETU chains through the pushed frames (LIFO)
-									and finally returns into this caller, exactly like nested `&function` calls.
-									(Blocking usage - enterCall() plus a nested run() - restores this->ip before
-									returning here, so it never takes this path.)
-								*/
-								assert(this->ipsp > ipsp && this->ipsp[-1].dsp != 0);	// plain pushCall frames on top
+							if (this->ip != ip) {																		// the native called pushCall(): continue in the last-pushed callee
+								assert(this->ipsp > ipsp && this->ipsp[-1].dsp != 0);									// plain pushCall frames on top
 								ipsp = this->ipsp;
 								dsp = this->dsp;
 								ip = this->ip;
@@ -1344,18 +1373,18 @@ Int Processor::run() {
 							break;
 			case MOVE_VV_:	V0 = V1; break;
 			case MOVE_VC_:	V0 = C1; break;
-			case PEEK_VC_:	V0 = mb[C1.p]; break; // FIX : remove memory_offset from constant indexes and move back mb -> memoryBase +/- 0
+			case PEEK_VC_:	V0 = mb[C1.p]; break;
 			case POKE_CV_:	mb[C0.p] = V1; break;
 			case POKE_CC_:	mb[C0.p] = C1; break;
-			case PEEK_VVV:	if ((ui = (UInt)V1.i + (UInt)V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
-			case PEEK_VCV:	if ((ui = (UInt)C1.i + (UInt)V2.i - MEMORY_OFFSET) < memorySize) { V0 = mb[ui + MEMORY_OFFSET]; break; } else { err = BAD_PEEK; goto ret; }
-			case POKE_VVV:	if ((ui = (UInt)V0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_CVV:	if ((ui = (UInt)C0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = V2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_VVC:	if ((ui = (UInt)V0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
-			case POKE_CVC:	if ((ui = (UInt)C0.i + (UInt)V1.i - MEMORY_OFFSET) < rwMemorySize) { mb[ui + MEMORY_OFFSET] = C2; break; } else { err = BAD_POKE; goto ret; }
-			case GETL_VVV:	if ((ui = V2.i) < (UInt)(dataStackEnd - dsp - C1.i)) { V0 = (dsp + C1.i)[ui]; break; } else { err = BAD_PEEK; goto ret; };
-			case SETL_VVV:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = V2; break; } else { err = BAD_POKE; goto ret; };
-			case SETL_VVC:	if ((ui = V1.i) < (UInt)(dataStackEnd - dsp - C0.i)) { (dsp + C0.i)[ui] = C2; break; } else { err = BAD_POKE; goto ret; };
+			case PEEK_VVV:	if ((ui = (UInt)V1.i + (UInt)V2.i) + readOffset < memorySize) { V0 = mb[ui]; break; } else { err = BAD_PEEK; goto ret; }
+			case PEEK_VCV:	if ((ui = (UInt)C1.i + (UInt)V2.i) + readOffset < memorySize) { V0 = mb[ui]; break; } else { err = BAD_PEEK; goto ret; }
+			case POKE_VVV:	if ((ui = (UInt)V0.i + (UInt)V1.i) - MEMORY_OFFSET < rwMemorySize) { mb[ui] = V2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_CVV:	if ((ui = (UInt)C0.i + (UInt)V1.i) - MEMORY_OFFSET < rwMemorySize) { mb[ui] = V2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_VVC:	if ((ui = (UInt)V0.i + (UInt)V1.i) - MEMORY_OFFSET < rwMemorySize) { mb[ui] = C2; break; } else { err = BAD_POKE; goto ret; }
+			case POKE_CVC:	if ((ui = (UInt)C0.i + (UInt)V1.i) - MEMORY_OFFSET < rwMemorySize) { mb[ui] = C2; break; } else { err = BAD_POKE; goto ret; }
+			case GETL_VVV:	if ((Int)(ui2 = (UInt)(dataStackEnd - dsp - C1.i)) > 0 && (ui = V2.i) < ui2) { V0 = (dsp + C1.i)[ui]; break; } else { err = BAD_PEEK; goto ret; };
+			case SETL_VVV:	if ((Int)(ui2 = (UInt)(dataStackEnd - dsp - C0.i)) > 0 && (ui = V1.i) < ui2) { (dsp + C0.i)[ui] = V2; break; } else { err = BAD_POKE; goto ret; };
+			case SETL_VVC:	if ((Int)(ui2 = (UInt)(dataStackEnd - dsp - C0.i)) > 0 && (ui = V1.i) < ui2) { (dsp + C0.i)[ui] = C2; break; } else { err = BAD_POKE; goto ret; };
 			case ADRL_VV_:	V0.p = Pointer(&dsp[C1.i] - mb); break;
 			case ABSI_VV_:	V0.i = absolute(V1.i); break;
 			case ADDI_VVV:	V0.i = iadd(V1.i, V2.i); break;
@@ -1400,17 +1429,17 @@ Int Processor::run() {
 			case DIVF_VCV:	CHECK_FLOAT_DIV_BY_ZERO(V2.f); V0.f = C1.f / V2.f; break;
 			case FTOI_VVC:	V0.i = ftoi(V1.f * C2.f); break;
 			case ITOF_VVC:	V0.f = (Float)(V1.i) * C2.f; break;
-			// FIX : all constant addresses here should be checked compile-time, but then we would need to parse operand 2 first and have an option for forward linking where the size is added to the check.
-			case COPY_VVC:	ui = V0.i - MEMORY_OFFSET; ui2 = V1.i - MEMORY_OFFSET; goto copy;
-			case COPY_VCC:	ui = V0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
-			case COPY_CVC:	ui = C0.i - MEMORY_OFFSET; ui2 = V1.i - MEMORY_OFFSET; goto copy;
-			case COPY_CCC:	ui = C0.i - MEMORY_OFFSET; ui2 = C1.i - MEMORY_OFFSET; goto copy;
-			copy:			if ((UInt)C2.i <= rwMemorySize && ui <= rwMemorySize - (UInt)C2.i
-									&& (UInt)C2.i <= memorySize && ui2 <= memorySize - (UInt)C2.i) {
-								// std::copy(&mb[ui2 + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET] + C2.i, &mb[ui + MEMORY_OFFSET]);
-								// memcpy(&mb[ui + MEMORY_OFFSET], &mb[ui2 + MEMORY_OFFSET], sizeof (Value) * C2.i);
-								const Value* sp = &mb[ui2 + MEMORY_OFFSET];
-								Value* dp = &mb[ui + MEMORY_OFFSET];
+			case COPY_VVC:	ui = V0.i; ui2 = V1.i; goto copy;
+			case COPY_VCC:	ui = V0.i; ui2 = C1.i; goto copy;
+			case COPY_CVC:	ui = C0.i; ui2 = V1.i; goto copy;
+			case COPY_CCC:	ui = C0.i; ui2 = C1.i; goto copy;
+			copy:			if ((UInt)C2.i <= rwMemorySize && ui - MEMORY_OFFSET <= rwMemorySize - (UInt)C2.i
+									&& (UInt)C2.i <= memorySize
+									&& ui2 + readOffset <= memorySize - (UInt)C2.i) {
+								// std::copy(&mb[ui2], &mb[ui2] + C2.i, &mb[ui]);
+								// memcpy(&mb[ui], &mb[ui2], sizeof (Value) * C2.i);
+								const Value* sp = &mb[ui2];
+								Value* dp = &mb[ui];
 								Value* ep = dp + C2.i;
 								while (dp < ep) *dp++= *sp++;
 								break;
@@ -1418,7 +1447,7 @@ Int Processor::run() {
 								err = ACCESS_VIOLATION;
 								goto ret;
 							}
-			case FORi_VVB:	V0.i = iadd(V0.i, 1); if (V0.i < V1.i) { ip += C2.i; continue; }; break;		// iadd, not ++: a counter already at INT_MAX made `++` signed-overflow UB. Wrap is unchanged, and FORp maps here too
+			case FORi_VVB:	V0.i = iadd(V0.i, 1); if (V0.i < V1.i) { ip += C2.i; continue; }; break;					// iadd, not ++: a counter already at INT_MAX made `++` signed-overflow UB. Wrap is unchanged, and FORp maps here too
 			case FORi_VCB:	V0.i = iadd(V0.i, 1); if (V0.i < C1.i) { ip += C2.i; continue; }; break;
 			case LSSI_VVB:	if (V0.i < V1.i) { ip += C2.i; continue; }; break;
 			case LSSI_VCB:	if (V0.i < C1.i) { ip += C2.i; continue; }; break;
@@ -1466,25 +1495,25 @@ ret:
 
 Status Processor::enterCall(Pointer functionPointer) {
 	assert(codeBase != 0);
-	UInt ui = functionPointer - FUNCTION_OFFSET;						// ui = function ordinal
+	UInt ui = functionPointer - FUNCTION_OFFSET;																		// ui = function ordinal
 	if (ui >= functionCount) return BAD_CALL;
-	ui = functionTable[ui];										// ui = code offset
+	ui = functionTable[ui];																								// ui = code offset
 	assert((codeBase + ui)->opcode == FUNC_CC_);
 	if (ipsp + 2 > ipStackEnd) return IP_STACK_OVERFLOW;
 	ipsp->ip = this->ip;
 	ipsp++->dsp = this->dsp;
 	ipsp->ip = this->ip;
-	ipsp++->dsp = 0;			// Mark return to native caller.
+ipsp++->dsp = 0;																										// Mark return to native caller.
 	this->ip = codeBase + ui;
 	return OK;
 }
 
 /*
-	pushCall() - see GAZL.h. The first push in a native call returns to the `^call`'s continuation and restores the
-	caller's frame base (undoing the window advance CALL_NVC performed for the native); every further push chains: its
-	frame resumes at the previously pushed target, so the calls run last-pushed-first, each RETU flowing into the next.
-	Frames store the resume point MINUS ONE because RETU restores and then the dispatch loop increments (`++ip`); for a
-	chain frame that minus-one address is never executed, only incremented over.
+	pushCall(); the contract is in GAZL.h. The first push in a native call returns to the `^call`'s continuation and
+	restores the caller's frame base (undoing the window advance CALL_NVC performed for the native); every further
+	push chains: its frame resumes at the previously pushed target, so the calls run last-pushed-first, each RETU
+	flowing into the next. Frames store the resume point MINUS ONE because RETU restores and then the dispatch loop
+	increments (`++ip`); for a chain frame that minus-one address is never executed, only incremented over.
 */
 Value* Processor::pushCall(Pointer functionPointer) {
 	assert(codeBase != 0);
@@ -1496,7 +1525,7 @@ Value* Processor::pushCall(Pointer functionPointer) {
 	const bool chainedPush = (ipsp != ipStackBase && this->ip->opcode == FUNC_CC_);	// a previous pushCall in this native call
 	if (!atNativeCall && !chainedPush) return 0;				// only valid from inside a native callback
 	if (ipsp >= ipStackEnd) return 0;
-	if (this->dsp + (UInt)(func->p0.i) + (UInt)(func->p1.i) > dataStackEnd) return 0;	// the callee's own FUNC check, done early
+	if ((UInt)func->p0.i + (UInt)func->p1.i > (UInt)(dataStackEnd - this->dsp)) return 0;	// the callee's own FUNC check, done early
 	ipsp->ip = atNativeCall ? this->ip : this->ip - 1;
 	ipsp++->dsp = atNativeCall ? this->dsp - this->ip->p1.i : this->dsp;
 	this->ip = func;											// this->dsp stays: the ^call's window is the argument window
@@ -1516,11 +1545,11 @@ Value* Processor::pushCall(Pointer functionPointer) {
 	data stack, call stack and instruction pointer hold nothing that needs saving.
 */
 const UInt MEMORY_FORMAT_VERSION = 1;
-const UInt MEMORY_INT_CANARY = 0x01020304;						// Detects endianness / format bugs on thaw.
-const UInt MEMORY_HEADER_SIZE = 4 + 6 * 4;						// Magic + { format version, GAZL version, word size, int canary, float canary, global count }.
+const UInt MEMORY_INT_CANARY = 0x01020304;							// Detects endianness / format bugs on thaw.
+const UInt MEMORY_HEADER_SIZE = 4 + 6 * 4;							// Magic + { format version, GAZL version, word size, int canary, float canary, global count }.
 static const char MEMORY_MAGIC[4] = { 'G', 'Z', 'M', 'M' };
 
-static unsigned char* putMemoryWord(unsigned char* p, UInt v) {	// Writes a 32-bit little-endian word.
+static unsigned char* putMemoryWord(unsigned char* p, UInt v) {		// Writes a 32-bit little-endian word.
 	p[0] = static_cast<unsigned char>(v);
 	p[1] = static_cast<unsigned char>(v >> 8);
 	p[2] = static_cast<unsigned char>(v >> 16);
@@ -1529,7 +1558,7 @@ static unsigned char* putMemoryWord(unsigned char* p, UInt v) {	// Writes a 32-b
 }
 
 static const unsigned char* getMemoryWord(const unsigned char* p, const unsigned char* end, UInt& value, bool& ok) {
-	if (p + 4 > end) { ok = false; value = 0; return p; }		// Truncated: stop reading, leave `ok` false.
+	if (end - p < 4) { ok = false; value = 0; return p; }			// Truncated: stop reading, leave `ok` false.
 	value = (UInt)p[0] | ((UInt)p[1] << 8) | ((UInt)p[2] << 16) | ((UInt)p[3] << 24);
 	return p + 4;
 }
@@ -1538,30 +1567,27 @@ UInt freezeMemorySize(const Processor& processor, const Symbols& symbols) {
 	(void)processor;
 	UInt size = MEMORY_HEADER_SIZE;
 	Symbols::Iterator it;
-	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) {
-		bool isTemp;
-		Pointer address;
-		UInt globalSize;
-		const char* name = symbols.getGlobalInfo(it, isTemp, address, globalSize);
-		size += 4 + (UInt)strlen(name) + 4 + globalSize * 4;	// name length + name + size + words
+	for (bool ok = symbols.findFirstGlobal(it, false, false); ok; ok = symbols.findNextGlobal(it, false, false)) {
+		const GlobalInfo info = symbols.getGlobalInfo(it);
+		size += 4 + (UInt)strlen(info.name) + 4 + info.size * 4;	// name length + name + size + words
 	}
 	return size;
 }
 
 UInt freezeMemory(const Processor& processor, const Symbols& symbols, void* buffer, UInt bufferSize) {
 	const UInt needed = freezeMemorySize(processor, symbols);
-	if (buffer == 0 || bufferSize < needed) return needed;	// Too small: write nothing, tell the caller the required size.
+	if (buffer == 0 || bufferSize < needed) return needed;			// Too small: write nothing, tell the caller the required size.
 
 	unsigned char* const start = static_cast<unsigned char*>(buffer);
 	unsigned char* p = start;
 	Symbols::Iterator it;
 	UInt globalCount = 0;
-	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) ++globalCount;
+	for (bool ok = symbols.findFirstGlobal(it, false, false); ok; ok = symbols.findNextGlobal(it, false, false)) ++globalCount;
 
 	memcpy(p, MEMORY_MAGIC, 4);
 	p += 4;
 	Value floatCanary;
-	floatCanary.f = 1.0f;										// Detects a divergent float bit-layout on thaw.
+	floatCanary.f = 1.0f;											// Detects a divergent float bit-layout on thaw.
 	p = putMemoryWord(p, MEMORY_FORMAT_VERSION);
 	p = putMemoryWord(p, (UInt)VERSION);
 	p = putMemoryWord(p, (UInt)WORD_SIZE);
@@ -1569,22 +1595,19 @@ UInt freezeMemory(const Processor& processor, const Symbols& symbols, void* buff
 	p = putMemoryWord(p, floatCanary.p);
 	p = putMemoryWord(p, globalCount);
 
-	for (bool ok = symbols.findFirstGlobal(it, false); ok; ok = symbols.findNextGlobal(it, false)) {
-		bool isTemp;
-		Pointer address;
-		UInt size;
-		const char* name = symbols.getGlobalInfo(it, isTemp, address, size);
-		assert(!isTemp);
-		const UInt nameLength = (UInt)strlen(name);
+	for (bool ok = symbols.findFirstGlobal(it, false, false); ok; ok = symbols.findNextGlobal(it, false, false)) {
+		const GlobalInfo info = symbols.getGlobalInfo(it);
+		assert(!info.isTemp && !info.isInterior);
+		const UInt nameLength = (UInt)strlen(info.name);
 		p = putMemoryWord(p, nameLength);
-		memcpy(p, name, nameLength);
+		memcpy(p, info.name, nameLength);
 		p += nameLength;
-		p = putMemoryWord(p, size);
-		const Value* source = processor.accessConstMemory(address, size);
+		p = putMemoryWord(p, info.size);
+		const Value* source = processor.accessConstMemory(info.address, info.size);
 		assert(source != 0);
-		for (UInt i = 0; i < size; ++i) p = putMemoryWord(p, source[i].p);
+		for (UInt i = 0; i < info.size; ++i) p = putMemoryWord(p, source[i].p);
 	}
-	assert((UInt)(p - start) == needed);					// Byte count must match freezeMemorySize exactly.
+	assert((UInt)(p - start) == needed);							// Byte count must match freezeMemorySize exactly.
 	return needed;
 }
 
@@ -1612,7 +1635,7 @@ MemoryLoad thawMemory(Processor& processor, const Symbols& symbols, const void* 
 	for (UInt g = 0; g < globalCount && ok; ++g) {
 		UInt nameLength;
 		p = getMemoryWord(p, end, nameLength, ok);
-		if (!ok || p + nameLength > end) { ok = false; break; }
+		if (!ok || nameLength > (UInt)(end - p)) { ok = false; break; }
 		std::string name(reinterpret_cast<const char*>(p), nameLength);
 		p += nameLength;
 		UInt size;
@@ -1701,10 +1724,12 @@ bool unitTest() {
 			assert((op.accepts[j] & ANY_VAR) == 0 || (op.accepts[j] & FORWARD) == 0);
 			assert(op.accepts[0] != COMPILE_TIME || (((op.accepts[1] & FORWARD) == 0 || op.accepts[1] == 0) && (((op.accepts[2] & FORWARD) == 0) || op.accepts[2] == 0)));
 			assert((op.accepts[j] & CONST_INT_P) != 0 || (op.accepts[j] & CONST_INT_N) == 0);
-// FIX : fails			assert((op.accepts[j] & (CONST_INT_P | CONST_FLOAT)) == 0 || ((op.accepts[j] & FORWARD) == 0));
+			assert(op.accepts[j] == KONST																// `#const` may name a forward address
+					|| (op.accepts[j] & (CONST_INT_P | CONST_FLOAT)) == 0 || (op.accepts[j] & FORWARD) == 0);
 			assert((op.accepts[j] & BRANCH) == 0 || (op.accepts[j] & FORWARD) != 0);
 		}
-		assert((op.otherFlags & YIELDS_CONST) == 0 || (op.opcode >= FIRST_COMPILE_TIME_OPCODE));
+		assert(((op.otherFlags & (YIELDS_CONST | YIELDS_GOTO)) != 0 || op.key[0] == '!')
+				== (op.opcode >= FIRST_COMPILE_TIME_OPCODE));
 		assert((op.otherFlags & CHECK_DIV_BY_0) == 0 || (op.accepts[2] & (CONST_FLOAT | CONST_INT)) == CONST_FLOAT || (op.accepts[2] & (CONST_FLOAT | CONST_INT)) == CONST_INT);
 		assert((op.declareTypes & FORWARD) == 0);
 	}
@@ -1817,13 +1842,10 @@ bool unitTest() {
 
 			// Every non-TEMP global must match the frozen original (identical assemblies share global addresses).
 			Symbols::Iterator it;
-			for (bool ok = globals.findFirstGlobal(it, false); ok; ok = globals.findNextGlobal(it, false)) {
-				bool isTemp;
-				Pointer address;
-				UInt size;
-				globals.getGlobalInfo(it, isTemp, address, size);
-				const UInt index = address - MEMORY_OFFSET;
-				for (UInt i = 0; i < size; ++i) assert(memory2[index + i].i == memory[index + i].i);
+			for (bool ok = globals.findFirstGlobal(it, false, true); ok; ok = globals.findNextGlobal(it, false, true)) {
+				const GlobalInfo info = globals.getGlobalInfo(it);
+				const UInt index = info.address - MEMORY_OFFSET + (sizes.constsSize - 1);			// the buffer starts with the constants
+				for (UInt i = 0; i < info.size; ++i) assert(memory2[index + i].i == memory[index + i].i);
 			}
 			// The restored function pointer resolves to CallBack in the fresh assembly (and equals the original ordinal).
 			UInt gpSize;
@@ -1855,89 +1877,6 @@ bool unitTest() {
 	delete [] callStack;
 
 	return true;
-}
-
-// FIX : drop
-static void instructionReport() {
-	const Operator* currentMnemonic = 0;
-	for (int i = 0; i < OPERATOR_COUNT; ++i) {
-		const Operator& op = OPERATORS[i];
-
-		const int FIRST_OPERAND_COLUMN = 10;
-		const int OPERAND_WIDTH = 16;
-		const int ADDRESS_MASK = (ADDRESS_R | ADDRESS_W | TEMPORARY | NULL_PTR | FUNC);
-		const int CONST_MASK = (CONST_INT_P | CONST_INT_N | CONST_FLOAT);
-		const int VAR_MASK = (TRANSIENT | VAR_INT_R | VAR_INT_W | VAR_FLOAT_R | VAR_FLOAT_W | VAR_PTR_R | VAR_PTR_W);
-		const int CATEGORY_MASK = COMPILE_TIME | ADDRESS_MASK | CONST_MASK | VAR_MASK;
-
-		assert(strlen(op.key) == 9);
-		std::string s;
-		if (currentMnemonic == 0 || memcmp(op.key, currentMnemonic, 5) != 0) {
-			if (currentMnemonic != 0) std::cout << std::endl;
-			currentMnemonic = &op;
-			s = op.key;
-			if (s[0] == '!') s = s.substr(0, 1) + ' ' + s.substr(1, 4);
-			else s = s.substr(1, 4);
-		}
-		s += std::string(FIRST_OPERAND_COLUMN - s.size(), ' ');
-		for (int j = 0; j < 3; ++j) {
-			int a = op.accepts[j];
-			switch (op.key[6 + j]) {
-				case '_': assert(a == 0); break;
-				case 'v': {
-					if ((a & CATEGORY_MASK) == TRANSIENT) {
-						s += "%temp";
-					} else if ((a & CATEGORY_MASK) == (a & VAR_MASK)) {
-						if ((a & VAR_MASK) == (a & (VAR_INT_R | VAR_INT_W))) s += "int";
-						else if ((a & VAR_MASK) == (a & (VAR_FLOAT_R | VAR_FLOAT_W))) s += "float";
-						else if ((a & VAR_MASK) == (a & (VAR_PTR_R | VAR_PTR_W))) s += "ptr";
-						else s += "var";
-						if ((a & VAR_MASK) == (a & (VAR_INT_W | VAR_FLOAT_W | VAR_PTR_W))) s += "(d)";
-						// else if ((a & VAR_MASK) != (a & (VAR_INT_R | VAR_FLOAT_R | VAR_PTR_R))) s += "(s+d)";
-					}
-					break;
-				}
-				case 'c': {
-					if ((a & CATEGORY_MASK) == COMPILE_TIME) {
-						s += "<?>";
-					} else if ((a & CATEGORY_MASK) == FUNC) {
-						s += "&function";
-					} else if ((a & CATEGORY_MASK) == (a & ADDRESS_MASK)) {
-						s += "&address";
-						if ((a & (ADDRESS_R | ADDRESS_W)) == ADDRESS_R) s += "(r)";
-						else if ((a & (ADDRESS_R | ADDRESS_W)) == ADDRESS_W) s += "(w)";
-					} else if ((a & CATEGORY_MASK) == (a & CONST_MASK) || op.opcode == IFDF_CB_ || op.opcode == IFND_CB_) {
-						s += "#";
-						if ((a & (CONST_MASK)) == CONST_FLOAT) s += "float";
-						else if ((a & (CONST_MASK)) != (CONST_INT_P | CONST_INT_N | CONST_FLOAT)) s += "int";
-						else s += "const";
-					}
-// FIX : fails					// else assert(0);
-					break;
-				}
-				case 'b': {
-					assert(a == FWD_BRANCH);
-					s += "@label";
-					break;
-				}
-				case 'n': {
-					assert((a & ~FORWARD) == NATIVE);
-					s += "^native";
-					break;
-				}
-				case 's': {
-					assert(a == CONST_INT_P);
-					s += "*size";
-					break;
-				}
-				default: assert(0);
-			}
-			size_t count = FIRST_OPERAND_COLUMN + (j + 1) * OPERAND_WIDTH - s.size();
-			assert(count > 1);
-			if (j != 2) s += std::string(count, ' ');
-		}
-		std::cout << s.c_str() << std::endl;
-	}
 }
 
 #endif

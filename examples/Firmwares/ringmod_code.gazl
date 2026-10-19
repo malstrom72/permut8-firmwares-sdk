@@ -6,9 +6,9 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ ringmod_code.impala:19:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ ringmod_code.impala:27:1
- 					DATA &.s__9ea3958f &.s__9ea3958f &.s__9ea3958f
- 					DATA &.s_LEFTDE_9ea39590 &.s__9ea3958f &.s__9ea3958f
- 					DATA &.s__9ea3958f &.s_RINGMO_9ea39591
+ 					DATA &.s__26fa580f &.s__26fa580f &.s__26fa580f
+ 					DATA &.s_LEFTDE_26fa5810 &.s__26fa580f &.s__26fa580f
+ 					DATA &.s__26fa580f &.s_RINGMO_26fa5811
  ; signature extern native abort() -> unknown @ ringmod_code.impala:38:1
  ; signature extern native trace() -> unknown @ ringmod_code.impala:39:1
  ; signature extern native yield() -> unknown @ ringmod_code.impala:40:1
@@ -147,13 +147,13 @@
  								! EQUi #DEBUG #0 @.a0			; assert(2 <= radix && radix <= 16)
  								GRTi #2 $radix @.f1
  								LEQi $radix #16 @.a0
- 					.f1:		MOVp %1 &.a_2radix_9ea3958f 
+ 					.f1:		MOVp %1 &.a_2radix_26fa580f 
  								CALL ^assertFail %0 *1
  					.a0:		NOOP
  								! EQUi #DEBUG #0 @.a2			; assert(0 <= minLength && minLength <= GAZL_WORD_SIZE)
  								GRTi #0 $minLength @.f3
  								LEQi $minLength #GAZL_WORD_SIZE @.a2
- 					.f3:		MOVp %1 &.a_0minLe_9ea39590 
+ 					.f3:		MOVp %1 &.a_0minLe_26fa5810 
  								CALL ^assertFail %0 *1
  					.a2:		ADDp %0 $buffer #GAZL_WORD_SIZE	; *(p = buffer + GAZL_WORD_SIZE + 1) = 0
  								ADDp $p %0 #1
@@ -166,12 +166,12 @@
  								! EQUi #DEBUG #0 @.a7			; assert(p >= buffer + 2)
  								ADDp %0 $buffer #2
  								GEQp $p %0 @.a7
- 								MOVp %1 &.a_pbuffe_9ea39591 
+ 								MOVp %1 &.a_pbuffe_26fa5811 
  								CALL ^assertFail %0 *1
  					.a7:		SUBp $p $p #1					; *(p = p - 1) = ("fedcba9876543210123456789abcdef")[15 + x % radix]
  								MODi %0 $x $radix
  								ADDi %0 #15 %0
- 								PEEK %0 &.s_fedcba_9ea39592 %0
+ 								PEEK %0 &.s_fedcba_26fa5812 %0
  								POKE $p %0 
  								DIVi $x $x $radix				; x = x / radix
  								GOTO @.l4  						; }
@@ -269,7 +269,7 @@
  					$y:			INPf
  ;-----------------------------------------------------------------------------
  								NEQf $y #0.0 @.f0				; if (y == 0.0) error("Division by zero")
- 								MOVp %1 &.s_Divisi_9ea39593 	; error("Division by zero")
+ 								MOVp %1 &.s_Divisi_26fa5813 	; error("Division by zero")
  								CALL &error %0 *2				; expects error(ptr) -> void @ ringmod_code.impala:216:41
  								RETU   
  					.f0:		DIVf %1 $x $y					; z = x - (float)trunc(x / y) * y
@@ -337,7 +337,7 @@
  .z.init.buf:		! DEFi #256
  					$buf:		LOCA *.z.init.buf
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_init_9ea39594 		; trace("init")
+ 								MOVp %1 &.s_init_26fa5814 		; trace("init")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ ringmod_code.impala:274:15
  								PEEK %2 &instance 				; trace(intToString(global instance, 10, 1, buf))
  								MOVi %3 #10 
@@ -364,9 +364,9 @@
  reset:				FUNC		; signature func reset() -> void @ ringmod_code.impala:286:1
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_reset_9ea39595 		; trace("reset")
+ 								MOVp %1 &.s_reset_26fa5815 		; trace("reset")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ ringmod_code.impala:288:16
- 								MOVp %1 &.s_params_9ea39596 	; traceInts(" params: ", PARAM_COUNT, global params)
+ 								MOVp %1 &.s_params_26fa5816 	; traceInts(" params: ", PARAM_COUNT, global params)
  								MOVi %2 #PARAM_COUNT 
  								MOVp %3 &params 
  								CALL &traceInts %0 *4			; expects traceInts(ptr, int, ptr) -> void @ ringmod_code.impala:289:52
@@ -393,9 +393,9 @@
  .z.update.params:	! DEFi #PARAM_COUNT
  					$params:	LOCA *.z.update.params
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_update_9ea39597 	; trace("update")
+ 								MOVp %1 &.s_update_26fa5817 	; trace("update")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ ringmod_code.impala:309:17
- 								MOVp %1 &.s_params_9ea39596 	; traceInts(" params: ", PARAM_COUNT, global params)
+ 								MOVp %1 &.s_params_26fa5816 	; traceInts(" params: ", PARAM_COUNT, global params)
  								MOVi %2 #PARAM_COUNT 
  								MOVp %3 &params 
  								CALL &traceInts %0 *4			; expects traceInts(ptr, int, ptr) -> void @ ringmod_code.impala:310:52
@@ -522,43 +522,43 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s__9ea3958f:		CNST *2
+ .s__26fa580f:		CNST *2
  					DATi #32 #0
- .s_LEFTDE_9ea39590: CNST *54
+ .s_LEFTDE_26fa5810: CNST *54
  					DATi #32 #32 #32 #32
  					DATs |----- LEFT DELAY -----| |----- RIGHT DELAY ----|
  					DATi #0
- .s_RINGMO_9ea39591: CNST *54
+ .s_RINGMO_26fa5811: CNST *54
  					DATi #32 #32 #32 #32
  					DATs |--- RING MOD RATE ----| |---- STEREO PHASE ----|
  					DATi #0
- .s_fedcba_9ea39592: CNST *32
+ .s_fedcba_26fa5812: CNST *32
  					DATs fedcba9876543210123456789abcdef
  					DATi #0
- .s_Divisi_9ea39593: CNST *17
+ .s_Divisi_26fa5813: CNST *17
  					DATs Division by zero
  					DATi #0
- .s_init_9ea39594:	CNST *5
+ .s_init_26fa5814:	CNST *5
  					DATs init
  					DATi #0
- .s_reset_9ea39595:	CNST *6
+ .s_reset_26fa5815:	CNST *6
  					DATs reset
  					DATi #0
- .s_params_9ea39596: CNST *10
+ .s_params_26fa5816: CNST *10
  					DATi #32
  					DATs params:
  					DATi #32 #0
- .s_update_9ea39597: CNST *7
+ .s_update_26fa5817: CNST *7
  					DATs update
  					DATi #0
  					! EQUi #DEBUG #0 @.noAssertStrings
- .a_2radix_9ea3958f: CNST *28
+ .a_2radix_26fa580f: CNST *28
  					DATs (2 <= radix && radix <= 16)
  					DATi #0
- .a_0minLe_9ea39590: CNST *48
+ .a_0minLe_26fa5810: CNST *48
  					DATs (0 <= minLength && minLength <= GAZL_WORD_SIZE)
  					DATi #0
- .a_pbuffe_9ea39591: CNST *18
+ .a_pbuffe_26fa5811: CNST *18
  					DATs (p >= buffer + 2)
  					DATi #0
  .noAssertStrings:	!

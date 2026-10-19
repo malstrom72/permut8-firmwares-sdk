@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ pong_code.impala:11:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ pong_code.impala:19:1
- 					DATA &.s_18PPVV_f603958f &.s_116AAO_f6039590
- 					DATA &.s_132NNL_f6039591 &.s_164TAP_f6039592
- 					DATA &.s_1PPVVT_f6039593 &.s_2AAOOI_f6039594
- 					DATA &.s_12NNLL_f6039595 &.s_contTA_f6039596
+ 					DATA &.s_18PPVV_a16c580f &.s_116AAO_a16c5810
+ 					DATA &.s_132NNL_a16c5811 &.s_164TAP_a16c5812
+ 					DATA &.s_1PPVVT_a16c5813 &.s_2AAOOI_a16c5814
+ 					DATA &.s_12NNLL_a16c5815 &.s_contTA_a16c5816
  ; signature extern native abort() -> unknown @ pong_code.impala:30:1
  ; signature extern native trace() -> unknown @ pong_code.impala:31:1
  ; signature extern native yield() -> unknown @ pong_code.impala:32:1
@@ -556,30 +556,30 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_18PPVV_f603958f: CNST *55
+ .s_18PPVV_a16c580f: CNST *55
  					DATs 1/8                           P  P  V  V  T  T  R  R
  					DATi #32 #32 #0
- .s_116AAO_f6039590: CNST *55
+ .s_116AAO_a16c5810: CNST *55
  					DATs 1/16                          A  A  O  O  I  I  A  E
  					DATi #32 #32 #0
- .s_132NNL_f6039591: CNST *55
+ .s_132NNL_a16c5811: CNST *55
  					DATs 1/32                          N  N  L  L  M  M  N  C
  					DATi #32 #32 #0
- .s_164TAP_f6039592: CNST *55
+ .s_164TAP_a16c5812: CNST *55
  					DATs 1/64 |-------- TAPS --------|
  					DATi #32 #195 #32 #32 #193 #32 #32 #194 #32 #32 #192 #32 #32 #195 #32 #32 #193 #32 #32
  					DATs D  T
  					DATi #32 #32 #0
- .s_1PPVVT_f6039593: CNST *55
+ .s_1PPVVT_a16c5813: CNST *55
  					DATs /1                            P  P  V  V  T  T  R  R
  					DATi #32 #32 #0
- .s_2AAOOI_f6039594: CNST *55
+ .s_2AAOOI_a16c5814: CNST *55
  					DATs /2                            A  A  O  O  I  I  A  E
  					DATi #32 #32 #0
- .s_12NNLL_f6039595: CNST *55
+ .s_12NNLL_a16c5815: CNST *55
  					DATs +1/2                          N  N  L  L  M  M  N  C
  					DATi #32 #32 #0
- .s_contTA_f6039596: CNST *55
+ .s_contTA_a16c5816: CNST *55
  					DATs cont |-------- TAPS --------|
  					DATi #32 #195 #32 #32 #193 #32 #32 #194 #32 #32 #192 #32 #32 #195 #32 #32 #193 #32 #32
  					DATs D  T

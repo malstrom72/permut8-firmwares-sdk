@@ -6,10 +6,10 @@
  TRUE:				! DEFi #1	; signature const TRUE : int @ fooBar_code.impala:19:1
  .z.panelTextRows:	! DEFi #8
  panelTextRows:		CNST *.z.panelTextRows ; signature array panelTextRows[8] : unknown @ fooBar_code.impala:27:1
- 					DATA &.s_stdREV_22459977 &.s_fastCR_22459978
- 					DATA &.s_slowCH_22459979 &.s_rndAK4_2245997a
- 					DATA &.s_1616_2245997b &.s_3216_2245997c &.s_88_2245997d
- 					DATA &.s_168Gat_2245997e
+ 					DATA &.s_stdREV_503e5bf7 &.s_fastCR_503e5bf8
+ 					DATA &.s_slowCH_503e5bf9 &.s_rndAK4_503e5bfa
+ 					DATA &.s_1616_503e5bfb &.s_3216_503e5bfc &.s_88_503e5bfd
+ 					DATA &.s_168Gat_503e5bfe
  ; signature extern native abort() -> unknown @ fooBar_code.impala:39:1
  ; signature extern native trace() -> unknown @ fooBar_code.impala:40:1
  ; signature extern native yield() -> unknown @ fooBar_code.impala:41:1
@@ -164,7 +164,7 @@
  reset:				FUNC		; signature func reset() -> void @ fooBar_code.impala:173:1
  								PARA *1
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_reset_2245997f 		; trace("reset")
+ 								MOVp %1 &.s_reset_503e5bff 		; trace("reset")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ fooBar_code.impala:175:16
  								POKE &doReset #TRUE 			; global doReset = TRUE
  								RETU   							; }
@@ -185,7 +185,7 @@
  					$fxs:		LOCA *.z.update.fxs
  					$fxCountFloat: LOCf
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_update_22459980 	; trace("update")
+ 								MOVp %1 &.s_update_503e5c00 	; trace("update")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ fooBar_code.impala:198:17
  								POKE &dirXor #0 				; global dirXor = 0
  								PEEK %0 &params:SWITCHES_PARAM_INDEX  ; if (((int) global params[SWITCHES_PARAM_INDEX] & SWITCHES_REVERSE_MASK) != 0) 
@@ -285,7 +285,7 @@
  					$s:			LOCi
  					$t:			LOCi
  ;-----------------------------------------------------------------------------
- 								MOVp %1 &.s_init_22459981 		; trace("init")
+ 								MOVp %1 &.s_init_503e5c01 		; trace("init")
  								CALL ^trace %0 *2				; expects trace(int-ptr) -> unknown @ fooBar_code.impala:278:15
  								CALL &update %0 *1				; expects update() -> void @ fooBar_code.impala:279:10
  								MOVp $p &FX_PARAMS 				; p = global FX_PARAMS
@@ -599,10 +599,10 @@
  								GOTO @.l0  						; }
  								RETU   							; }
 
- .s_stdREV_22459977: CNST *25
+ .s_stdREV_503e5bf7: CNST *25
  					DATs std  REVERSE     STRETCH
  					DATi #0
- .s_fastCR_22459978: CNST *50
+ .s_fastCR_503e5bf8: CNST *50
  					DATs fast
  					DATi #32 #197 #32 #32
  					DATs CRUSH
@@ -611,14 +611,14 @@
  					DATi #32 #32 #32 #32 #195
  					DATs --- Enabled Effects
  					DATi #0
- .s_slowCH_22459979: CNST *53
+ .s_slowCH_503e5bf9: CNST *53
  					DATs slow
  					DATi #32 #197 #32 #32 #197 #32 #32
  					DATs CHOP
  					DATi #32 #32 #197 #32 #32 #197 #32 #32
  					DATs SLOW
  					DATi #32 #32 #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_rndAK4_2245997a: CNST *54
+ .s_rndAK4_503e5bfa: CNST *54
  					DATs rnd
  					DATi #32 #32 #197 #32 #32 #197 #32 #32 #197 #32
  					DATs AK47
@@ -627,26 +627,26 @@
  					DATi #32 #209 #32 #32
  					DATs Random Order Seed
  					DATi #32 #32 #210 #0
- .s_1616_2245997b:	CNST *6
+ .s_1616_503e5bfb:	CNST *6
  					DATs 16/16
  					DATi #0
- .s_3216_2245997c:	CNST *6
+ .s_3216_503e5bfc:	CNST *6
  					DATs 32/16
  					DATi #0
- .s_88_2245997d:	CNST *53
+ .s_88_503e5bfd:	CNST *53
  					DATs 8/8
  					DATi #32 #32 #32 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #211 #0
- .s_168Gat_2245997e: CNST *54
+ .s_168Gat_503e5bfe: CNST *54
  					DATs 16/8
  					DATi #32 #209 #32 #32
  					DATs Gates (prev step off = trigger new effect)
  					DATi #32 #32 #210 #0
- .s_reset_2245997f:	CNST *6
+ .s_reset_503e5bff:	CNST *6
  					DATs reset
  					DATi #0
- .s_update_22459980: CNST *7
+ .s_update_503e5c00: CNST *7
  					DATs update
  					DATi #0
- .s_init_22459981:	CNST *5
+ .s_init_503e5c01:	CNST *5
  					DATs init
  					DATi #0
