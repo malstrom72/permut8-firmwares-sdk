@@ -46,7 +46,7 @@ done
 mkdir -p "$dst" "$bin"
 
 # Build the NuXJS command-line runtime that executes the Impala compiler.
-GAZL/tools/BuildCpp.sh "$target" "$model" "$runtime_nuxjs" \
+bash GAZL/tools/BuildCpp.sh "$target" "$model" "$runtime_nuxjs" \
 	"$src_nuxjs/tools/NuXJSREPL.cpp" \
 	"$src_nuxjs/src/NuXJS.cpp" \
 	"$src_nuxjs/src/stdlibJS.cpp"
@@ -62,7 +62,7 @@ fi
 # Build GAZLCmd, the VM driver that runs a firmware under the Permut8 host harness
 # (tools/permut8Host.nuxjs.js + tools/runPermut8Firmware.sh). It is a maintenance tool, not part of
 # the authoring path, so it is NOT staged into "$dst" - firmware folders only need the compiler.
-GAZL/tools/BuildCpp.sh "$target" "$model" "$bin/GAZLCmd" -IGAZL \
+bash GAZL/tools/BuildCpp.sh "$target" "$model" "$bin/GAZLCmd" -IGAZL \
 	GAZL/tools/GAZLCmd.cpp \
 	GAZL/src/GAZL.cpp
 chmod +x "$bin/GAZLCmd"
@@ -109,7 +109,7 @@ c_sources=(
 	IVG/externals/zlib/zutil.c
 )
 
-IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
+bash IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
 	-ffp-contract=off -UTARGET_OS_MAC IVG/tools/IVG2PNG.cpp -DNUXPIXELS_SIMD="$simd_flag" \
 	-I IVG -I IVG/externals -I IVG/externals/libpng -I IVG/externals/zlib \
 	IVG/src/IVG.cpp IVG/src/IMPD.cpp IVG/externals/NuX/NuXPixels.cpp \
