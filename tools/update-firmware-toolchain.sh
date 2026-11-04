@@ -3,8 +3,16 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+# On macOS the committed binaries are universal (x86_64 + arm64) and run on macOS 11 and later, not just the build
+# machine's macOS. Clang reads MACOSX_DEPLOYMENT_TARGET for every slice; set it in the environment to override.
+default_model="native"
+if [ "$(uname -s)" = "Darwin" ]; then
+	default_model="fat"
+	export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
+fi
+
 target="${1:-release}"
-model="${2:-native}"
+model="${2:-$default_model}"
 simd="${3:-nosimd}"
 
 case "$simd" in
@@ -38,7 +46,7 @@ done
 mkdir -p "$dst" "$bin"
 
 # Build the NuXJS command-line runtime that executes the Impala compiler.
-GAZL/tools/BuildCpp.sh "$target" "$model" "$runtime_nuxjs" \
+bash GAZL/tools/BuildCpp.sh "$target" "$model" "$runtime_nuxjs" \
 	"$src_nuxjs/tools/NuXJSREPL.cpp" \
 	"$src_nuxjs/src/NuXJS.cpp" \
 	"$src_nuxjs/src/stdlibJS.cpp"
@@ -54,7 +62,7 @@ fi
 # Build GAZLCmd, the VM driver that runs a firmware under the Permut8 host harness
 # (tools/permut8Host.nuxjs.js + tools/runPermut8Firmware.sh). It is a maintenance tool, not part of
 # the authoring path, so it is NOT staged into "$dst" - firmware folders only need the compiler.
-GAZL/tools/BuildCpp.sh "$target" "$model" "$bin/GAZLCmd" -IGAZL \
+bash GAZL/tools/BuildCpp.sh "$target" "$model" "$bin/GAZLCmd" -IGAZL \
 	GAZL/tools/GAZLCmd.cpp \
 	GAZL/src/GAZL.cpp
 chmod +x "$bin/GAZLCmd"
@@ -101,10 +109,7 @@ c_sources=(
 	IVG/externals/zlib/zutil.c
 )
 
-# The committed macOS IVG2PNG must run on macOS 11 and later, not just the build machine's macOS. Clang reads
-# MACOSX_DEPLOYMENT_TARGET when the target triple has no version; set it in the environment to override.
-MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}" \
-IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
+bash IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
 	-ffp-contract=off -UTARGET_OS_MAC IVG/tools/IVG2PNG.cpp -DNUXPIXELS_SIMD="$simd_flag" \
 	-I IVG -I IVG/externals -I IVG/externals/libpng -I IVG/externals/zlib \
 	IVG/src/IVG.cpp IVG/src/IMPD.cpp IVG/externals/NuX/NuXPixels.cpp \
