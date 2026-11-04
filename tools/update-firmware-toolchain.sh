@@ -101,6 +101,9 @@ c_sources=(
 	IVG/externals/zlib/zutil.c
 )
 
+# The committed macOS IVG2PNG must run on macOS 11 and later, not just the build machine's macOS. Clang reads
+# MACOSX_DEPLOYMENT_TARGET when the target triple has no version; set it in the environment to override.
+MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-11.0}" \
 IVG/tools/BuildCpp.sh "$target" "$model" "$bin/IVG2PNG" \
 	-ffp-contract=off -UTARGET_OS_MAC IVG/tools/IVG2PNG.cpp -DNUXPIXELS_SIMD="$simd_flag" \
 	-I IVG -I IVG/externals -I IVG/externals/libpng -I IVG/externals/zlib \

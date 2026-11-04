@@ -4,22 +4,31 @@ IVG is Magnus Lidström's vector graphics format and renderer, upstream at
 <https://github.com/malstrom72/IVG>. It is vendored here by **file copy**, not as a submodule, so
 nothing in `.git` records which upstream revision these files came from. This file is that record.
 
-**Pinned at `170ae9695a324c7511893bf0877378de6fcebf5a`** (2026-11-01, "Stop rounding up 9s at the
-spare digit in toString(double)", #284) - the IVG-2 freeze on IVG `main`. Per Magnus's decision, the SDKs
+**Pinned at `cdabe2888d846111e6cd8c2ebed4a91ddcd097c7`** (2026-11-04, the merge of #292, "Apply one
+rule to every Unicode converter") - the IVG-2 freeze on IVG `main`. Per Magnus's decision, the SDKs
 vendor the IVG main freeze rather than the IVG revision embedded in the shipping Permut8 (svn
 r25291); a sticker that renders here may therefore exercise fixes the shipping plugin predates, so a
 final in-plugin check still counts. Never take anything from upstream's `IVG-3` branch.
 
 | Consumer | Pin |
 |---|---|
-| Permut8 firmwares SDK | `170ae96` |
+| Permut8 firmwares SDK | `cdabe28` |
 
-The move from the previous freeze `5ad1afd` brings one code fix (ffbab9f, #284): when every digit
+The move from the previous freeze `170ae96` brings two fail-safes. Non-finite values now stop a
+render with an error instead of reaching `toString(double)`, which hung on infinity: a text caret
+(`text caret out of range`) and scaled pattern bounds (`rescaled bounds out of range`) (c675163,
+#290). IMPD's Unicode converters now follow one rule (5140b35, #292): invalid code points are
+asserted and become U+FFFD in release builds, an unpaired UTF-16 surrogate no longer reads past the
+string, and the new `repairWideString()` cleans strings that come from the OS. The rest is the
+rebuilt IVGFiddle WASM (`rasterizeIVG.js`). Rendered with IVG2PNG built from `170ae96` and
+`cdabe28`, all 7 example stickers and `tests/font-rendering.ivg` produce byte-identical PNGs on
+Windows.
+
+The earlier move from `5ad1afd` to `170ae96` brought one code fix (ffbab9f, #284): when every digit
 IMPD's `toString(double)` rounds up is a 9, the carry loop no longer reads the uninitialized byte
 before the spare digit (`dp > bp` guard, as in PikaScript). Everything else is whitespace - tabs
 instead of spaces in `src/IVG.h` and `tools/IVG2PNG.cpp` (cbdffc3, #281) - plus the regenerated
-IVGFiddle outputs. Rendered with IVG2PNG built from `5ad1afd` and `170ae96`, all 7 example
-stickers and `tests/font-rendering.ivg` produce byte-identical PNGs on Windows.
+IVGFiddle outputs. Renders from the `5ad1afd` and `170ae96` builds were byte-identical.
 
 The earlier move from `651fdab` to `5ad1afd` brought a count-based resource budget per render, now
 **required** (#268, 5baf7e5, 421f819): IMPD takes an `IMPD::IMPDBudget` (characters, statements)
@@ -49,7 +58,7 @@ single 0/1 characters; ecd2075, 83e25a4) and the arcSweep `fabs` fix.
 
 ## Local patches
 
-None at this pin - every vendored file is byte-identical to upstream `170ae96`. History worth
+None at this pin - every vendored file is byte-identical to upstream `cdabe28`. History worth
 knowing: the pre-freeze copy carried ONE deliberate local patch, documented only in
 `SHIPPING_MICROTONIC_VERSION.md` - `tools/ivgfiddle/output/setupModule.js` deferred `runIVG()`
 until the modularized Emscripten runtime instance had replaced the factory in the global `Module`,
@@ -75,7 +84,7 @@ From the repository root, with the pin above as the `..` endpoint so you can rea
 
 ```
 git clone https://github.com/malstrom72/IVG.git /tmp/ivg
-git -C /tmp/ivg log --oneline 170ae96..origin/main
+git -C /tmp/ivg log --oneline cdabe28..origin/main
 ```
 
 Refresh **only the files already vendored** (every `git ls-files IVG` path except this `VENDOR.md`
