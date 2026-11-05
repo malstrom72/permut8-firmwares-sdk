@@ -1,5 +1,8 @@
 @ECHO OFF
 SETLOCAL ENABLEEXTENSIONS ENABLEDELAYEDEXPANSION
+REM %~f1 resolves a relative firmware path against the caller's directory, so take it before the CD.
+SET "FW="
+IF NOT "%~1"=="" SET "FW=%~f1"
 CD /D "%~dp0.."
 REM Run one compiled Permut8 firmware and print its deterministic output checksum.
 REM See runPermut8Firmware.sh for what the harness does and what the checksum does and does not prove.
@@ -9,12 +12,11 @@ IF "%~1"=="" (
 	ECHO usage: tools\runPermut8Firmware.cmd ^<firmware.gazl^> [extra GAZLCmd args] 1>&2
 	EXIT /B 1
 )
-IF NOT EXIST "%~1" (
+IF NOT EXIST "%FW%" (
 	ECHO runPermut8Firmware: no such file: %~1 1>&2
 	EXIT /B 1
 )
 
-SET "FW=%~1"
 SET "NAME=%~n1"
 SHIFT
 
