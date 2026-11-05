@@ -64,7 +64,6 @@
 
 namespace GAZL {
 
-// TODO : support unicode source
 typedef char Char;
 typedef int Int;
 typedef unsigned int UInt;
@@ -75,7 +74,7 @@ typedef Int Status;																										// Run-time status code
 const int VERSION = 1;
 const int WORD_SIZE = 32;
 const Pointer MEMORY_OFFSET = 0x12345678;																				// All memory pointers in GAZL are offsetted by this amount (thus the address of the first memory word is not zero). This makes it easier to detect invalid memory operations (such as writing to a null-pointer).
-const Pointer FUNCTION_OFFSET = 0x56789ABC;																				// All function pointers in GAZL are offsetted by this amount (thus the ordinal of the first function is not zero). This makes it easier to detect an invalid indirect call - through a null pointer, or through a small integer that was never a function pointer at all. A function pointer is an ORDINAL indexing `functionTable`, NOT a code address, which is why this is not an instruction-pointer offset; it was named IP_OFFSET until 2026-08-05.
+const Pointer FUNCTION_OFFSET = 0x56789ABC;																				// All function pointers in GAZL are offsetted by this amount (thus the ordinal of the first function is not zero). A function pointer is an ordinal indexing `functionTable`, not a code address.
 const Pointer NULL_POINTER = 0;
 
 union Value {
@@ -126,16 +125,15 @@ enum AssemblerError {
 	, EXPECTED_CONSTANT = 31
 	, NOT_ENOUGH_FUNCTION_SPACE = 32
 	, LABEL_ON_FUNCTION = 33
-	, ASSEMBLER_ERROR_COUNT = 34
+	, FRAME_TOO_LARGE = 34
+	, NON_ASCII_TEXT = 35
+	, UNNAMED_DATA_SECTION = 36
+	, ASSEMBLER_ERROR_COUNT = 37
 };
 
 extern const char* ASSEMBLER_ERROR_TEXTS[];
 
-/*
-	Exception thrown by the assembler.
-	
-	Contains the error code and an optional detail string referencing the offending source.
-*/
+// Thrown by the assembler; `detail` quotes the offending source when there is one.
 class Exception : public std::exception {
 	public:		Exception(AssemblerError error);
 	public:		Exception(AssemblerError error, const Char* b, const Char* e);
@@ -151,18 +149,43 @@ inline Exception::Exception(AssemblerError error, const Char* b, const Char* e) 
 inline Exception::Exception(AssemblerError error, const std::string& detail) : error(error), detail(detail) { assert(0 <= error && error < ASSEMBLER_ERROR_COUNT); }
 inline Exception::~Exception() throw() { }																				// (GCC requires explicit destructor with one that has throw().)
 
-/*
-	Symbol table shared between assembler and processor.
+enum DataSection {
+	GLOB_SECTION				// writable, and saved by freezing
+	, TEMP_SECTION				// writable, but left out of freezing
+	, CNST_SECTION				// read-only
+};
 
-	Stores function and global definitions, constants and manages forward references during assembly.
-*/
+// What `Symbols::getGlobalInfo` reports about one name of data: a section's label, or a label on a data statement.
+struct GlobalInfo {
+	const char* name;				// valid as long as the `Symbols` it came from
+	Pointer address;
+	UInt declaredWords;				// what the source says: a section's `*n`, or the values on the labelled statement
+	UInt ownedWords;				// to the next label or the section's end: what freezing saves under the name
+	DataSection section;			// the kind of section it is declared in; freezing saves `GLOB_SECTION` only
+};
+
+enum ConstantKind {				// what `Symbols::lookupConstant` found
+	INT_CONSTANT					// a `DEFi`, or an int from `defineConstant`
+	, FLOAT_CONSTANT				// a `DEFf`, or a float from `defineConstant`
+	, ADDRESS_CONSTANT				// a `DEFp`, or `NULL`
+};
+
+// A program's global names: functions, natives, data labels and named constants.
 class Symbols {
 	friend class Assembler;
+	/*
+		One name: in `globals` a data label, function, native or named constant; in `locals` a parameter, local or
+		branch label of the current function.
+	*/
 	protected:	struct Symbol {
-					Symbol(int types, Value value, UInt size) : types(types), value(value), size(size) { }
-					int types;
-					Value value;
-					UInt size;
+					Symbol(int types, Value value, UInt words) : types(types), value(value), declaredWords(words)
+							, ownedWords(words), minOffset(0), maxOffset(static_cast<Int>(words) - 1) { }
+					int types;																			// What kind of name it is, matched against the types an operand accepts.
+					Value value;																		// What the name stands for: an address, a function or native, a constant, a frame word or a code position.
+					UInt declaredWords;																	// What the source says: a section's `*n`, the values on a labelled data statement, or a local's size.
+					UInt ownedWords;																	// For data, its words to the next label or the section's end: what freezing saves.
+					Int minOffset;																		// The lowest `k` a `:k` on it may take: for data, down to its section's first word.
+					Int maxOffset;																		// The highest `k`: for data, up to its section's last word. Locals are checked against the frame instead.
 				};
 
 	protected:	struct Reference {
@@ -181,30 +204,33 @@ class Symbols {
 	public:		typedef SymbolMap::const_iterator Iterator;
 				
 	public:		void registerNative(const Char* name, Int index);
-	public:		Pointer findFunction(const Char* name) const;															/// Returns `NULL_POINTER` if not found.
-	public:		Pointer findGlobal(const Char* name, UInt& size) const;													/// Returns `NULL_POINTER` if not found (in which case, `size` is left untouched).
+	public:		Pointer findFunction(const Char* name) const;															// Returns `NULL_POINTER` if not found.
+	public:		Pointer findGlobal(const Char* name, UInt& declaredWords) const;										// Returns `NULL_POINTER` if not found (in which case, `declaredWords` is left untouched).
 	public:		void defineConstant(const Char* name, bool asFloat, const Value& value);
-	public:		bool lookupConstant(const Char* name, bool* isFloat, Value* value) const;	// FIX : why * isFloat here, when we use & at other places
-	public:		bool findFirstGlobal(Iterator& iterator, bool includeTemps) const;
-	public:		bool findNextGlobal(Iterator& iterator, bool includeTemps) const;
-	public:		const char* getGlobalInfo(const Iterator& iterator, bool& isTemp, Pointer& address, UInt& size) const;
+	public:		bool lookupConstant(const Char* name, ConstantKind& kind, Value& value) const;							// A named constant only, not data or a function. Returns false if `name` is none.
+	public:		bool findFirstGlobal(Iterator& iterator) const;															// Every name of data, `GLOB`, `TEMP` and `CNST` alike, in ascending order (see `GlobalInfo`).
+	public:		bool findNextGlobal(Iterator& iterator) const;
+	public:		GlobalInfo getGlobalInfo(const Iterator& iterator) const;
+	public:		bool getGlobalInfo(const Char* name, GlobalInfo& info) const;													// Returns false, with `info` cleared, if `name` is not data.
 
-	// TODO : all these below could take std::string&, would be more consistent
-	protected:	bool lookup(const Char* nameBegin, const Char* nameEnd, int acceptedTypes, int& types, Value& value, UInt& size) const;
-	protected:	void define(const std::string& name, int types, Value value, UInt size = 1);
-	protected:	void link(const Char* labelBegin, const Char* labelEnd, Value* storage, int accepts, Int offset = 0); // FIX : name?
+	protected:	bool lookup(const Char* nameBegin, const Char* nameEnd, int acceptedTypes, int& types, Value& value) const;
+	protected:	Symbol* define(const std::string& name, int types, Value value, UInt words = 1);
+	protected:	const Symbol* link(const Char* labelBegin, const Char* labelEnd, Value* storage, int accepts
+						, Int offset = 0);																		// The symbol, or 0 for a forward reference.
 	protected:	void registerSwitch(const Char* labelBegin, const Char* labelEnd, UInt switchSize, Value* storage, Int offset = 0);
 	protected:	void resolveForwardRefs();
 	protected:	void clear() { symbols.clear(); forwardRefs.clear(); }
 	protected:	void resolve(const Reference& ref, const Symbol& symbol);
-	protected:	SymbolMap symbols;						// TODO : try a C variation with a sorted array (fixed size strings) and bsearch or alternatively a hash table (nick the one from NuXScript)
-	protected:	std::vector<Reference> forwardRefs;		// TODO : move this to a Linker class (or some better name)? in assembler, the methods herein that needs forwardRefs only lookup things in Symbols so they can use lookup()
+	protected:	SymbolMap symbols;
+	protected:	std::vector<Reference> forwardRefs;
 };
 
 struct Operator;
 
 /*
-	The four sizes an assembly computes: what a program actually used, from `finalize`.
+	The four sizes an assembly computes: what a program actually used, from `finalize`. `constsSize` counts the
+	constants plus the one-word zero guard at the end of memory, so `globalsSize + constsSize` is the least memory
+	a program needs before its data stack.
 */
 struct ProgramSizes {
 	UInt codeSize;
@@ -213,53 +239,61 @@ struct ProgramSizes {
 	UInt constsSize;
 };
 
-/*
-	Parses GAZL source code and emits executable data.
-
-	Maintains symbol tables and compile-time variables while converting assembly text to a binary representation.
-*/
+// Assembles GAZL source, line by line, into the code, function-table and memory buffers the caller provides.
 class Assembler {
 	friend class Symbols;
 	public:		Assembler(UInt maxCodeSize, Instruction* codeBase, UInt maxFunctionCount, UInt* functionTable, UInt maxMemorySize, Value* memoryBase, Symbols& globals); // Create an assembler for the provided buffers. `functionTable` maps each function's ordinal to its code offset (see `finalize`).
-	public:		void newUnit(const Char* unitName); // Begin assembling a new source unit.
-	public:		const Char* feed(const Char* line); // Assemble a single line and return pointer to the next.
-	public:		void finalize(ProgramSizes& sizes); // Finish assembly and report memory usage. `sizes.functionCount` is the number of entries filled in `functionTable`.
-	public:		void finalize(UInt& codeSize, UInt& globalsSize, UInt& constsSize, UInt& functionCount); // Positional form of `finalize`; prefer the `ProgramSizes` overload.
+	public:		void newUnit(const Char* unitName);																		// Begin assembling a new source unit.
+	public:		const Char* feed(const Char* line); 																	// Assemble a single line and return pointer to the next.
+	public:		void finalize(ProgramSizes& sizes); 																	// Finish assembly and report memory usage. `sizes.functionCount` is the number of entries filled in `functionTable`.
 
 	protected:	struct CompileTimeVar {
 					int types;
 					Value value;
 				};
 
-	protected:	void declare(Symbols& where, const Char* labelBegin, const Char* labelEnd, int types, Value value, UInt size = 1);
+	protected:	struct Operand {																			// What `parseOperand` read, besides its value.
+					const Symbols::Symbol* symbol;															// The global symbol it names, or 0: an assembly-time variable, a literal, a local or a forward reference.
+					int variableTypes;																		// The types of the assembly-time variable it read, or 0.
+				};
+
+	protected:	Symbols::Symbol* declare(Symbols& where, const Char* labelBegin, const Char* labelEnd, int types, Value value
+						, UInt words = 1);
 	protected:	static int operatorCompare(const void* a, const void* b);
 	protected:	static int nativeDefinitionCompare(const void* a, const void* b);
 	protected:	static Char parseOperandType(const Char* b, const Char* e);
-	protected:	void linkWithOffset(Symbols& defs, const char* b, const char* e, int accepts, Value* v);
-	protected:	void parseConstant(const Char* b, const Char* e, int accepts, Value* v);
-	protected:	void parseOperand(const Char* b, const Char* e, int accepts, Value* v);
+	protected:	const Symbols::Symbol* linkWithOffset(Symbols& defs, const char* b, const char* e, int accepts
+						, Value* v);
+	protected:	Operand parseConstant(const Char* b, const Char* e, int accepts, Value* v);
+	protected:	Operand parseOperand(const Char* b, const Char* e, int accepts, Value* v);
 	protected:	bool doConstantBranch(const Operator* op, const Char* op0Begin, const Char* op0End
 						, const Char* op1Begin, const Char* op1End);
 	protected:	Value calcConstant(const Operator* op, const Char* op1Begin, const Char* op1End, const Char* op2Begin
 						, const Char* op2End);
 	protected:	void finalizeFunction();
+	protected:	void declareData(const Char* labelBegin, const Char* labelEnd, const Value* first, UInt declaredWords);	// Declare a data label at `first`, and end what the previous one owns there.
+	protected:	bool unownedRefused() const;																			// The current section has unowned words, and is a `GLOB` one, whose words freezing must save by name.
+	protected:	Pointer makeGAZLPointer(const Value* data, bool constant) const;										// The pointer to `data`: up from the base for globals, down from it for constants.
 	protected:	Instruction* const codeBase;
 	protected:	Instruction* const codeEnd;
 	protected:	const UInt maxFunctionCount;
-	protected:	UInt* const functionTable;			// Maps function ordinal -> code offset (index into `codeBase`).
+	protected:	UInt* const functionTable;																				// Maps function ordinal -> code offset (index into `codeBase`).
 	protected:	Value* const memoryBase;
 	protected:	Value* const memoryEnd;
 	protected:	Instruction* ip;
 	protected:	Instruction* functionStart;
-	protected:	UInt functionCount;					// Running ordinal; assigned to each `FUNC` in declaration order.
+	protected:	UInt functionCount;																						// Running ordinal; assigned to each `FUNC` in declaration order.
 	protected:	UInt localsSize;
 	protected:	UInt paramsSize;
 	protected:	Value* globalsPointer;
 	protected:	Value* constantsPointer;
-	protected:	std::string dataLabel; // Only for error display.
+	protected:	std::string dataLabel;																					// Only for error display.
 	protected:	int dataLabelType;
 	protected:	Value* dataPointer;
+	protected:	Value* sectionBegin;																					// The current data section's first word.
 	protected:	Value* dataEnd;
+	protected:	Symbols::Symbol* dataOwner;																				// The current section's latest label, owning to its end for now; null while it has none.
+	protected:	bool dataIsConstant;																					// The current data section is a `CNST` one, placed below the base.
 	protected:	Symbols& globals;
 	protected:	Symbols locals;
 	protected:	CompileTimeVar compileTimeVars[128];
@@ -294,7 +328,13 @@ enum {
 };
 
 /*
+	What a `Processor` runs in: the labels are its constructor's parameters, and the frames below are the call frames
+	`run()` builds.
+
 						 +-----------------------+ <- memory pointer
+						 | Constants | Read Only |
+						 |           | Memory    |
+						 |-----------|-----------| <- MEMORY_OFFSET, the base: constants below, the rest above
 						 | Globals   | RW Memory |
 						 |           |           |
 	  dataStackOffset -> |-----------|           |
@@ -303,9 +343,8 @@ enum {
       + dataStackSize -> |-----------|           |
 						 | (Data     |           |
 						 | Stack 2)  |           |
-						 |-----------|-----------| <- rwMemorySize
-						 |           | Read Only |
-						 | Constants | Memory    |
+						 |-----------|-----------| <- base + rwMemorySize
+						 | Zero guard            |
 						 +-----------------------+ <- memorySize
 
                          +--------+  +----------+  +-----------+
@@ -325,8 +364,7 @@ enum {
 						 | Transients |
 						 | +------------+
 						 | | Parameters | <-- Frame #2 (callee)
-						 +-|----------+ |
-					       |------------|
+						 +-|------------|
 						   | Locals     |
 						   |            |
 						   |------------|
@@ -335,28 +373,22 @@ enum {
 						   +------------+
 */
 
-/*
-	Executes compiled bytecode using an internal stack-based VM.
-
-	The processor owns memory and call stacks and provides helper functions for interacting with native code.
-
-	Processor is copyable.
-*/
+// Processor is copyable.
 class Processor {
 	public:		Processor(); 																							// Default-initialized processor. It's illegal to call any methods on a default constructed processor.
 	public:		Processor(UInt codeSize, const Instruction* code, UInt functionCount, const UInt* functionTable
 						, UInt memorySize, Value* memory, UInt globalsSize, UInt constsSize, UInt ipStackSize
-						, CallStackEntry* ipStack, NativeFunc const* natives, void* userData = 0);						// higher level routine, data stack is full space between globals and constants
+						, CallStackEntry* ipStack, NativeFunc const* natives, void* userData = 0);						// higher level routine, data stack is all the space between the globals and the zero guard
 	public:		Processor(UInt codeSize, const Instruction* code, UInt functionCount, const UInt* functionTable
-						, UInt memorySize, Value* memory, UInt rwMemorySize, UInt dataStackOffset, UInt dataStackSize
-						, UInt ipStackSize, CallStackEntry* ipStack, NativeFunc const* natives, void* userData = 0);	// lower level routine, useful for running multiple processors on the same code (i.e. threads) where each processor needs its own stack
-	public:		void resetTimeOut(Int clockCycles); 																	// It is allowed to use `resetTimeOut(0)` from a native call to make the processor return immediately before executing it's next instruction. Alternatively if you want to suspend the processor from a native call, but retry the call when resumed (e.g. simulating a blocking call), return non-zero from the native call and the instruction pointer will not be incremented.
+						, UInt memorySize, Value* memory, UInt constsSize, UInt rwMemorySize, UInt dataStackOffset
+						, UInt dataStackSize, UInt ipStackSize, CallStackEntry* ipStack, NativeFunc const* natives
+						, void* userData = 0);																			// lower level routine, useful for running multiple processors on the same code (i.e. threads) where each processor needs its own stack; `rwMemorySize` and `dataStackOffset` count from the base
+	public:		void resetTimeOut(Int clockCycles); 																	// It is allowed to use `resetTimeOut(0)` from a native call to make the processor return immediately before executing its next instruction. Alternatively if you want to suspend the processor from a native call, but retry the call when resumed (e.g. simulating a blocking call), return non-zero from the native call and the instruction pointer will not be incremented.
 	public:		const Value* accessConstMemory(Pointer pointer, UInt count) const; 										// If returning null pointer you should normally return `ACCESS_VIOLATION`
 	public:		Value* accessMemory(Pointer pointer, UInt count) const; 												// If returning null pointer you should normally return `ACCESS_VIOLATION`
 	public:		Value* accessParams(UInt count) const; 																	// If returning null pointer you should normally return `DATA_STACK_OVERFLOW`
-	// FIX : stack alloc function
 	public:		Status enterCall(Pointer functionPointer); 																// After `enterCall()`, call `run()` (and on time out, repeatedly call `run()` until it returns OK). It is ok to call `enterCall()` at any time, current instruction pointer and stack is pushed and popped as expected which makes `enterCall()` double as a mean to issue interrupts.
-	public:		Value* pushCall(Pointer functionPointer);																/// Push a call onto the current GAZL continuation, from INSIDE a native callback only: return OK from the native (do not run()) and execution flows into the pushed function; its RETU returns into the GAZL caller, so the `^native` call behaves exactly like a `&function` call. The returned pointer is the argument window ([0] = return value, [1..] = arguments) - for a transparent forward the `^call`'s arguments are already in place. Pushing several calls forms a LIFO chain: the last pushed runs first and each RETU flows into the next. All links share the ONE window - each receives the same arguments, each overwrites [0] with its result (so [0] ends as the FIRST-pushed link's result); the typical chain is several argument-less handlers delivered at one safe point. Returns 0 on error (not inside a native call, bad function, ipStack or data-stack overflow).
+	public:		Value* pushCall(Pointer functionPointer);																// From inside a native callback only: when the native returns OK, the function runs as if the `^native` call had called it. Returns its argument window ([0] = result), or 0 on error. Several pushes run last-pushed first and share that one window.
 	public:		Status run();
 	public:		void* getUserData() const;
 	public:		int getClockCyclesLeft() const;
@@ -365,9 +397,11 @@ class Processor {
 	protected:	const Instruction* codeBase;
 	protected:	UInt functionCount;
 	protected:	const UInt* functionTable;																				// Maps function ordinal -> code offset; a function pointer is `FUNCTION_OFFSET + ordinal`.
-	protected:	UInt memorySize;
-	protected:	Value* memoryBase;
-	protected:	UInt rwMemorySize;
+	protected:	UInt memorySize;																						// One less than the memory given: the last word is the assembler's zero guard, so no checked read reaches it.
+	protected:	Value* memoryBase;																						// The lowest constant: the start of the memory given.
+	protected:	UInt constantsSize;																						// Words below the base, `MEMORY_OFFSET`: the constants, without the zero guard.
+	protected:	UInt readOffset;																						// `constantsSize - MEMORY_OFFSET`: a pointer plus this is its index from the lowest constant.
+	protected:	UInt rwMemorySize;																						// Words from the base up: globals and data stack.
 	protected:	Value* dataStackBase;
 	protected:	Value* dataStackEnd;
 	protected:	CallStackEntry* ipStackBase;
@@ -385,43 +419,41 @@ inline int Processor::getClockCyclesLeft() const { return clockCyclesLeft; }
 
 inline const Value* Processor::accessConstMemory(Pointer pointer, UInt count) const {
 	assert(memoryBase != 0);
-	return (count < memorySize && pointer - MEMORY_OFFSET <= memorySize - count)
-			? pointer - MEMORY_OFFSET + memoryBase : 0;
+	const UInt index = pointer + readOffset;																			// the readable range starts at the lowest constant
+	return (count <= memorySize && index <= memorySize - count) ? memoryBase + index : 0;
 }
 
 inline Value* Processor::accessMemory(Pointer pointer, UInt count) const {
 	assert(memoryBase != 0);
-	return (count < rwMemorySize && pointer - MEMORY_OFFSET <= rwMemorySize - count)
-			? pointer - MEMORY_OFFSET + memoryBase : 0;
+	return (count <= rwMemorySize && pointer - MEMORY_OFFSET <= rwMemorySize - count)
+			? memoryBase + constantsSize + (pointer - MEMORY_OFFSET) : 0;
 }
 
 inline Value* Processor::accessParams(UInt count) const {
 	assert(dsp != 0);
 	assert(dsp >= dataStackBase);
-	return (dsp + count <= dataStackEnd ? dsp : 0);
+	return (count <= (UInt)(dataStackEnd - dsp) ? dsp : 0);
 }
 
 inline void* Processor::getUserData() const { return userData; }
 
-/*
-	Memory serialization ("freeze" / "thaw"). Persists a Processor's mutable, non-TEMP global memory so it can be
-	reconstructed later. Source text and compile-time constants are the caller's responsibility: to thaw, first
-	re-assemble the same source (which deterministically rebuilds identical code, layout and function ordinals), then
-	call `thawMemory`. Function pointers stored in globals survive re-assembly because they are stable ordinals.
-	Call only at a quiescent boundary (between `run()` calls, with no active GAZL call).
-*/
+// Frozen memory, docs/gazl/Specification.md section 11. Freeze and thaw only between `run()` calls.
 enum MemoryLoad {
-	MEMORY_OK = 0				// Restored successfully.
-	, MEMORY_BAD_MAGIC = 1		// Not a GAZL memory blob.
-	, MEMORY_BAD_VERSION = 2	// Incompatible memory-format or GAZL version.
+	MEMORY_OK = 0				// Every entry met an owner of the same size, and every owner had an entry.
+	, MEMORY_BAD_MAGIC = 1		// Not frozen memory.
+	, MEMORY_BAD_VERSION = 2	// Unknown format version, or a GAZL version this one cannot thaw.
 	, MEMORY_BAD_WORDSIZE = 3	// Word size differs from this build.
-	, MEMORY_BAD_CANARY = 4		// Endianness or float bit-layout differs from this build.
-	, MEMORY_TRUNCATED = 5		// Blob ended unexpectedly.
+	, MEMORY_BAD_CANARY = 4		// The check entry is missing or differs: the encoding was damaged or misread.
+	, MEMORY_TRUNCATED = 5		// The header is incomplete, or a length runs past the end.
+	, MEMORY_MALFORMED = 6		// A name is invalid or out of order, padding is not zero, or bytes follow the last entry.
+	, MEMORY_MISMATCH = 7		// Restored as far as `prefix` allows, but entries and owners did not match exactly.
 };
 
-UInt freezeMemorySize(const Processor& processor, const Symbols& symbols);								// Exact byte count a freeze will occupy.
-UInt freezeMemory(const Processor& processor, const Symbols& symbols, void* buffer, UInt bufferSize);	// Writes the blob; returns the size (writes nothing and returns the needed size if `bufferSize` is too small).
-MemoryLoad thawMemory(Processor& processor, const Symbols& symbols, const void* buffer, UInt bufferSize);	// Restores non-TEMP globals by name into an already-assembled Processor.
+UInt freezeMemorySize(const Processor& processor, const Symbols& symbols);												// Exact byte count a freeze will occupy. Requires (asserted) that it fits a `UInt`: under 4 GiB.
+UInt freezeMemory(const Processor& processor, const Symbols& symbols, void* buffer, UInt bufferSize);					// Writes the frozen memory; returns its size (writes nothing and returns the needed size if `bufferSize` is too small). Requires what `freezeMemorySize` does.
+MemoryLoad thawMemory(Processor& processor, const Symbols& symbols, const void* buffer, UInt bufferSize
+		, bool prefix);																								// Restores nothing unless all of `buffer` is valid. If `prefix`, an owner and an entry of different sizes share their common words.
+Float parseFloat(const Char*& p, const Char* e);																		// Reads a float literal in [`p`, `e`), advancing `p`, rounded to the nearest float, ties to even. Never reads at `e`.
 
 #if !defined(NDEBUG)
 bool unitTest();

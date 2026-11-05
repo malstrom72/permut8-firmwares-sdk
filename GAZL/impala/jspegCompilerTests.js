@@ -573,6 +573,36 @@ function testNuXJSCommandCompilerScript(compilerSource) {
 		true,
 	);
 	runCase("numeric output path", ["impala.nuxjs.js", sourcePath, "42"], { "impalaCompiler.js": "ok" }, false);
+
+	// A source with CR-only line ends must report its real line, as the node front end does: counting `\n` alone put
+	// every diagnostic on line 1.
+	const crSource = "function main()\r{\r\tundeclared = 1;\r}\r";
+	const crPrinted = [];
+	const crContext = {
+		arguments: ["impala.nuxjs.js", "cr.impala"],
+		print: (line) => crPrinted.push(String(line)),
+		write: () => {},
+		read: (file) => {
+			if (file === "cr.impala") {
+				return crSource;
+			}
+			throw new Error(`Unexpected read path for the CR case: ${file}`);
+		},
+		load: (file) => {
+			const loadedSource = /impalaImportClosure\.js$/.test(file) ? closureSource : compilerSource;
+			new vm.Script(loadedSource, { filename: file }).runInContext(crContext);
+		},
+	};
+	vm.createContext(crContext);
+	try {
+		new vm.Script(scriptSource, { filename: "impala.nuxjs.js" }).runInContext(crContext);
+	} catch (err) {
+		// the compile is meant to fail; the printed diagnostic is what is checked
+	}
+	assert(
+		crPrinted.some((line) => line.indexOf("cr.impala:3:") === 0),
+		"impala.nuxjs.js must count a lone CR as a line end: " + crPrinted.join(" | "),
+	);
 	console.log("impala.nuxjs.js compiles an Impala source through NuXJS-style command arguments");
 }
 
@@ -2358,8 +2388,6 @@ console.log("impala.jspeg compiler never bounds-checks ADDRESS formation");
 		["an untyped source promises nothing to break", "copy (4 from &global gu[0] to &global gf[0]);"],
 		["an untyped destination, likewise", "copy (4 from &global gf[0] to &global gu[0]);"],
 		["a cast is the escape hatch", "copy (4 from (pointer) &global gi[0] to &global gf[0]);"],
-		["a length past the destination extent is the programmer's, as with memcpy",
-			"copy (64 from &global gi[0] to &global gi[4]);"],
 	]) {
 		expectCompileOutcome("copy element type", label,
 			decls + "function main() { " + body + " }\n", null);
@@ -2370,6 +2398,38 @@ console.log("impala.jspeg compiler never bounds-checks ADDRESS formation");
 	expectCompileOutcome("copy element type", "two untyped spellings do not contradict each other",
 		"global array gu[8]\nfunction main() locals array a[4] { copy (4 from a to &global gu[0]); }\n", null);
 	console.log("impala.jspeg compiler checks copy's element types, and only on a contradiction");
+
+	// A LITERAL count larger than the room left in a global array is E467 (it used to be "the programmer's, as
+	// with memcpy"; the VM stops only a copy that leaves memory, so one into the neighbour succeeded silently).
+	// Anything Impala cannot measure stays unchecked: a symbolic count, a pointer, a symbolic offset.
+	for (const [label, body] of [
+		["past the destination", "copy (64 from &global gi[0] to &global gi[4]);"],
+		["past the source", "copy (5 from &global gi[4] to &global gu[0]);"],
+	]) {
+		expectCompileOutcome("copy count", label, decls + "function main() { " + body + " }\n", "E467");
+	}
+	for (const [label, body] of [
+		["exactly the room left", "copy (4 from &global gi[4] to &global gu[4]);"],
+		["a symbolic count", "copy (N from &global gi[0] to &global gu[0]);"],
+		["a pointer has no extent", "copy (64 from global gp to global gq);"],
+	]) {
+		expectCompileOutcome("copy count", label, "const int N\nglobal pointer gp\nglobal pointer gq\n" + decls
+				+ "function main() { " + body + " }\n", null);
+	}
+	console.log("impala.jspeg compiler refuses a literal copy count larger than a global array's room");
+
+	for (const [label, expr, error] of [
+		["integer division", "i / 0", "E466"],
+		["modulus", "i % 0", "E466"],
+		["float division", "f / 0.0", "E466"],
+		["a hex zero", "i / 0x0", "E466"],
+		["a symbolic zero is the assembler's", "i / Z", null],
+		["a non-zero literal", "i / 2", null],
+	]) {
+		expectCompileOutcome("zero divisor", label, "const int Z\nfunction main() locals int i, float f, int r, float q "
+				+ "{ i = 1; f = 1.0; " + (expr.charAt(0) === 'f' ? "q" : "r") + " = " + expr + "; }\n", error);
+	}
+	console.log("impala.jspeg compiler refuses a literal zero divisor");
 }
 
 // The `; else` detector must not fire on the shapes that legitimately put a `;` or an `else` nearby.
@@ -3582,6 +3642,25 @@ if (diagnosticWarnings.length !== 1 || !/^diag\.impala:1:\d+: warning\[E101\]: /
 }
 console.log("impala.jspeg compiler renders --legacy warnings in the same diagnostic shape");
 
+// Both types are named in a type diagnostic. typeError filled `{$type2}` only when that type was defined, so an
+// untyped shaped array's initializer once reported "int vs {$type2}" (that E422 itself is gone, see below).
+const typedShape = "global int array m[2, 2] = { { 1, 2.5 }, { 3, 4 } }\nfunction main() { }";
+expectCompileOutcome("type-names", "both types named", typedShape, "(float vs int)");
+try {
+	compileWithJsImpala(typedShape + "\n", { randomId: 42 });
+} catch (err) {
+	assert(!/\{\$/.test(err.message), `a diagnostic still carries a raw placeholder\n${err.message}`);
+}
+console.log("impala.jspeg compiler names every type in a type diagnostic, never a raw placeholder");
+
+// An untyped shaped array takes any mix of values, as an untyped flat one does. The buffered initializer path
+// compared each entry with the untyped element's undefined type, so no untyped shaped array could be initialized.
+expectCompileOutcome("untyped-shape", "ints", "global array m[2, 2] = { { 1, 2 }, { 3, 4 } }\nfunction main() { }",
+	null);
+expectCompileOutcome("untyped-shape", "a mix with an omitted entry",
+	"global int array b[4]\nglobal array m[2, 3] = { { 1, 2.5, &global b[2] }, { 4 } }\nfunction main() { }", null);
+console.log("impala.jspeg compiler initializes an untyped shaped array with any mix of values");
+
 // A symbol table is a plain `{}`, so it inherits `constructor`/`valueOf`/`toString`/`hasOwnProperty`/...
 // from Object.prototype. An unguarded `table[name]` read once mistook those user identifiers for
 // pre-existing entries: `function constructor()` crashed the compiler with a RAW, uncoded
@@ -3667,5 +3746,56 @@ console.log("impala.jspeg compiler treats Object.prototype names as ordinary ide
 		"[+-\\]] must be the Ford range '+'..']' (includes digits and ']', excludes '^')");
 	console.log("character class refuses an unescaped ']' range endpoint and keeps the escaped Ford range");
 }
+
+// Every string character fills a whole word. A 4-digit escape above 0xFF was cut to its low byte (0x5A7E became `~`,
+// 0x0100 a NUL that ended the string early), and an 8-digit escape holds any 32-bit value, past 0x10FFFF too. Equal
+// strings and suffixes share one table entry, and string constants whose labels have the same ASCII tag (here none)
+// must still get distinct labels.
+const wideOutput = compileWithJsImpala(
+	[
+		'const pointer S = "\\u5A7E\\u0100x\\UFFFFFFFF\\U12345678";',
+		'const pointer A = "\\uABCD\\U12345678";',
+		'const pointer B = "\\U12345678";',
+		'const pointer C = "\\uABCD\\U12345678";',
+		'const pointer D = "\\uABCE";',
+		"function main()",
+		"{",
+		"}",
+		"",
+	].join("\n"),
+	{ randomId: 42 },
+);
+const wideRows = wideOutput
+	.split("\n")
+	.map((line) => line.trim())
+	.filter((line) => /^(\S+:\s+)?(CNST|DAT|!)/.test(line));
+assert(wideOutput.indexOf("DATi #23166 #256") >= 0 && wideOutput.indexOf("DATs x") >= 0,
+	"a string character above 0xFF must keep its whole value: " + wideRows.join(" | "));
+assert(wideOutput.indexOf("DATi #4294967295 #305419896 #0") >= 0,
+	"an 8-digit escape must store its full 32-bit value: " + wideRows.join(" | "));
+assert(wideOutput.indexOf("DATi #43981 #305419896 #0") >= 0, "a wide string must be emitted once: " + wideRows.join(" | "));
+const labelOf = (name) => (new RegExp("\\n" + name + ":\\s+! DEFp &(\\S+)").exec(wideOutput) || [])[1];
+assert(labelOf("C") === labelOf("A") && labelOf("B") === labelOf("A") + ":1",
+	"equal wide strings and suffixes must share one entry: " + wideRows.join(" | "));
+assert(labelOf("D") !== undefined && labelOf("D") !== labelOf("A"),
+	"string constants with the same label tag must get distinct labels: " + wideRows.join(" | "));
+console.log("impala.jspeg compiler keeps every string character's full word value");
+
+// Only a zero word may be dropped from an initializer, and `-0.0` is not one: its sign bit is set, so dropping it read
+// back as `+0.0`. Where the field's word is unknown (an extern struct), it must be refused like any other value.
+let observedNegativeZero = false;
+try {
+	compileWithJsImpala("extern struct E { float a; float b; }\nglobal E e = { a: -0.0 };\nfunction main()\n{\n}\n", {
+		randomId: 42,
+	});
+} catch (err) {
+	observedNegativeZero = err && err.message && err.message.includes("E459");
+}
+
+if (!observedNegativeZero) {
+	console.error("impala.jspeg compiler dropped a -0.0 initializer as if it were zero");
+	process.exit(1);
+}
+console.log("impala.jspeg compiler keeps -0.0 apart from zero in initializers");
 
 console.log("JSPEG regression suite completed successfully");

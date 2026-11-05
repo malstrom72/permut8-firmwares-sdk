@@ -114,7 +114,7 @@ function retabulate(line) {
 
 	for (i = 0; i < segments.length; ++i) {
 		stop = tabIndex < INPUT_TAB_STOPS.length ? INPUT_TAB_STOPS[tabIndex] : -1000000000;
-		target = Math.max(stop, column + 1);
+		target = Math.max(stop, tabIndex === 0 ? 0 : column + 1);
 		while (column < target) {
 			remainder = column % OUTPUT_TAB_WIDTH;
 			next = column + (remainder === 0 ? OUTPUT_TAB_WIDTH : OUTPUT_TAB_WIDTH - remainder);
@@ -162,7 +162,8 @@ function impalaNuxLineColumn(source, offset) {
 	var end = offset < source.length ? offset : source.length;
 	for (var i = 0; i < end; ++i) {
 		var ch = source[i];
-		if (ch === "\n") {
+		// A lone CR ends a line too, as in the node front end; CRLF counts once.
+		if (ch === "\n" || (ch === "\r" && source[i + 1] !== "\n")) {
 			++line;
 			column = 1;
 		} else if (ch !== "\r") {

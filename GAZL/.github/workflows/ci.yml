@@ -24,7 +24,10 @@ jobs:
         chmod +x ./build.sh               # ensure it is executable
         ./build.sh
         
-  linux-gcc:
+  # Named for the PLATFORM, not a compiler: the toolchain is whatever build.sh selects, which is g++ by default
+  # (BuildCpp.sh) plus clang++ for the standalone fuzz driver on branches whose build.sh runs test-jit.sh. The old
+  # name said gcc and reported a clang failure under it, which cost real time to attribute.
+  linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -32,3 +35,12 @@ jobs:
       run: |
         chmod +x ./build.sh
         ./build.sh
+    - name: UBSan (unit tests and fuzz corpus replay)
+      run: bash tools/test-ubsan.sh
+    # The sanitizers don't see reads of uninitialized memory, which change results only when the stray bytes happen to
+    # matter. Valgrind reports every one.
+    - name: Valgrind (fuzz corpus replay)
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq valgrind
+        bash tools/test-fuzz.sh valgrind
