@@ -42,8 +42,8 @@ class CmdException : public std::exception {
 	public:		CmdException(const char* string = "General Exception") throw() : string(string) { }
 	public:		CmdException(const std::string& string) throw() : string(string) { }
 	public:		virtual ~CmdException() throw() { }
-    public:		virtual const char* what() const throw() { return string.c_str(); }
-    public:		const std::string& getString() const { return string; }
+	public:		virtual const char* what() const throw() { return string.c_str(); }
+	public:		const std::string& getString() const { return string; }
 	public:		std::string string;
 };
 
@@ -238,7 +238,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 	memset(code, 0, sizeof code);
 	memset(functionTable, 0, sizeof functionTable);
 	memset(callStack, 0, sizeof callStack);
-    try {
+	try {
 		Symbols globals;
 
 		static const NativeFunc NATIVE_TABLE[] = {
@@ -284,7 +284,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 	catch (GAZL::Exception&) {
 		return 0;
 	}
-  	return 0;  // Non-zero return values are reserved for future use.
+	return 0;  // Non-zero return values are reserved for future use.
 }
 #endif
 
@@ -334,7 +334,7 @@ void doOne(const char* fn) {
 	fseek(f, 0, SEEK_END);
 	size_t len = ftell(f);
 	fseek(f, 0, SEEK_SET);
-	unsigned char *buf = (unsigned char*)malloc(len);
+	unsigned char *buf = static_cast<unsigned char*>(malloc(len));
 	size_t n_read = fread(buf, 1, len, f);
 	fclose(f);
 	assert(n_read == len);
@@ -387,7 +387,8 @@ int main(int argc, const char* argv[]) {
 					const size_t dirLength = strlen(argv[i]);
 					// the directory argument need not end with a separator
 					const char* separator = (dirLength > 0 && argv[i][dirLength - 1] != '/') ? "/" : "";
-					if (snprintf(fn, sizeof fn, "%s%s%s", argv[i], separator, ent->d_name) >= (int)(sizeof fn)) {
+					const int pathLength = snprintf(fn, sizeof fn, "%s%s%s", argv[i], separator, ent->d_name);
+				if (pathLength >= static_cast<int>(sizeof fn)) {
 						fprintf(stderr, "Path too long, skipped: %s%s%s\n", argv[i], separator, ent->d_name);
 						continue;						// a truncated path would replay the WRONG file, or none
 					}

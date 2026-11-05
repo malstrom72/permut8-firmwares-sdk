@@ -4,11 +4,10 @@ Descriptions extracted from [`src/UnitTest.gazl`](../../src/UnitTest.gazl).
 
 **Floating-point environment.** Integer and `FTOi` results are identical on every target (two's-complement wrap,
 count-mod-32 shifts, saturating `FTOi`; see the individual opcodes). Float arithmetic (`ADDf`, `SUBf`, `MULf`, `DIVf`,
-`FLOf`, and so on) is IEEE-754 single precision, but its rounding mode and denormal handling (FTZ/DAZ) follow the host's
-current floating-point environment. GAZL does not set or restore it. Results that involve denormals are therefore
-host-defined and can differ between callers (for example an audio thread with flush-to-zero enabled versus a default
-thread) or between platforms. For bit-reproducible float results, run GAZL under a fixed FP environment (round-to-nearest
-plus a deliberate FTZ/DAZ choice) around `run()`.
+`FLOf`, and so on) is IEEE-754 single precision with round-to-nearest-even and denormals kept. GAZL does not set or
+restore the host's floating-point environment, so the host runs it with round-to-nearest-even and flush-to-zero off,
+or with flush-to-zero on for every thread that assembles or runs GAZL. Under flush-to-zero a denormal operand reads
+as zero and a denormal result becomes zero. See [`Specification.md`](Specification.md) sections 4 and 9.
 
 ## ABSf
 - `float(d)        #float`
@@ -86,9 +85,9 @@ stack frame sizes or for bounds checking etc.
 > call window, so an exhausted stack is reported at entry rather than deeper in. See `docs/impala/MemorySafetyModel.md`.
 
 A function pointer (the value of `&function`) is an opaque handle: a stable ordinal assigned in function declaration
-order, not a code address. Only equality (`EQUp` / `NEQp`) and calling are defined operations on a function pointer;
-ordering (`LSSp`, `GEQp` etc.) and arithmetic (`ADDp`, `SUBp`, `DIFp`) applied to a function pointer yield an
-unspecified (but memory-safe) result.
+order, not a code address. Equality (`EQUp` / `NEQp`), ordering (`LSSp`, `GEQp` etc.), the difference of two
+(`DIFp`, their ordinal distance) and calling are defined on function pointers. Arithmetic that produces one (`ADDp`,
+`SUBp`) yields an unspecified result, and so does ordering or subtracting `NULL` against any pointer.
 
 > **GAZL 1 does not enforce that contract, and GAZL 2 should.** All of those assemble today, because `p`
 > covers both data pointers and function pointers. `ADDp` is the one that bites: `&one + 1` is a valid
@@ -154,17 +153,19 @@ Define a compile-time constant integer
 ## DEFp
 - `&address`
 
-Define a compile-time constant pointer
+Define a compile-time constant pointer. The name is the same kind of pointer as the operand: data, constant data, a
+function or `NULL`.
 ## COPY
 - `&address(w)     &address(r)     *size`
 - `&address(w)     ptr             *size`
 - `ptr             &address(r)     *size`
 - `ptr             ptr             *size`
 
-Copies memory. Behaviour is undefined if target and source overlaps. This instruction can be used to accelerate memory
-access since global and constant data must otherwise be accessed with individual PEEK and POKE instructions. With COPY
-you can copy a range of global / constant data to a local array which can then be used directly with arbitrary
-instructions. (Just remember that you need to use ADRL to obtain the address to the local array.)
+Copies memory forward, one word at a time from the lowest address up, so overlapping ranges have a defined result
+(`Specification.md` section 3). This instruction can be used to accelerate memory access since global and constant
+data must otherwise be accessed with individual PEEK and POKE instructions. With COPY you can copy a range of global /
+constant data to a local array which can then be used directly with arbitrary instructions. (Just remember that you
+need to use ADRL to obtain the address to the local array.)
 
 ## DIFp
 - `int(d)          &address        &address`
@@ -189,8 +190,8 @@ corrected constant forms.
 - `float(d)        float           #float`
 - `float(d)        float           float`
 
-Divide floats Division by 0 is considered illegal and should generate a run-time error (or compile-time error if 0 is a
-constant).
+Divide floats Follows IEEE-754: dividing by a zero of either sign gives an infinity of the matching sign, and 0 / 0 gives
+NaN.
 
 ## DIVi
 - `int(d)          #int            #int`

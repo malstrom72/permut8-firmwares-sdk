@@ -5,7 +5,7 @@ with [`tools/buildGazlFuzz.sh`](../../tools/buildGazlFuzz.sh) or its `.cmd`, and
 [`tools/seedTextCorpus.sh`](../../tools/seedTextCorpus.sh). How to build and run the lane, on which machine, and
 with which sanitizers, is in [`design/fuzzing.md`](../../design/fuzzing.md).
 
-`textCorpus.tar.gz` is a corpus grown by that lane, minimized with `-merge=1` to 1367 inputs and packed
+`textCorpus.tar.gz` is a corpus grown by that lane, minimized with `-merge=1` to 2076 inputs and packed
 deterministically as `design/fuzzing.md` describes. **Unpack it into an EMPTY folder** - inputs left behind from a
 previous unpack would be replayed as well.
 
@@ -24,6 +24,11 @@ clean on a current engine and reproduces its defect on the commit before the fix
 | `peekIndexOverflowsInt`       | `PEEK`'s bounds check summed a biased address in `Int`, overflowing it   |
 | `pokeIndexOverflowsInt`       | the same, for `POKE`                                                     |
 | `swchSizeOverflowsInt`        | `SWCH *2147483647` computed its table size as `Int + 1`, a signed overflow (UBSan catches it) |
+| `setlNegativeFrameOffset`     | a negative `local:k` on `SETL`'s base reached below the frame, which run time does not check |
+| `defpOffsetPastSection`       | a `! DEFp` name took any offset, and `PEEK`/`POKE` through it checked only the name, never the section |
+| `defpOfCompileTimeAddress`    | the same, for a `! DEFp` name of an assembly-time address                |
+| `compileTimeAddressAccess`    | `PEEK`/`POKE` through an assembly-time address, which names no label to check against |
+| `defpOfPrefixedCompileTimeAddress` | `! DEFp #<P>` took the label path, looked up the name `<P>` and read the map's end node (ASan stack-buffer-overflow) |
 
 Only inputs for FIXED defects belong here. An input for a defect that is still open goes somewhere else until the
 fix lands, or it aborts a strict run while the corpus is still loading.

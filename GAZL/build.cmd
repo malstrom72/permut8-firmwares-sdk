@@ -27,6 +27,14 @@ REM Every memory instruction form at every edge of the memory arena, against an 
 CALL tools\test-bounds.cmd
 IF ERRORLEVEL 1 EXIT /B 1
 
+REM Float literals round correctly, sampled across every float (tools\GAZLFloatLiteralTest.cpp).
+CALL tools\test-float-literals.cmd
+IF ERRORLEVEL 1 EXIT /B 1
+
+REM Several processors in one memory, cooperative and on threads (tools\GAZLMultiProcessorTest.cpp).
+CALL tools\test-processors.cmd
+IF ERRORLEVEL 1 EXIT /B 1
+
 REM Every node-only gate, shared with build.sh so the two cannot run different subsets.
 CALL tools\test-js.cmd
 IF ERRORLEVEL 1 EXIT /B 1
@@ -40,6 +48,10 @@ output\NuXJS.exe output\impala.nuxjs.js ^
 	impala\ImpalaDemo.impala output\ImpalaDemo.gazl 0x4d2 impala\ImpalaDemo.impala
 IF ERRORLEVEL 1 EXIT /B 1
 output\GAZLCmd.exe output\ImpalaDemo.gazl main
+IF ERRORLEVEL 1 EXIT /B 1
+
+REM Impala keeps named constants in its output, so a golden that only matches text can still fail to assemble.
+output\GAZLCmd.exe tests\impala\golden\pointerConstants.gazl main
 IF ERRORLEVEL 1 EXIT /B 1
 
 REM The staging above only proves the compiler fits TODAY's nesting limit. This fails while there is still headroom,

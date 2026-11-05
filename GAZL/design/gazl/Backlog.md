@@ -35,12 +35,29 @@ Constant addresses are stored with `MEMORY_OFFSET` added, so `Processor::run` in
 `Char` is `char`, and identifiers and string data are byte-based. Supporting Unicode source needs a decision on
 encoding (UTF-8 in, code points in DATA strings) more than code.
 
-## `lookupConstant` out-parameters
-
-`Symbols::lookupConstant` returns through pointers (`bool* isFloat, Value* value`) where the rest of the API
-uses references. Changing it breaks hosts, so it waits for a version bump.
-
 ## Stack allocation for hosts
 
 There is no host call to reserve space on the GAZL data stack, for a native that needs scratch memory GAZL code
 can see. `accessParams` covers arguments only.
+
+## GAZL 2: rework `SEEK`
+
+`SEEK :offset [*extent]` (GAZL 2 only) needs another design pass before GAZL 2 is final:
+- `:offset` is measured from the section start, but reads like a relative jump of `offset` words. The base should
+  be explicit, or the mnemonic clearer.
+- It does not really seek. It never leaves the current section, and `*extent` fences the `DAT` rows that follow
+  into an even smaller range, so it opens a part of the section and fills it. A name like `PART`, `SLOT` or `AREA`
+  would say that.
+- The common case, zeros and then more data, would be simpler as plain data, for example `DATz *n` (n zero words),
+  leaving absolute placement to what Impala 2 really needs: struct fields at offsets the host decides.
+- Data label extents (a label covers up to the next label or the end of its section, from #135) must become
+  region-aware: regions may be opened in any offset order, so "the next label" cannot follow statement order, and
+  `SEEK` labels have their own size (the extent, or 1).
+
+## GAZL 2: the prefix decides a name's kind
+
+GAZL 1 lets `#name` and `&name` take any name the operand accepts (`#table`, `#NULL`, `DATA &GAZL_VERSION`), because
+compiled programs rely on it: earlier Impala versions wrote `#name` for a `! DEFp` name. Impala now writes `&name`
+for a `pointer` or `funcptr` constant, so its output already meets the strict rule. Inside a `GAZL #2` region it
+should be strict: `#` only numbers (literals, `DEFi`, `DEFf`), `&` only pointers (data labels, functions, `DEFp`,
+`NULL`). That also covers the region's function-pointer rule on the `#` path, which today only the `&` path applies.

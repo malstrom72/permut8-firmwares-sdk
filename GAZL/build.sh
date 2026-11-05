@@ -18,6 +18,12 @@ bash tools/test-fuzz.sh
 # Every memory instruction form at every edge of the memory arena, against an oracle (tools/GAZLBoundsSweep.cpp).
 bash tools/test-bounds.sh
 
+# Float literals round correctly, sampled across every float (tools/GAZLFloatLiteralTest.cpp).
+bash tools/test-float-literals.sh
+
+# Several processors in one memory, cooperative and on threads (tools/GAZLMultiProcessorTest.cpp).
+bash tools/test-processors.sh
+
 # Every node-only gate, shared with build.cmd so the two cannot run different subsets.
 bash tools/test-js.sh
 
@@ -28,6 +34,9 @@ bash tools/BuildImpala.sh
 ./output/NuXJS output/impala.nuxjs.js \
 	impala/ImpalaDemo.impala output/ImpalaDemo.gazl 0x4d2 impala/ImpalaDemo.impala
 ./output/GAZLCmd output/ImpalaDemo.gazl main
+
+# Impala keeps named constants in its output, so a golden that only matches text can still fail to assemble.
+./output/GAZLCmd tests/impala/golden/pointerConstants.gazl main
 
 # The staging above only proves the compiler fits TODAY's nesting limit. This fails while there is still headroom,
 # because the limit is NuXJS's to change: when it dropped to 48, GAZL stopped building with no prior warning.
