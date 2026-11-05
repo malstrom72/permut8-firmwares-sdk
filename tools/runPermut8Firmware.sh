@@ -16,6 +16,7 @@
 #
 # Usage: bash tools/runPermut8Firmware.sh <firmware.gazl> [extra GAZLCmd args]
 set -e -o pipefail -u
+caller="$PWD"											# a relative firmware path is the caller's, not the SDK root's
 cd "$(dirname "$0")/.."
 
 if [ $# -lt 1 ]; then
@@ -24,6 +25,7 @@ if [ $# -lt 1 ]; then
 fi
 
 fw="$1"; shift || true
+case "$fw" in /*|[A-Za-z]:[\\/]*) ;; *) fw="$caller/$fw" ;; esac
 [ -f "$fw" ] || { echo "runPermut8Firmware: no such file: $fw" >&2; exit 1; }
 name=$(basename "$fw" .gazl)
 
