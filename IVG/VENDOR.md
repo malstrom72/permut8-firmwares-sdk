@@ -4,25 +4,34 @@ IVG is Magnus Lidström's vector graphics format and renderer, upstream at
 <https://github.com/malstrom72/IVG>. It is vendored here by **file copy**, not as a submodule, so
 nothing in `.git` records which upstream revision these files came from. This file is that record.
 
-**Pinned at `cdabe2888d846111e6cd8c2ebed4a91ddcd097c7`** (2026-11-04, the merge of #292, "Apply one
-rule to every Unicode converter") - the IVG-2 freeze on IVG `main`. Per Magnus's decision, the SDKs
-vendor the IVG main freeze rather than the IVG revision embedded in the shipping Permut8 (svn
-r25291); a sticker that renders here may therefore exercise fixes the shipping plugin predates, so a
-final in-plugin check still counts. Never take anything from upstream's `IVG-3` branch.
+**Pinned at `8598ae26be26002f1f7ead8e4e6bdd2da0f99f81`** (2026-11-19, the merge of #301, "Reject
+non-ASCII escapes inside { } on every platform") - the IVG-2 freeze on IVG `main`. Per Magnus's
+decision, the SDKs vendor the IVG main freeze rather than the IVG revision embedded in the shipping
+Permut8 (svn r25291); a sticker that renders here may therefore exercise fixes the shipping plugin
+predates, so a final in-plugin check still counts. Never take anything from upstream's `IVG-3`
+branch.
 
 | Consumer | Pin |
 |---|---|
-| Permut8 firmwares SDK | `cdabe28` |
+| Permut8 firmwares SDK | `8598ae2` |
 
-The move from the previous freeze `170ae96` brings two fail-safes. Non-finite values now stop a
+The move from the previous freeze `cdabe28` brings one code fix (1ba7114, #301). An escape inside
+`{ }` that decodes to a character at or above 0x80 is now a syntax error on every platform. Before,
+the check compared through `Char`, so it only caught such escapes where `char` is signed (Windows
+x86/x64, macOS); where `char` is unsigned they slipped through. The rest is the IVGFiddle start fix:
+the runtime now starts from the end of `ivgfiddle.js` instead of `setupModule.js` (9a2c4b6, #297),
+with a rebuilt WASM. The Windows `IVG2PNG.exe` built from `cdabe28` and from `8598ae2` both reject
+`TRACE {\xE9}` and accept `TRACE {\x41}`. All 7 example stickers and `tests/font-rendering.ivg`
+render byte-identical PNGs with the two builds.
+
+The earlier move from `170ae96` to `cdabe28` brought two fail-safes. Non-finite values now stop a
 render with an error instead of reaching `toString(double)`, which hung on infinity: a text caret
 (`text caret out of range`) and scaled pattern bounds (`rescaled bounds out of range`) (c675163,
 #290). IMPD's Unicode converters now follow one rule (5140b35, #292): invalid code points are
 asserted and become U+FFFD in release builds, an unpaired UTF-16 surrogate no longer reads past the
 string, and the new `repairWideString()` cleans strings that come from the OS. The rest is the
-rebuilt IVGFiddle WASM (`rasterizeIVG.js`). Rendered with IVG2PNG built from `170ae96` and
-`cdabe28`, all 7 example stickers and `tests/font-rendering.ivg` produce byte-identical PNGs on
-Windows.
+rebuilt IVGFiddle WASM (`rasterizeIVG.js`). Renders from the `170ae96` and `cdabe28` builds were
+byte-identical.
 
 The earlier move from `5ad1afd` to `170ae96` brought one code fix (ffbab9f, #284): when every digit
 IMPD's `toString(double)` rounds up is a 9, the carry loop no longer reads the uninitialized byte
@@ -58,7 +67,7 @@ single 0/1 characters; ecd2075, 83e25a4) and the arcSweep `fabs` fix.
 
 ## Local patches
 
-None at this pin - every vendored file is byte-identical to upstream `cdabe28`. History worth
+None at this pin - every vendored file is byte-identical to upstream `8598ae2`. History worth
 knowing: the pre-freeze copy carried ONE deliberate local patch, documented only in
 `SHIPPING_MICROTONIC_VERSION.md` - `tools/ivgfiddle/output/setupModule.js` deferred `runIVG()`
 until the modularized Emscripten runtime instance had replaced the factory in the global `Module`,
@@ -84,7 +93,7 @@ From the repository root, with the pin above as the `..` endpoint so you can rea
 
 ```
 git clone https://github.com/malstrom72/IVG.git /tmp/ivg
-git -C /tmp/ivg log --oneline cdabe28..origin/main
+git -C /tmp/ivg log --oneline 8598ae2..origin/main
 ```
 
 Refresh **only the files already vendored** (every `git ls-files IVG` path except this `VENDOR.md`
